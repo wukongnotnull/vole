@@ -12,3 +12,4 @@ anyhow = "1"
 serde = { workspace = true, features = ["derive"] }
 crossbeam-channel = "0.5"
 serde_json.workspace = true
+jwalk = "0.8"

@@ -5,10 +5,12 @@
 
 pub use vole_sys::vole_proto;
 
+pub mod analyze;
 pub mod cancel;
 pub mod mutex;
 pub mod oplog;
 pub mod ops;
+pub mod scan;
 pub mod spike_toctou;
 pub mod status;
 pub mod units;

@@ -2249,6 +2249,7 @@ dependencies = [
  "ratatui",
  "serde_json",
  "signal-hook",
+ "tempfile",
  "vole-core",
 ]
 

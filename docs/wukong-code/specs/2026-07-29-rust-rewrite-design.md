@@ -778,6 +778,8 @@ Vole 侧不需要为测试做任何特殊支持——[5.6](#56-前端边界协�
 
 交互菜单、`completion`、`history` 子命令；Developer ID 签名与 notarization；Homebrew formula 与 `install.sh`；`docs/protocol.md` 定稿。
 
+**协议状态（2026-07-29）：** NDJSON / Plan / Report 已在 `docs/protocol.md` 标注 **FROZEN**（Phase 4 结束后冻结，见 [5.6](#56-前端边界协议与两阶段模型)）。History JSON 为独立附录，不属于 `StreamEvent`。
+
 桌面 app 本身不在本计划范围内。Phase 5 结束时 app 所需的一切（`ops` 编排、`vole-proto` 协议、plan/apply、`--json-stream`、签名身份）均已就绪，app 可作为独立项目启动。
 
 ---

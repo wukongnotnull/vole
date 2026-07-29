@@ -2385,4 +2385,263 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+[[rule]]
+id = "recent-items-preferences"
+category = "app-caches"
+label = "Recent items preferences"
+platform = ["macos"]
+paths = ["~/Library/Preferences/com.apple.recentitems.plist"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "diagnostic-reports"
+category = "app-caches"
+label = "Diagnostic reports"
+platform = ["macos"]
+paths = ["~/Library/DiagnosticReports/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "identity-caches"
+category = "app-caches"
+label = "Identity caches"
+platform = ["macos"]
+paths = ["~/Library/IdentityCaches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "siri-suggestions-cache"
+category = "app-caches"
+label = "Siri suggestions cache"
+platform = ["macos"]
+paths = ["~/Library/Suggestions/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "calendar-cache"
+category = "app-caches"
+label = "Calendar cache"
+platform = ["macos"]
+paths = ["~/Library/Calendars/Calendar Cache"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "address-book-photo-cache"
+category = "app-caches"
+label = "Address Book photo cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/AddressBook/Sources/*/Photos.cache"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "apple-configurator-temp-files"
+category = "app-caches"
+label = "Apple Configurator temp files"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.configurator.xpc.InternetService/Data/tmp/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "macos-help-system-cache"
+category = "app-caches"
+label = "macOS Help system cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.helpd/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "maps-geo-tile-cache"
+category = "app-caches"
+label = "Maps geo tile cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/GeoServices/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "memoji-picker-cache"
+category = "app-caches"
+label = "Memoji picker cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.AvatarUI.AvatarPickerMemojiPicker/Data/Library/Caches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "music-album-art-cache"
+category = "app-caches"
+label = "Music album art cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.AMPArtworkAgent/Data/Library/Caches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "coredevice-service-cache"
+category = "app-caches"
+label = "CoreDevice service cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.CoreDevice.CoreDeviceService/Data/Library/Caches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "apple-intelligence-extension-cache"
+category = "app-caches"
+label = "Apple Intelligence extension cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.NeptuneOneExtension/Data/Library/Caches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "apple-media-services-temp-files"
+category = "app-caches"
+label = "Apple Media Services temp files"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.AppleMediaServicesUI.UtilityExtension/Data/tmp/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "apple-media-services-cache"
+category = "app-caches"
+label = "Apple Media Services cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.AppleMediaServices/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "duet-expert-cache"
+category = "app-caches"
+label = "Duet Expert cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.duetexpertd/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "parsecd-cache"
+category = "app-caches"
+label = "Parsecd cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.parsecd/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "apple-python-cache"
+category = "app-caches"
+label = "Apple Python cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.python/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "safari-cache"
+category = "app-caches"
+label = "Safari cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.Safari/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "apple-silicon-media-service-cache"
+category = "app-caches"
+label = "Apple Silicon media service cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.amp.mediasevicesd"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
 

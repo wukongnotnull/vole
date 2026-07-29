@@ -1,0 +1,14 @@
+{
+  "id": "batch11_memoji_picker_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "memoji-picker container cache child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Containers/com.apple.AvatarUI.AvatarPickerMemojiPicker/Data/Library/Caches/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Containers/com.apple.AvatarUI.AvatarPickerMemojiPicker/Data/Library/Caches/item|Memoji picker cache"
+  ],
+  "expect_not_selected": []
+}

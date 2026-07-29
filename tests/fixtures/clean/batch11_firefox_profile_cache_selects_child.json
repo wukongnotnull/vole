@@ -1,0 +1,14 @@
+{
+  "id": "batch11_firefox_profile_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "firefox-profile-cache selects profile cache2 child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Firefox/Profiles/abc.default/cache2/entry"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Firefox/Profiles/abc.default/cache2/entry|Firefox profile cache"
+  ],
+  "expect_not_selected": []
+}

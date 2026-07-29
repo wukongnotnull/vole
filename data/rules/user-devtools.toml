@@ -2100,4 +2100,263 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+[[rule]]
+id = "chrome-component-crx-cache"
+category = "user-devtools"
+label = "Chrome component CRX cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Google/Chrome/component_crx_cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "chrome-shader-cache"
+category = "user-devtools"
+label = "Chrome shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Google/Chrome/ShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "chrome-gr-shader-cache"
+category = "user-devtools"
+label = "Chrome GR shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Google/Chrome/GrShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "chrome-profile-gr-shader-cache"
+category = "user-devtools"
+label = "Chrome profile GR shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Google/Chrome/*/GrShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "chrome-dawn-cache"
+category = "user-devtools"
+label = "Chrome Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Google/Chrome/GraphiteDawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "chrome-crash-reports"
+category = "user-devtools"
+label = "Chrome crash reports"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Google/Chrome/Crashpad/completed/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "chrome-on-device-model-cache"
+category = "user-devtools"
+label = "Chrome on-device model cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Google/Chrome/OptGuideOnDeviceModel/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "googleupdater-crx-cache"
+category = "user-devtools"
+label = "GoogleUpdater CRX cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Google/GoogleUpdater/crx_cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "chromium-cache"
+category = "user-devtools"
+label = "Chromium cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/Chromium/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "edge-cache"
+category = "user-devtools"
+label = "Edge cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.microsoft.edgemac/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "firefox-cache"
+category = "user-devtools"
+label = "Firefox cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/Firefox/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "firefox-profile-cache"
+category = "user-devtools"
+label = "Firefox profile cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Firefox/Profiles/*/cache2/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "brave-component-crx-cache"
+category = "user-devtools"
+label = "Brave component CRX cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/BraveSoftware/Brave-Browser/component_crx_cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "brave-shader-cache"
+category = "user-devtools"
+label = "Brave shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/BraveSoftware/Brave-Browser/ShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "brave-crash-reports"
+category = "user-devtools"
+label = "Brave crash reports"
+platform = ["macos"]
+paths = ["~/Library/Application Support/BraveSoftware/Brave-Browser/Crashpad/completed/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-user-data-code-cache"
+category = "user-devtools"
+label = "Arc User Data code cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/User Data/*/Code Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-user-data-gpu-cache"
+category = "user-devtools"
+label = "Arc User Data GPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/User Data/*/GPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-user-data-component-crx-cache"
+category = "user-devtools"
+label = "Arc User Data component CRX cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/User Data/component_crx_cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "opera-cache"
+category = "user-devtools"
+label = "Opera cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.operasoftware.Opera/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "puppeteer-browser-cache"
+category = "user-devtools"
+label = "Puppeteer browser cache"
+platform = ["macos"]
+paths = ["~/.cache/puppeteer/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
 

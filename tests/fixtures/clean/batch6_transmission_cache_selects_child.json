@@ -1,0 +1,14 @@
+{
+  "id": "batch6_transmission_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "transmission-cache selects cache dir",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/org.m0k.transmission"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/org.m0k.transmission|Transmission cache"
+  ],
+  "expect_not_selected": []
+}

@@ -1,0 +1,14 @@
+{
+  "id": "batch6_iqiyi_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "iqiyi-cache selects cache dir",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.iqiyi.player"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.iqiyi.player|iQIYI cache"
+  ],
+  "expect_not_selected": []
+}

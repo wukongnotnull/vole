@@ -1084,3 +1084,264 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+# Batch 6 wave: media/streaming/download app caches
+
+[[rule]]
+id = "iqiyi-cache"
+category = "app-caches"
+label = "iQIYI cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.iqiyi.player"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "tencent-video-cache"
+category = "app-caches"
+label = "Tencent Video cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.tencent.tenvideo"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "kugou-music-cache"
+category = "app-caches"
+label = "Kugou Music cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.kugou.mac/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "kuwo-music-cache"
+category = "app-caches"
+label = "Kuwo Music cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.kuwo.mac/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "apple-tv-cache"
+category = "app-caches"
+label = "Apple TV cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.TV/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "mpv-cache"
+category = "app-caches"
+label = "MPV cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/io.mpv"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "transmission-cache"
+category = "app-caches"
+label = "Transmission cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/org.m0k.transmission"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "aria2-cache"
+category = "app-caches"
+label = "Aria2 cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/net.xmac.aria2gui"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "google-clearcut-logs"
+category = "app-caches"
+label = "Google Clearcut logs"
+platform = ["macos"]
+paths = ["~/Library/Caches/CCTClearcutLogger"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "alilang-security-component"
+category = "app-caches"
+label = "AliLang security component"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.alibaba.AliLang.osx/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "ora-browser-cache"
+category = "app-caches"
+label = "Ora browser cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.orabrowser.app/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "filo-cache"
+category = "app-caches"
+label = "Filo cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.filo.client/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "kaku-cache"
+category = "app-caches"
+label = "Kaku cache"
+platform = ["macos"]
+paths = ["~/.cache/kaku/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "spacedrive-thumbnail-cache"
+category = "app-caches"
+label = "Spacedrive thumbnail cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/spacedrive/thumbnails/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "stremio-server-cache"
+category = "app-caches"
+label = "Stremio server cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/stremio/stremio-server/stremio-cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "senplayer-video-cache"
+category = "app-caches"
+label = "SenPlayer video cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.wuziqi.SenPlayer/Data/tmp/videoCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "douyu-cache"
+category = "app-caches"
+label = "Douyu cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.douyu.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "huya-cache"
+category = "app-caches"
+label = "Huya cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.huya.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qq-music-container-cache"
+category = "app-caches"
+label = "QQ Music container cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.tencent.QQMusicMac/Data/Library/Caches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "final-cut-pro-cache"
+category = "app-caches"
+label = "Final Cut Pro cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.FinalCut/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"

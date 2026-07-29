@@ -111,4 +111,37 @@ mod tests {
         assert_eq!(json.sessions[0].ended_at, "");
         assert_eq!(json.sessions[0].actions.removed, 1);
     }
+
+    #[test]
+    fn parse_deletions_newest_first_with_limit() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let ops = dir.path().join("operations.log");
+        let dels = dir.path().join("deletions.log");
+        fs::write(&ops, "").expect("write ops");
+        fs::write(
+            &dels,
+            "\
+2026-05-24T10:00:02+0000\ttrash\t4\tok\t/tmp/Old App.app
+2026-05-24T11:00:01+0000\tpermanent\t10\tdry-run\t/tmp/build
+not-a-valid-line
+2026-05-24T12:00:00+0000\ttrash\tunknown\tok\t/tmp/weird
+",
+        )
+        .expect("write dels");
+
+        let report = HistoryReport::load(&ops, &dels);
+        let json = report.to_json(1);
+        assert_eq!(json.limit, 1);
+        assert_eq!(json.deletions.len(), 1);
+        assert_eq!(json.deletions[0].mode, "trash");
+        assert_eq!(json.deletions[0].path, "/tmp/weird");
+        assert_eq!(json.deletions[0].size_kb, None);
+
+        let json_all = report.to_json(20);
+        assert_eq!(json_all.deletions.len(), 3);
+        assert_eq!(json_all.deletions[0].path, "/tmp/weird");
+        assert_eq!(json_all.deletions[1].mode, "permanent");
+        assert_eq!(json_all.deletions[1].size_kb, Some(10));
+        assert_eq!(json_all.deletions[2].path, "/tmp/Old App.app");
+    }
 }

@@ -38,7 +38,6 @@ pub struct HistoryDeletion {
     pub timestamp: String,
     pub mode: String,
     pub status: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub size_kb: Option<u64>,
     pub path: String,
 }
@@ -66,8 +65,7 @@ impl HistoryReport {
         let operations_log = operations_log.as_ref().to_path_buf();
         let deletions_log = deletions_log.as_ref().to_path_buf();
         let sessions = crate::history::session::load_sessions(&operations_log);
-        // Deletions parsing lands in Task 3; keep empty for now beyond path wiring.
-        let deletions = Vec::new();
+        let deletions = crate::history::session::load_deletions(&deletions_log);
         Self {
             operations_log,
             deletions_log,

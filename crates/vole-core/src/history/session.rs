@@ -1,3 +1,3 @@
-//! Session aggregation for operations.log (wrappers around parse).
+//! Session / deletion load wrappers.
 
-pub use super::parse::load_sessions;
+pub use super::parse::{load_deletions, load_sessions};

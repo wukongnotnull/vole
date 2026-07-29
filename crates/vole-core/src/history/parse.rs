@@ -1,6 +1,6 @@
-//! Parse mole-compatible `operations.log` lines.
+//! Parse mole-compatible `operations.log` and `deletions.log` lines.
 
-use crate::history::json::{HistoryActions, HistorySession};
+use crate::history::json::{HistoryActions, HistoryDeletion, HistorySession};
 
 /// Load sessions from an operations.log (missing/unreadable → empty).
 pub fn load_sessions(path: &std::path::Path) -> Vec<HistorySession> {
@@ -8,6 +8,14 @@ pub fn load_sessions(path: &std::path::Path) -> Vec<HistorySession> {
         return Vec::new();
     };
     parse_operations(&content)
+}
+
+/// Load deletion audit entries (missing/unreadable → empty).
+pub fn load_deletions(path: &std::path::Path) -> Vec<HistoryDeletion> {
+    let Ok(content) = std::fs::read_to_string(path) else {
+        return Vec::new();
+    };
+    parse_deletions(&content)
 }
 
 pub fn parse_operations(content: &str) -> Vec<HistorySession> {
@@ -47,6 +55,46 @@ pub fn parse_operations(content: &str) -> Vec<HistorySession> {
     }
 
     sessions
+}
+
+pub fn parse_deletions(content: &str) -> Vec<HistoryDeletion> {
+    let mut out = Vec::new();
+    for line in content.lines() {
+        if line.is_empty() {
+            continue;
+        }
+        let mut parts = line.splitn(5, '\t');
+        let Some(timestamp) = parts.next() else {
+            continue;
+        };
+        let Some(mode) = parts.next() else {
+            continue;
+        };
+        let Some(size_kb_raw) = parts.next() else {
+            continue;
+        };
+        let Some(status) = parts.next() else {
+            continue;
+        };
+        let path = parts.next().unwrap_or("");
+        if timestamp.is_empty() || mode.is_empty() || status.is_empty() {
+            continue;
+        }
+        let size_kb =
+            if !size_kb_raw.is_empty() && size_kb_raw.chars().all(|c| c.is_ascii_digit()) {
+                size_kb_raw.parse::<u64>().ok()
+            } else {
+                None
+            };
+        out.push(HistoryDeletion {
+            timestamp: timestamp.to_string(),
+            mode: mode.to_string(),
+            status: status.to_string(),
+            size_kb,
+            path: path.to_string(),
+        });
+    }
+    out
 }
 
 struct SessionEnd {

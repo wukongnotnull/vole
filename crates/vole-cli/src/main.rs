@@ -3,6 +3,7 @@
 
 mod clean;
 mod history_cmd;
+mod interactive;
 mod signals;
 mod terminal;
 mod tui;
@@ -25,7 +26,7 @@ use vole_core::vole_proto::AnalyzeOutput;
 #[command(name = "vole", version, about = "macOS cleanup and monitoring")]
 struct Cli {
     #[command(subcommand)]
-    command: Command,
+    command: Option<Command>,
 }
 
 #[derive(Subcommand)]
@@ -137,7 +138,8 @@ impl From<CompletionShell> for Shell {
 fn main() {
     let cli = Cli::parse();
     match cli.command {
-        Command::Clean {
+        None => std::process::exit(interactive::run()),
+        Some(Command::Clean {
             plan: _,
             dry_run: _,
             apply,
@@ -149,7 +151,7 @@ fn main() {
             whitelist_add,
             whitelist_remove,
             whitelist_list,
-        } => {
+        }) => {
             let code = clean::run_clean(clean::CleanOptions {
                 json,
                 json_stream,
@@ -163,22 +165,22 @@ fn main() {
             });
             std::process::exit(code);
         }
-        Command::Status { json, json_stream } => {
+        Some(Command::Status { json, json_stream }) => {
             if let Err(e) = cmd_status(json, json_stream) {
                 eprintln!("vole status: {}", e);
                 std::process::exit(1);
             }
         }
-        Command::Analyze { path, json } => {
+        Some(Command::Analyze { path, json }) => {
             if let Err(e) = cmd_analyze(path, json) {
                 eprintln!("vole analyze: {}", e);
                 std::process::exit(1);
             }
         }
-        Command::History { json, limit } => {
+        Some(Command::History { json, limit }) => {
             std::process::exit(history_cmd::run(json, limit));
         }
-        Command::Completions { shell } => {
+        Some(Command::Completions { shell }) => {
             let mut cmd = Cli::command();
             generate(Shell::from(shell), &mut cmd, "vole", &mut io::stdout());
         }
@@ -192,7 +194,7 @@ fn should_use_json(force: bool) -> bool {
     !io::stdout().is_terminal()
 }
 
-fn cmd_status(force_json: bool, json_stream: bool) -> io::Result<()> {
+pub(crate) fn cmd_status(force_json: bool, json_stream: bool) -> io::Result<()> {
     if json_stream {
         return cmd_status_stream();
     }

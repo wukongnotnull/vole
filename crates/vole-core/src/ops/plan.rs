@@ -371,31 +371,44 @@ mod tests {
 
     #[test]
     fn cancel_mid_run_returns_cancelled() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::Arc;
+
         let _guard = test_env::lock();
         let dir = scratch("cancel");
-        let file_a = dir.join("a/cache.db");
-        let file_b = dir.join("b/cache.db");
-        touch(&file_a);
-        touch(&file_b);
-
-        let rules = vec![
-            all_rule("r1", vec![file_a.to_string_lossy().into_owned()], false),
-            all_rule("r2", vec![file_b.to_string_lossy().into_owned()], false),
-        ];
+        // Enough rules that cancel is observed at a rule boundary even on fast runners.
+        let mut rules = Vec::new();
+        for i in 0..32 {
+            let file = dir.join(format!("r{i}/cache.db"));
+            touch(&file);
+            rules.push(all_rule(
+                &format!("r{i}"),
+                vec![file.to_string_lossy().into_owned()],
+                false,
+            ));
+        }
 
         let token = crate::cancel::CancelToken::new();
         let token2 = token.clone();
         let orch = Orchestrator::new(token, None);
+        let done = Arc::new(AtomicBool::new(false));
+        let done2 = Arc::clone(&done);
 
         let handle = thread::spawn(move || {
-            thread::sleep(StdDuration::from_millis(1));
-            token2.cancel();
+            while !done2.load(Ordering::Relaxed) {
+                token2.cancel();
+                thread::sleep(StdDuration::from_micros(50));
+            }
         });
 
         let result = orch.build_plan(&rules, &AppProtection::new(), &[]);
+        done.store(true, Ordering::Relaxed);
         handle.join().unwrap();
 
-        assert!(matches!(result, Err(OpsError::Cancelled)));
+        assert!(
+            matches!(result, Err(OpsError::Cancelled)),
+            "expected Cancelled, got {result:?}"
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 

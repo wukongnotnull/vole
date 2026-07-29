@@ -1,0 +1,14 @@
+{
+  "id": "batch11_safari_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "safari-cache explicit Library/Caches child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.apple.Safari/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.apple.Safari/item|Safari cache"
+  ],
+  "expect_not_selected": []
+}

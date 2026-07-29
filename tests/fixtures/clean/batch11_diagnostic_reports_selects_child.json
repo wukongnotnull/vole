@@ -1,0 +1,14 @@
+{
+  "id": "batch11_diagnostic_reports_selects_child",
+  "source_bats": "manual",
+  "source_test": "diagnostic-reports selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/DiagnosticReports/test.crash"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/DiagnosticReports/test.crash|Diagnostic reports"
+  ],
+  "expect_not_selected": []
+}

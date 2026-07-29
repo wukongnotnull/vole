@@ -1,0 +1,14 @@
+{
+  "id": "batch11_chrome_shader_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "chrome-shader-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Google/Chrome/ShaderCache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Google/Chrome/ShaderCache/item|Chrome shader cache"
+  ],
+  "expect_not_selected": []
+}

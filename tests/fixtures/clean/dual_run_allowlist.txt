@@ -1,6 +1,6 @@
 # Default dual-run allowlist (5 fixtures, ~5 min in CI).
+batch11_safari_cache_selects_child.json
+batch11_chrome_shader_cache_selects_child.json
+batch11_memoji_picker_cache_selects_child.json
 batch10_notion_cache_selects_child.json
-batch10_app_store_cache_selects_child.json
-batch10_cocoapods_cache_selects_child.json
 batch9_warp_cache_selects_child.json
-batch8_navicat_cache_selects_child.json

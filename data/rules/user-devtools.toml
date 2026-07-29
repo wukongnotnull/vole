@@ -1841,4 +1841,263 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+[[rule]]
+id = "cocoapods-cache"
+category = "user-devtools"
+label = "CocoaPods cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/CocoaPods/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "flutter-cache"
+category = "user-devtools"
+label = "Flutter cache"
+platform = ["macos"]
+paths = ["~/.cache/flutter/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "dart-pub-cache"
+category = "user-devtools"
+label = "Dart Pub cache"
+platform = ["macos"]
+paths = ["~/.pub-cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "opam-cache"
+category = "user-devtools"
+label = "OPAM download cache"
+platform = ["macos"]
+paths = ["~/.opam/download-cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "homebrew-downloads-cache"
+category = "user-devtools"
+label = "Homebrew downloads cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/Homebrew/downloads/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "messages-preview-attachment-cache"
+category = "user-devtools"
+label = "Messages preview attachment cache"
+platform = ["macos"]
+paths = ["~/Library/Messages/Caches/Previews/Attachments/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "messages-preview-sticker-cache"
+category = "user-devtools"
+label = "Messages preview sticker cache"
+platform = ["macos"]
+paths = ["~/Library/Messages/Caches/Previews/StickerCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "photo-analysis-cache"
+category = "user-devtools"
+label = "Photo analysis cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.photoanalysisd"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "apple-id-cache"
+category = "user-devtools"
+label = "Apple ID cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.akd"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "webkit-network-cache"
+category = "user-devtools"
+label = "WebKit network cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.WebKit.Networking/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "quicklook-thumbnails"
+category = "user-devtools"
+label = "QuickLook thumbnails"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.QuickLook.thumbnailcache"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "quicklook-cache"
+category = "user-devtools"
+label = "QuickLook cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/Quick Look/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "icon-services-cache"
+category = "user-devtools"
+label = "Icon services cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.iconservices*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "wallpaper-agent-cache"
+category = "user-devtools"
+label = "Wallpaper agent cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.wallpaper.agent/Data/Library/Caches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "media-analysis-cache"
+category = "user-devtools"
+label = "Media analysis cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.mediaanalysisd/Data/Library/Caches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "media-analysis-temp-files"
+category = "user-devtools"
+label = "Media analysis temp files"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.mediaanalysisd/Data/tmp/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "app-store-cache"
+category = "user-devtools"
+label = "App Store cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.AppStore/Data/Library/Caches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "wallpaper-aerials-temp-files"
+category = "user-devtools"
+label = "Wallpaper aerials temp files"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.wallpaper.extension.aerials/Data/tmp/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "geod-temp-files"
+category = "user-devtools"
+label = "Geod temp files"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.geod/Data/tmp/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "stocks-cache"
+category = "user-devtools"
+label = "Stocks cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.stocks/Data/Library/Caches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
 

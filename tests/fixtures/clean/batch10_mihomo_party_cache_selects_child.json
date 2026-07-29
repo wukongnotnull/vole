@@ -1,0 +1,14 @@
+{
+  "id": "batch10_mihomo_party_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "mihomo-party-cache selects Electron Cache child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/mihomo-party/Cache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/mihomo-party/Cache/item|mihomo-party cache"
+  ],
+  "expect_not_selected": []
+}

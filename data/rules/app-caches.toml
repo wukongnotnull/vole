@@ -2126,4 +2126,263 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+[[rule]]
+id = "wetype-image-cache"
+category = "app-caches"
+label = "WeType image cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/WeType/com.onevcat.Kingfisher.ImageCache.WeType/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "wetype-dict-update-cache"
+category = "app-caches"
+label = "WeType dict update cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/WeType/DictUpdate/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "mihomo-party-cache"
+category = "app-caches"
+label = "mihomo-party cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/mihomo-party/Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "mihomo-party-code-cache"
+category = "app-caches"
+label = "mihomo-party code cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/mihomo-party/Code Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "mihomo-party-gpu-cache"
+category = "app-caches"
+label = "mihomo-party GPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/mihomo-party/GPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "mihomo-party-dawn-cache"
+category = "app-caches"
+label = "mihomo-party Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/mihomo-party/DawnGraphiteCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "mihomo-party-webgpu-cache"
+category = "app-caches"
+label = "mihomo-party WebGPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/mihomo-party/DawnWebGPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "mihomo-party-logs"
+category = "app-caches"
+label = "mihomo-party logs"
+platform = ["macos"]
+paths = ["~/Library/Application Support/mihomo-party/logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "stash-cache"
+category = "app-caches"
+label = "Stash cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/ws.stash.app.mac/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "notion-cache"
+category = "app-caches"
+label = "Notion cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/notion.id/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "logseq-cache"
+category = "app-caches"
+label = "Logseq cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.logseq.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "bear-cache"
+category = "app-caches"
+label = "Bear cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.bear-writer.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "evernote-cache"
+category = "app-caches"
+label = "Evernote cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.evernote.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "yinxiang-note-cache"
+category = "app-caches"
+label = "Yinxiang Note cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.yinxiang.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "alfred-cache"
+category = "app-caches"
+label = "Alfred cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.runningwithcrayons.Alfred/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "the-unarchiver-cache"
+category = "app-caches"
+label = "The Unarchiver cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/cx.c3.theunarchiver/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "teamviewer-cache"
+category = "app-caches"
+label = "TeamViewer cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.teamviewer.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "anydesk-cache"
+category = "app-caches"
+label = "AnyDesk cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.anydesk.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "todesk-cache"
+category = "app-caches"
+label = "ToDesk cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.todesk.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "sunlogin-cache"
+category = "app-caches"
+label = "Sunlogin cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.sunlogin.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
 

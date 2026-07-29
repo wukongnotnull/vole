@@ -1,0 +1,14 @@
+{
+  "id": "batch10_app_store_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "app-store-cache container cache child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Containers/com.apple.AppStore/Data/Library/Caches/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Containers/com.apple.AppStore/Data/Library/Caches/item|App Store cache"
+  ],
+  "expect_not_selected": []
+}

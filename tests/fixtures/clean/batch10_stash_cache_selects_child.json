@@ -1,0 +1,14 @@
+{
+  "id": "batch10_stash_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "stash-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/ws.stash.app.mac/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/ws.stash.app.mac/item|Stash cache"
+  ],
+  "expect_not_selected": []
+}

@@ -1,9 +1,7 @@
 //! Minimal interactive menu when `vole` is run with no subcommand.
 
 use std::io::{self, BufRead, IsTerminal, Write};
-
-use crate::clean;
-use crate::history_cmd;
+use std::process::Command;
 
 pub fn run() -> i32 {
     if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
@@ -37,31 +35,18 @@ pub fn run() -> i32 {
         }
         match line.trim() {
             "1" => {
-                if let Err(e) = crate::cmd_status(true, false) {
-                    eprintln!("vole status: {e}");
-                    return 1;
+                if let Err(msg) = run_child(&["status", "--json"]) {
+                    let _ = writeln!(stdout, "{msg}");
                 }
             }
             "2" => {
-                let code = clean::run_clean(clean::CleanOptions {
-                    json: false,
-                    json_stream: false,
-                    plan_out: None,
-                    apply_plan: None,
-                    permanent: false,
-                    whitelist: false,
-                    whitelist_add: None,
-                    whitelist_remove: None,
-                    whitelist_list: false,
-                });
-                if code != 0 {
-                    return code;
+                if let Err(msg) = run_child(&["clean", "--plan"]) {
+                    let _ = writeln!(stdout, "{msg}");
                 }
             }
             "3" => {
-                let code = history_cmd::run(false, 20);
-                if code != 0 {
-                    return code;
+                if let Err(msg) = run_child(&["history"]) {
+                    let _ = writeln!(stdout, "{msg}");
                 }
             }
             "4" | "q" | "quit" | "exit" => return 0,
@@ -69,5 +54,27 @@ pub fn run() -> i32 {
                 let _ = writeln!(stdout, "Unknown choice: {other}");
             }
         }
+    }
+}
+
+/// Spawn a fresh `vole` process so submenu failures / signals don't tear down the menu,
+/// and so clean doesn't accumulate in-process signal threads.
+fn run_child(args: &[&str]) -> Result<(), String> {
+    let exe = std::env::current_exe().map_err(|e| format!("vole: resolve executable: {e}"))?;
+    let status = Command::new(exe)
+        .args(args)
+        .status()
+        .map_err(|e| format!("vole: spawn {}: {e}", args.join(" ")))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!(
+            "vole {}: exited {}",
+            args.first().unwrap_or(&"?"),
+            status
+                .code()
+                .map(|c| c.to_string())
+                .unwrap_or_else(|| "signal".into())
+        ))
     }
 }

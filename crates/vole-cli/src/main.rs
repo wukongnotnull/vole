@@ -23,7 +23,12 @@ use vole_core::status::{CollectionMode, StatusCollector, REFRESH_INTERVAL};
 use vole_core::vole_proto::AnalyzeOutput;
 
 #[derive(Parser)]
-#[command(name = "vole", version, about = "macOS cleanup and monitoring")]
+#[command(
+    name = "vole",
+    version,
+    about = "macOS cleanup and monitoring",
+    after_help = "Run `vole` with no subcommand in a terminal to open a simple menu."
+)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Command>,

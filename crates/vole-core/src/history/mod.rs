@@ -143,6 +143,35 @@ mod tests {
     }
 
     #[test]
+    fn malformed_session_end_keeps_ops_and_ended_at() {
+        // Aligns with mole tests/history.bats "tolerates malformed session summaries".
+        let dir = tempfile::tempdir().expect("tempdir");
+        let ops = dir.path().join("operations.log");
+        let dels = dir.path().join("deletions.log");
+        fs::write(
+            &ops,
+            "\
+# ========== clean session started at 2026-05-24 10:00:00 ==========
+[2026-05-24 10:00:01] [clean] REMOVED /tmp/cache (2KB)
+# ========== clean session ended at malformed summary ==========
+",
+        )
+        .expect("write ops");
+
+        let report = HistoryReport::load(&ops, &dels);
+        let json = report.to_json(20);
+        assert_eq!(json.sessions.len(), 1);
+        let s = &json.sessions[0];
+        assert_eq!(s.command, "clean");
+        assert_eq!(s.started_at, "2026-05-24 10:00:00");
+        assert_eq!(s.ended_at, "malformed summary");
+        assert_eq!(s.items, 0);
+        assert_eq!(s.size, "0B");
+        assert_eq!(s.actions.removed, 1);
+        assert_eq!(s.operation_count, 1);
+    }
+
+    #[test]
     fn parse_deletions_newest_first_with_limit() {
         let dir = tempfile::tempdir().expect("tempdir");
         let ops = dir.path().join("operations.log");

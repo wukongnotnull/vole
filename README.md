@@ -17,16 +17,18 @@ GPL-3.0。因为 Vole 是 GPL-3.0 作品的衍生作品，这是唯一可选的�
 
 ## 范围
 
-计划中的 v1 只实现 Mole 十二个子命令中的三个：`status`、`analyze`、`clean`。
+v1 子命令：`status`、`analyze`、`clean`、`history`（另有 `completions` 与无参交互菜单）。
 设计文档见 `docs/wukong-code/specs/`。
 
-**Phase 2 状态（2026-07-29）**：`vole status` 可用（TUI、`--json`、`--json-stream`）；`analyze` 与真实 `clean` 仍不可用。Phase 1 基础设施（协议、oplog、互斥等）已落地。TCC 完整矩阵 deferred，见 `docs/findings/2026-07-phase1-tcc-deferred.md`。
+**Phase 2 状态（2026-07-29）**：`vole status` 可用（TUI、`--json`、`--json-stream`）。Phase 1 基础设施（协议、oplog、互斥等）已落地。TCC 完整矩阵 deferred，见 `docs/findings/2026-07-phase1-tcc-deferred.md`。
 
 **Phase 3 状态（2026-07-29）**：`vole analyze` 目录模式可用（TUI 下钻、`--json`）；默认路径为 `$HOME`（mole 无参为 `/` 概览，待后续）。扫描含硬链接去重、折叠目录、`jwalk` 并行遍历。验证：`scripts/verify-analyze-json.sh`。
 
 **Phase 4 状态（2026-07-29）**：`vole clean` 可用——`--plan` / `--apply` 两阶段、`--json-stream` NDJSON、`--whitelist` 白名单管理；默认移入废纸篓，`--permanent` 永久删除。报告区分 `trashed_bytes` / `deleted_bytes`。验证：`scripts/verify-clean-candidates.sh`。计划见 `docs/wukong-code/plans/2026-07-29-phase4-clean.md`。
 
-**补全**：`vole completions zsh`（或 `bash` / `fish`）输出脚本到 stdout，可重定向到补全目录，例如：
+**Phase 5 状态（2026-07-29）**：`vole history`（文本 / `--json` / `--limit`，对齐 mole）；`docs/protocol.md` 已 FROZEN；无参 `vole` 进入轻量菜单；`vole completions <shell>` 生成补全。验证：`scripts/verify-history-mole.sh`、`scripts/check-protocol-doc.sh`。计划见 `docs/wukong-code/plans/2026-07-29-phase5-history-protocol.md`。签名 / Homebrew 仍为占位，见 `docs/findings/2026-07-phase5-signing.md`。
+
+**补全**：
 
 ```bash
 vole completions zsh > ~/.zfunc/_vole

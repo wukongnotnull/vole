@@ -23,3 +23,5 @@ GPL-3.0。因为 Vole 是 GPL-3.0 作品的衍生作品，这是唯一可选的�
 **Phase 2 状态（2026-07-29）**：`vole status` 可用（TUI、`--json`、`--json-stream`）；`analyze` 与真实 `clean` 仍不可用。Phase 1 基础设施（协议、oplog、互斥等）已落地。TCC 完整矩阵 deferred，见 `docs/findings/2026-07-phase1-tcc-deferred.md`。
 
 **Phase 3 状态（2026-07-29）**：`vole analyze` 目录模式可用（TUI 下钻、`--json`）；默认路径为 `$HOME`（mole 无参为 `/` 概览，待后续）。扫描含硬链接去重、折叠目录、`jwalk` 并行遍历。验证：`scripts/verify-analyze-json.sh`。
+
+**Phase 4 状态（进行中）**：`4a` 已启动——`vole-core::safety` 移植 `validate_path_for_deletion` 与关键路径判定；应用保护层与规则引擎待续。计划见 `docs/wukong-code/plans/2026-07-29-phase4-clean.md`。

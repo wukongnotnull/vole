@@ -6,3 +6,4 @@ license.workspace = true
 
 [dependencies]
 vole-sys = { path = "../vole-sys" }
+rustix = { version = "1", features = ["fs"] }

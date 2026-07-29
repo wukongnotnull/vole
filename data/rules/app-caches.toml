@@ -1867,3 +1867,263 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+[[rule]]
+id = "minecraft-web-cache"
+category = "app-caches"
+label = "Minecraft web cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/minecraft/webcache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "minecraft-web-cache-2"
+category = "app-caches"
+label = "Minecraft web cache 2"
+platform = ["macos"]
+paths = ["~/Library/Application Support/minecraft/webcache2/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "lunar-client-offline-logs"
+category = "app-caches"
+label = "Lunar Client offline logs"
+platform = ["macos"]
+paths = ["~/.lunarclient/offline/*/logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "lunar-client-offline-file-logs"
+category = "app-caches"
+label = "Lunar Client offline file logs"
+platform = ["macos"]
+paths = ["~/.lunarclient/offline/files/*/logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "spark-cache"
+category = "app-caches"
+label = "Spark cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.readdle.smartemail-Mac"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "airmail-cache"
+category = "app-caches"
+label = "Airmail cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.airmail.*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "todoist-cache"
+category = "app-caches"
+label = "Todoist cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.todoist.mac.Todoist"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "any-do-cache"
+category = "app-caches"
+label = "Any.do cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.any.do.*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "zsh-completion-cache"
+category = "app-caches"
+label = "Zsh completion cache"
+platform = ["macos"]
+paths = ["~/.zcompdump*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "less-history"
+category = "app-caches"
+label = "less history"
+platform = ["macos"]
+paths = ["~/.lesshst"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "vim-temporary-files"
+category = "app-caches"
+label = "Vim temporary files"
+platform = ["macos"]
+paths = ["~/.viminfo.tmp"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "wget-hsts-cache"
+category = "app-caches"
+label = "wget HSTS cache"
+platform = ["macos"]
+paths = ["~/.wget-hsts"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "cacher-logs"
+category = "app-caches"
+label = "Cacher logs"
+platform = ["macos"]
+paths = ["~/.cacher/logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "kite-logs"
+category = "app-caches"
+label = "Kite logs"
+platform = ["macos"]
+paths = ["~/.kite/logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "warp-cache"
+category = "app-caches"
+label = "Warp cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/dev.warp.Warp-Stable/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "warp-log"
+category = "app-caches"
+label = "Warp log"
+platform = ["macos"]
+paths = ["~/Library/Logs/warp.log"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "warp-sentry-crash-reports"
+category = "app-caches"
+label = "Warp Sentry crash reports"
+platform = ["macos"]
+paths = ["~/Library/Caches/SentryCrash/Warp/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "ghostty-cache"
+category = "app-caches"
+label = "Ghostty cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.mitchellh.ghostty/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "input-source-pro-cache"
+category = "app-caches"
+label = "Input Source Pro cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.runjuu.Input-Source-Pro/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "wakatime-cache"
+category = "app-caches"
+label = "WakaTime cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/macos-wakatime.WakaTime/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+

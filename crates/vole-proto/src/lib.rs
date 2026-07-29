@@ -11,10 +11,12 @@ use serde::{Deserialize, Serialize};
 pub mod events;
 pub mod plan;
 pub mod report;
+pub mod status;
 
 pub use events::StreamEvent;
 pub use plan::{Plan, PlanEntry};
 pub use report::{Report, SkipSummary};
+pub use status::StatusSnapshot;
 
 /// NDJSON 协议版本。Phase 4 结束时冻结 v1，在那之前可自由破坏性修改。
 pub const SCHEMA_VERSION: u32 = 1;

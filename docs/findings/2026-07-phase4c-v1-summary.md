@@ -171,3 +171,18 @@ cargo clippy -p vole-core -- -D warnings
 ---
 
 **Phase 4c v1 Done.** 下一建议动作：**打 tag `v0.0.1` 发 GitHub Release**（ad-hoc）；Developer ID 就绪后接签名与 Homebrew stable。
+
+---
+
+## 10. Phase 4c+ 延续（2026-07-30 更新）
+
+v0.0.1 之后继续 Batch 6–13，规则 **150 → 470**，Release **v0.0.7**。
+
+**完整收官总结**：[`docs/findings/2026-07-phase4c-plus-summary.md`](2026-07-phase4c-plus-summary.md)
+
+| 里程碑 | 值 |
+|---|---|
+| 启用规则 | **470** |
+| `all` 策略 ported | **442/513 (86%)** |
+| 未移植 `all`（伪差集为主） | 22 |
+| guard/custom/sudo 未移植 | 49 |

@@ -51,12 +51,7 @@ pub fn render_analyze(
         .enumerate()
         .map(|(i, e)| {
             let prefix = if e.is_dir { "▸ " } else { "  " };
-            let label = format!(
-                "{}{} {}",
-                prefix,
-                e.name,
-                human(e.size as u64)
-            );
+            let label = format!("{}{} {}", prefix, e.name, human(e.size as u64));
             let style = if i == selected {
                 theme.selected
             } else {

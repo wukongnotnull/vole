@@ -40,13 +40,28 @@ pub fn last_access_time(meta: &Metadata) -> Option<std::time::SystemTime> {
 
 /// 大文件榜跳过的小文件扩展名（对齐 mole `skipExtensions` 子集）。
 pub fn skip_large_file(path: &Path) -> bool {
-    let ext = path
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("");
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
     matches!(
         ext,
-        "go" | "js" | "ts" | "tsx" | "jsx" | "json" | "md" | "txt" | "yml" | "yaml" | "xml"
-            | "html" | "css" | "py" | "rb" | "java" | "rs" | "swift" | "c" | "cpp" | "h"
+        "go" | "js"
+            | "ts"
+            | "tsx"
+            | "jsx"
+            | "json"
+            | "md"
+            | "txt"
+            | "yml"
+            | "yaml"
+            | "xml"
+            | "html"
+            | "css"
+            | "py"
+            | "rb"
+            | "java"
+            | "rs"
+            | "swift"
+            | "c"
+            | "cpp"
+            | "h"
     )
 }

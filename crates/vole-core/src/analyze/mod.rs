@@ -51,7 +51,7 @@ fn format_access_time(t: std::time::SystemTime) -> String {
     let secs = dur.as_secs();
     let nanos = dur.subsec_nanos();
 
-  // 自 1970-01-01 起的 UTC RFC3339（无外部 crate）
+    // 自 1970-01-01 起的 UTC RFC3339（无外部 crate）
     let days = secs / 86400;
     let time_of_day = secs % 86400;
     let hour = time_of_day / 3600;

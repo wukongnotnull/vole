@@ -21,12 +21,7 @@ fn du_directory_size_inner(path: &Path) -> std::io::Result<u64> {
     }
 
     let path = path.to_path_buf();
-    let handle = thread::spawn(move || {
-        Command::new("du")
-            .args(["-skPx"])
-            .arg(&path)
-            .output()
-    });
+    let handle = thread::spawn(move || Command::new("du").args(["-skPx"]).arg(&path).output());
 
     let start = Instant::now();
     while !handle.is_finished() {

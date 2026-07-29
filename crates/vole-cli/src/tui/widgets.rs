@@ -38,4 +38,3 @@ pub fn line_pair(theme: &Theme, label: &str, value: &str) -> Line<'static> {
         Span::styled(value.to_string(), theme.value),
     ])
 }
-

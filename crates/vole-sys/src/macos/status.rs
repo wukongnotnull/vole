@@ -472,7 +472,10 @@ mod tests {
 
     #[test]
     fn parse_memory_pressure_levels() {
-        assert_eq!(parse_memory_pressure("system-wide memory pressure: normal"), "normal");
+        assert_eq!(
+            parse_memory_pressure("system-wide memory pressure: normal"),
+            "normal"
+        );
         assert_eq!(parse_memory_pressure("WARN level"), "warn");
         assert_eq!(parse_memory_pressure("CRITICAL"), "critical");
         assert_eq!(parse_memory_pressure("unknown"), "");

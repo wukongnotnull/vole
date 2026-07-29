@@ -167,12 +167,7 @@ fn walk_subtree(
     large_heap: &Arc<Mutex<LargeFileHeap>>,
     cancel: &CancelToken,
 ) -> io::Result<(u64, u64)> {
-    if should_fold_name(
-        root
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or(""),
-    ) {
+    if should_fold_name(root.file_name().and_then(|n| n.to_str()).unwrap_or("")) {
         return Ok((du_directory_size(root)?, 0));
     }
 

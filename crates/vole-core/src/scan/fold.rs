@@ -57,8 +57,20 @@ pub fn should_skip_root_child(root: &Path, name: &str) -> bool {
     if root == Path::new("/") {
         matches!(
             name,
-            "dev" | "tmp" | "private" | "cores" | "net" | "home" | "System" | "sbin" | "bin"
-                | "etc" | "var" | "Volumes" | "Network" | ".vol"
+            "dev"
+                | "tmp"
+                | "private"
+                | "cores"
+                | "net"
+                | "home"
+                | "System"
+                | "sbin"
+                | "bin"
+                | "etc"
+                | "var"
+                | "Volumes"
+                | "Network"
+                | ".vol"
         )
     } else {
         false

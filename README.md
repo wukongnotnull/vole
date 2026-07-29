@@ -35,3 +35,19 @@ v1 子命令：`status`、`analyze`、`clean`、`history`（另有 `completions`
 ```bash
 vole completions zsh > ~/.zfunc/_vole
 ```
+
+## 本地安装与验证（无需 Developer ID）
+
+```bash
+# 安装到 ~/.local/bin（见 install.sh）
+./install.sh
+export PATH="$HOME/.local/bin:$PATH"
+
+# 一键本地验证（CI 门禁 + release 构建 + 子系统脚本）
+bash scripts/verify-local.sh
+
+# 跳过交叉编译以加快迭代
+VERIFY_LOCAL_SKIP_CROSS=1 bash scripts/verify-local.sh
+```
+
+签名 / Homebrew 发布见 `docs/findings/2026-07-phase5-signing.md`（Developer ID 就绪后再做）。

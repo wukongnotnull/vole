@@ -51,6 +51,32 @@ enum Command {
         /// 将 plan JSON 写入文件。
         #[arg(long, conflicts_with = "apply")]
         plan_out: Option<PathBuf>,
+        /// 交互式管理受保护路径白名单（对齐 mole `clean --whitelist`）。
+        #[arg(
+            long,
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent"]
+        )]
+        whitelist: bool,
+        /// 向白名单添加路径 pattern（非交互）。
+        #[arg(
+            long = "whitelist-add",
+            value_name = "PATH",
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist"]
+        )]
+        whitelist_add: Option<String>,
+        /// 从白名单移除路径 pattern（非交互）。
+        #[arg(
+            long = "whitelist-remove",
+            value_name = "PATH",
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist"]
+        )]
+        whitelist_remove: Option<String>,
+        /// 列出当前白名单（非交互）。
+        #[arg(
+            long = "whitelist-list",
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist"]
+        )]
+        whitelist_list: bool,
     },
     /// 实时系统监控。
     Status {
@@ -82,6 +108,10 @@ fn main() {
             json,
             json_stream,
             plan_out,
+            whitelist,
+            whitelist_add,
+            whitelist_remove,
+            whitelist_list,
         } => {
             let code = clean::run_clean(clean::CleanOptions {
                 json,
@@ -89,6 +119,10 @@ fn main() {
                 plan_out,
                 apply_plan: apply,
                 permanent,
+                whitelist,
+                whitelist_add,
+                whitelist_remove,
+                whitelist_list,
             });
             std::process::exit(code);
         }

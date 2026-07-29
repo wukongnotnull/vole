@@ -1,6 +1,6 @@
-//! `vole clean` plan / apply 接线。
+//! `vole clean` plan / apply / whitelist 接线。
 
-use std::io::{self, IsTerminal, Write};
+use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::PathBuf;
 use std::thread;
 
@@ -13,6 +13,7 @@ use vole_core::ops::{
 };
 use vole_core::protection::AppProtection;
 use vole_core::rules::{default_rules_dir, load_rules_from_dir, LoadError};
+use vole_core::units;
 use vole_core::vole_proto::{Plan as ProtoPlan, Report, StreamEvent, SCHEMA_VERSION};
 use vole_core::whitelist;
 
@@ -24,6 +25,19 @@ pub struct CleanOptions {
     pub plan_out: Option<PathBuf>,
     pub apply_plan: Option<PathBuf>,
     pub permanent: bool,
+    pub whitelist: bool,
+    pub whitelist_add: Option<String>,
+    pub whitelist_remove: Option<String>,
+    pub whitelist_list: bool,
+}
+
+impl CleanOptions {
+    fn is_whitelist_command(&self) -> bool {
+        self.whitelist
+            || self.whitelist_list
+            || self.whitelist_add.is_some()
+            || self.whitelist_remove.is_some()
+    }
 }
 
 pub fn run_clean(opts: CleanOptions) -> i32 {
@@ -38,6 +52,10 @@ pub fn run_clean(opts: CleanOptions) -> i32 {
 }
 
 fn run_clean_inner(opts: CleanOptions) -> io::Result<()> {
+    if opts.is_whitelist_command() {
+        return run_whitelist(&opts);
+    }
+
     let _lock = try_lock_clean().map_err(map_mutex_error)?;
 
     if let Some(ref plan_path) = opts.apply_plan {
@@ -232,12 +250,124 @@ fn print_human_report(report: &Report) {
         "Apply: {} succeeded, {} skipped, {} failed",
         report.succeeded, report.skipped, report.failed
     );
-    if report.trashed_bytes > 0 || report.deleted_bytes > 0 {
-        println!(
-            "  trashed {} bytes, permanently deleted {} bytes",
-            report.trashed_bytes, report.deleted_bytes
-        );
+    if report.trashed_bytes > 0 {
+        println!("移入废纸篓   {}", units::bytes_bin(report.trashed_bytes));
     }
+    if report.deleted_bytes > 0 {
+        println!("永久删除     {}", units::bytes_bin(report.deleted_bytes));
+    }
+}
+
+fn run_whitelist(opts: &CleanOptions) -> io::Result<()> {
+    if let Some(path) = &opts.whitelist_add {
+        whitelist::add_clean(path)?;
+        println!("已添加白名单: {path}");
+        return Ok(());
+    }
+    if let Some(path) = &opts.whitelist_remove {
+        if whitelist::remove_clean(path)? {
+            println!("已移除白名单: {path}");
+        } else {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                format!("白名单中未找到: {path}"),
+            ));
+        }
+        return Ok(());
+    }
+    if opts.whitelist_list {
+        let patterns = whitelist::load_clean()?;
+        if should_use_json(opts.json) {
+            let json = serde_json::to_string(&patterns).map_err(io::Error::other)?;
+            println!("{json}");
+        } else {
+            print_whitelist_list(&patterns);
+        }
+        return Ok(());
+    }
+    if opts.whitelist {
+        if io::stdin().is_terminal() {
+            return run_whitelist_interactive();
+        }
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "非交互环境请使用 --whitelist-add、--whitelist-remove 或 --whitelist-list",
+        ));
+    }
+    Ok(())
+}
+
+fn print_whitelist_list(patterns: &[String]) {
+    if patterns.is_empty() {
+        println!("白名单为空");
+        return;
+    }
+    println!("白名单（受保护路径）:");
+    for (idx, pattern) in patterns.iter().enumerate() {
+        println!("  {}. {pattern}", idx + 1);
+    }
+}
+
+fn run_whitelist_interactive() -> io::Result<()> {
+    let stdin = io::stdin();
+    let mut stdout = io::stdout();
+    loop {
+        let patterns = whitelist::load_clean()?;
+        print_whitelist_list(&patterns);
+        writeln!(stdout)?;
+        write!(stdout, "[a] 添加  [r] 移除  [q] 退出 > ")?;
+        stdout.flush()?;
+
+        let mut action = String::new();
+        stdin.lock().read_line(&mut action)?;
+        let action = action.trim().to_lowercase();
+        match action.as_str() {
+            "q" | "quit" | "" => break,
+            "a" | "add" => {
+                write!(stdout, "路径 pattern: ")?;
+                stdout.flush()?;
+                let mut path = String::new();
+                stdin.lock().read_line(&mut path)?;
+                let path = path.trim();
+                if path.is_empty() {
+                    continue;
+                }
+                whitelist::add_clean(path)?;
+                println!("已添加: {path}");
+            }
+            "r" | "remove" => {
+                if patterns.is_empty() {
+                    println!("白名单为空，无可移除项");
+                    continue;
+                }
+                write!(stdout, "编号或路径: ")?;
+                stdout.flush()?;
+                let mut input = String::new();
+                stdin.lock().read_line(&mut input)?;
+                let input = input.trim();
+                if input.is_empty() {
+                    continue;
+                }
+                let target = if let Ok(num) = input.parse::<usize>() {
+                    patterns.get(num.saturating_sub(1)).map(String::as_str)
+                } else {
+                    Some(input)
+                };
+                let Some(pattern) = target else {
+                    println!("无效编号: {input}");
+                    continue;
+                };
+                if whitelist::remove_clean(pattern)? {
+                    println!("已移除: {pattern}");
+                } else {
+                    println!("未找到: {pattern}");
+                }
+            }
+            _ => println!("未知操作，请输入 a / r / q"),
+        }
+        writeln!(stdout)?;
+    }
+    Ok(())
 }
 
 fn zero_report() -> Report {

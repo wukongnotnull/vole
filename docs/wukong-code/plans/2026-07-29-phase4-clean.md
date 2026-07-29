@@ -44,7 +44,7 @@
 
 - [x] Task 12: `vole clean --plan --json-stream`
 - [x] Task 13: `vole clean --apply <plan>` + TTL
-- [ ] Task 14: 交互 whitelist + 报告 NDJSON
+- [x] Task 14: 交互 whitelist + 报告 NDJSON
 
 ---
 

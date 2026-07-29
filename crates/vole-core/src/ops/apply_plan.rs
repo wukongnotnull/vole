@@ -5,7 +5,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 use vole_sys::Trash;
 
-use crate::delete::{mole_delete, DeleteMode, DeletionLogger, MoleDeleteError, MoleDeleteOptions};
+use crate::delete::{
+    mole_delete_verified, DeleteMode, DeletionLogger, MoleDeleteError, MoleDeleteOptions,
+};
 use crate::oplog::OperationLogger;
 use crate::protection::AppProtection;
 use crate::safety::{
@@ -138,6 +140,7 @@ pub fn apply_plan(
         let path = entry.path.display().to_string();
         let identity = proto_identity(entry);
 
+        // 策略闸口先过一遍，再进入带身份重验的删除路径。
         if let Err(err) = verify_plan_entry_for_apply(&path, &identity, ctx.protection) {
             skipped += 1;
             let reason = skip_reason_for_apply(&err);
@@ -157,8 +160,9 @@ pub fn apply_plan(
             needs_sudo: false,
         };
 
-        match mole_delete(
+        match mole_delete_verified(
             &path,
+            &identity,
             ctx.protection,
             ctx.whitelist_patterns,
             delete_opts,
@@ -166,14 +170,34 @@ pub fn apply_plan(
             ctx.deletion_log,
             ctx.oplog,
         ) {
-            Ok(()) => {
+            Ok(outcome) => {
                 succeeded += 1;
                 match delete_mode {
-                    DeleteMode::Trash => trashed_bytes += entry.size,
-                    DeleteMode::Permanent => deleted_bytes += entry.size,
+                    DeleteMode::Trash => trashed_bytes += outcome.bytes,
+                    DeleteMode::Permanent => deleted_bytes += outcome.bytes,
                 }
             }
+            Err(MoleDeleteError::Whitelisted) => {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::Whitelisted,
+                    });
+                }
+                skip_tracker.record(SkipReason::Whitelisted, &entry.rule_id);
+            }
             Err(MoleDeleteError::Rejected) => {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::NeedsPrivilege,
+                    });
+                }
+                skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+            }
+            Err(MoleDeleteError::Vanished) | Err(MoleDeleteError::IdentityMismatch) => {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -461,6 +485,46 @@ mod tests {
         assert_eq!(report.deleted_bytes, 4);
         assert!(!file.exists());
         assert!(fs::read_dir(&trash_dir).unwrap().next().is_none());
+
+        std::env::remove_var("MOLE_TEST_TRASH_DIR");
+        std::env::remove_var("MOLE_DELETE_LOG");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn replaced_inode_before_delete_is_skipped_not_succeeded() {
+        let _guard = test_env::lock();
+        let root = scratch("toctou-replace");
+        let file = root.join("victim.txt");
+        fs::write(&file, b"planned").unwrap();
+        let mut entry = plan_entry(&file, "rule-toctou");
+        // 伪造计划身份，模拟 plan 生成后目标被替换。
+        entry.ino = entry.ino.wrapping_add(1);
+        let plan = fresh_plan(vec![entry]);
+
+        let trash_dir = root.join("Trash");
+        fs::create_dir_all(&trash_dir).unwrap();
+        std::env::set_var("MOLE_TEST_TRASH_DIR", &trash_dir);
+        std::env::set_var("MOLE_DELETE_LOG", root.join("deletions.log"));
+
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+
+        let report = run_apply(
+            &plan,
+            &protection,
+            apply_opts(false),
+            &deletion_log,
+            &mut oplog,
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert_eq!(report.trashed_bytes, 0);
+        assert!(file.exists());
 
         std::env::remove_var("MOLE_TEST_TRASH_DIR");
         std::env::remove_var("MOLE_DELETE_LOG");

@@ -42,3 +42,16 @@ pub fn size_kb_field(size: PathSizeKb) -> String {
         PathSizeKb::Unknown => "unknown".into(),
     }
 }
+
+/// 删除前实测字节数（文件用 metadata，目录用 du）；失败返回 `None`。
+pub fn measure_path_size_bytes(path: &str) -> Option<u64> {
+    let path = Path::new(path);
+    let meta = fs::symlink_metadata(path).ok()?;
+    if meta.is_file() || meta.file_type().is_symlink() {
+        return Some(meta.len());
+    }
+    if meta.is_dir() {
+        return du_directory_size(path).ok();
+    }
+    None
+}

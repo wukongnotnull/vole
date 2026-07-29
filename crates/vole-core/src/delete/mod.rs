@@ -13,12 +13,12 @@ pub use config::{
 };
 pub use deletion_log::DeletionLogger;
 pub use mole_delete::{
-    mole_delete, mole_delete_with_env_mode, warn_invalid_delete_mode_once, MoleDeleteError,
-    MoleDeleteOptions,
+    mole_delete, mole_delete_verified, mole_delete_with_env_mode, warn_invalid_delete_mode_once,
+    DeleteOutcome, MoleDeleteError, MoleDeleteOptions,
 };
 pub use safe_remove::{
     safe_remove, safe_remove_symlink, FsRemover, PathRemover, SafeRemoveError, SafeRemoveOptions,
     ShellRemover,
 };
-pub use size::{measure_path_size_kb, PathSizeKb};
+pub use size::{measure_path_size_bytes, measure_path_size_kb, PathSizeKb};
 pub use trash::{move_to_trash, TrashMoveError};

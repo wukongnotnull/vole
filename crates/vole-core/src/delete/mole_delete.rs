@@ -8,14 +8,17 @@ use thiserror::Error;
 use vole_sys::Trash;
 
 use crate::oplog::OperationLogger;
-use crate::safety::{validate_path_for_deletion, PathProtection};
+use crate::safety::{
+    validate_path_for_deletion, verify_plan_entry, PathProtection, PlanEntryIdentity,
+    PlanVerifyError,
+};
 
 use super::config::{dry_run_enabled, test_no_auth, DeleteMode, DeleteModeParseError};
 use super::deletion_log::DeletionLogger;
 use super::safe_remove::{
     safe_remove, safe_remove_symlink, FsRemover, SafeRemoveError, SafeRemoveOptions,
 };
-use super::size::{measure_path_size_kb, size_kb_field};
+use super::size::{measure_path_size_bytes, measure_path_size_kb, size_kb_field};
 use super::trash::{move_to_trash, TrashMoveError};
 
 static INVALID_MODE_WARNED: AtomicBool = AtomicBool::new(false);
@@ -27,12 +30,24 @@ pub enum MoleDeleteError {
     InvalidMode,
     #[error("path rejected by policy")]
     Rejected,
+    #[error("whitelisted path")]
+    Whitelisted,
+    #[error("plan identity mismatch")]
+    IdentityMismatch,
+    #[error("path vanished")]
+    Vanished,
     #[error("sudo required but blocked in test mode")]
     SudoBlockedTestMode,
     #[error("trash unavailable")]
     TrashUnavailable,
     #[error("safe remove failed")]
     SafeRemove(#[from] SafeRemoveError),
+}
+
+/// 删除成功时回传实测体积，供 Report 分口径统计。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DeleteOutcome {
+    pub bytes: u64,
 }
 
 pub struct MoleDeleteOptions {
@@ -70,6 +85,54 @@ pub fn mole_delete(
     deletion_log: &DeletionLogger,
     oplog: &mut OperationLogger,
 ) -> Result<(), MoleDeleteError> {
+    mole_delete_inner(
+        path,
+        None,
+        protection,
+        whitelist_patterns,
+        options,
+        trash,
+        deletion_log,
+        oplog,
+    )
+    .map(|_| ())
+}
+
+/// apply 路径：在删除 syscall 前立刻重验 `(dev, ino, mtime)`，缩小 TOCTOU 窗口。
+#[allow(clippy::too_many_arguments)]
+pub fn mole_delete_verified(
+    path: &str,
+    expect: &PlanEntryIdentity,
+    protection: &dyn PathProtection,
+    whitelist_patterns: &[String],
+    options: MoleDeleteOptions,
+    trash: &dyn Trash,
+    deletion_log: &DeletionLogger,
+    oplog: &mut OperationLogger,
+) -> Result<DeleteOutcome, MoleDeleteError> {
+    mole_delete_inner(
+        path,
+        Some(expect),
+        protection,
+        whitelist_patterns,
+        options,
+        trash,
+        deletion_log,
+        oplog,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn mole_delete_inner(
+    path: &str,
+    expect: Option<&PlanEntryIdentity>,
+    protection: &dyn PathProtection,
+    whitelist_patterns: &[String],
+    options: MoleDeleteOptions,
+    trash: &dyn Trash,
+    deletion_log: &DeletionLogger,
+    oplog: &mut OperationLogger,
+) -> Result<DeleteOutcome, MoleDeleteError> {
     if path.is_empty() {
         return Err(MoleDeleteError::Rejected);
     }
@@ -80,12 +143,25 @@ pub fn mole_delete(
     };
 
     if !path_exists_for_mole_delete(path) {
-        return Ok(());
+        // 无身份约束时保持 mole 兼容 no-op；apply 身份路径必须报 vanished。
+        return if expect.is_some() {
+            Err(MoleDeleteError::Vanished)
+        } else {
+            Ok(DeleteOutcome { bytes: 0 })
+        };
     }
 
     if validate_path_for_deletion(path, protection).is_err() {
         deletion_log.log(mode_label, "0", "rejected", path);
         return Err(MoleDeleteError::Rejected);
+    }
+
+    if let Some(identity) = expect {
+        // 紧挨删除前重验，避免 rename 竞态把受保护对象换到计划路径上。
+        if let Err(err) = verify_plan_entry(path, identity) {
+            deletion_log.log(mode_label, "0", "identity-mismatch", path);
+            return Err(map_verify_error(err));
+        }
     }
 
     if options.needs_sudo {
@@ -94,21 +170,30 @@ pub fn mole_delete(
             deletion_log.log(mode_label, &size, "sudo-blocked-test-mode", path);
             return Err(MoleDeleteError::SudoBlockedTestMode);
         }
-        // Privileged trash staging is Phase 4d; fail closed for now.
         deletion_log.log(mode_label, "unknown", "sudo-not-implemented", path);
         return Err(MoleDeleteError::SudoBlockedTestMode);
     }
 
     let size = measure_path_size_kb(path);
     let size_field = size_kb_field(size);
+    let bytes = measure_path_size_bytes(path).unwrap_or(0);
 
     if options.dry_run {
         deletion_log.log(mode_label, &size_field, "dry-run", path);
-        return Ok(());
+        return Ok(DeleteOutcome { bytes });
+    }
+
+    // 再验一次：测量与删除之间仍可能被替换。
+    if let Some(identity) = expect {
+        if let Err(err) = verify_plan_entry(path, identity) {
+            deletion_log.log(mode_label, &size_field, "identity-mismatch", path);
+            return Err(map_verify_error(err));
+        }
     }
 
     if options.mode == DeleteMode::Trash {
-        return mole_delete_trash(path, &size_field, trash, deletion_log, oplog);
+        mole_delete_trash(path, &size_field, trash, deletion_log, oplog)?;
+        return Ok(DeleteOutcome { bytes });
     }
 
     mole_delete_permanent(
@@ -119,7 +204,19 @@ pub fn mole_delete(
         &size_field,
         deletion_log,
         oplog,
-    )
+    )?;
+    Ok(DeleteOutcome { bytes })
+}
+
+fn map_verify_error(err: PlanVerifyError) -> MoleDeleteError {
+    match err {
+        PlanVerifyError::StatFailed(_) => MoleDeleteError::Vanished,
+        PlanVerifyError::InodeMismatch
+        | PlanVerifyError::MtimeMismatch
+        | PlanVerifyError::CrossDevice
+        | PlanVerifyError::SegmentOpen(_) => MoleDeleteError::IdentityMismatch,
+        _ => MoleDeleteError::IdentityMismatch,
+    }
 }
 
 fn mole_delete_trash(
@@ -179,7 +276,11 @@ fn mole_delete_permanent(
 
     let status = if result.is_ok() { "ok" } else { "error" };
     deletion_log.log(mode_label, size_field, status, path);
-    result.map_err(MoleDeleteError::from)
+    match result {
+        Ok(()) => Ok(()),
+        Err(SafeRemoveError::Whitelisted) => Err(MoleDeleteError::Whitelisted),
+        Err(e) => Err(MoleDeleteError::SafeRemove(e)),
+    }
 }
 
 fn path_exists_for_mole_delete(path: &str) -> bool {
@@ -196,7 +297,7 @@ fn warn_trash_unavailable_once() {
         return;
     }
     eprintln!(
-        "Error: Trash unavailable; refusing permanent delete. Use --permanent to delete immediately."
+        "Error: Trash unavailable; refusing permanent delete. Retry after fixing Trash permissions, or rescan."
     );
 }
 

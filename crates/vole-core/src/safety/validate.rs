@@ -80,6 +80,9 @@ pub fn validate_path_for_deletion(
                 if is_critical_deletion_path(&resolved) {
                     return Err(ValidationError::SymlinkToCritical);
                 }
+                if protection.should_protect(&resolved) {
+                    return Err(ValidationError::SymlinkToCritical);
+                }
             }
         }
     }

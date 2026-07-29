@@ -3,8 +3,6 @@
 //! JSON files under `tests/fixtures/clean/` are produced by
 //! `scripts/extract-clean-fixtures.py` from Mole bats tests.
 
-use std::path::Path;
-
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -37,8 +35,9 @@ pub struct CleanFixture {
     pub expect_not_selected: Vec<String>,
 }
 
+#[cfg(test)]
 impl CleanFixture {
-    pub fn load(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn load(path: &std::path::Path) -> Result<Self, Box<dyn std::error::Error>> {
         let text = std::fs::read_to_string(path)?;
         let fx: Self = serde_json::from_str(&text)?;
         Ok(fx)

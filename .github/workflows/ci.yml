@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    # macOS runner 是必需的：vole-sys 对非 macOS target 会 compile_error!。
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: License and attribution
+        run: ./scripts/check-license.sh
+
+      - name: Crate dependency direction
+        run: ./scripts/check-dep-direction.sh
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --workspace
+
+      - name: Cross-compile aarch64
+        run: |
+          rustup target add aarch64-apple-darwin
+          cargo build --workspace --target aarch64-apple-darwin
+
+      - name: Cross-compile x86_64
+        run: |
+          rustup target add x86_64-apple-darwin
+          cargo build --workspace --target x86_64-apple-darwin
+
+  # 一致性测试的 apply 阶段用例故意不在 CI 里跑。
+  # 它们会真实删除文件，只应在设计文档 7.0 描述的一次性环境中执行，
+  # 跑完回滚快照。不要把它们加进上面的 job。
+  conformance-plan-only:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Placeholder until Task 8 lands the harness
+        run: echo "harness 在 Task 8 接入"

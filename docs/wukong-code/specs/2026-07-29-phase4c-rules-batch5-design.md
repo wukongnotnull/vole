@@ -42,4 +42,4 @@
 
 ## 4. 后续（Phase 4c+）
 
-剩余 ≈ 310+ 未移植 `all` 候选 + guard/custom 类；v1 报告提示「继续用 Mole」或开 Batch 6+ 扩面。
+v1 收官总结见 `docs/findings/2026-07-phase4c-v1-summary.md`。剩余 ≈310+ 未移植 `all` 候选 + guard/custom 类；v1 报告提示「继续用 Mole」或开 Batch 6+ 扩面。

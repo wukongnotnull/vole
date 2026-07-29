@@ -33,7 +33,7 @@
 
 - [x] Task 7: 规则 TOML schema + 策略 trait（glob、mtime、pgrep…）
 - [x] Task 8: guard 与路径语义（设计 6.2 八条）
-- [ ] Task 9: `Orchestrator` 扩展为 plan 生成管线
+- [x] Task 9: `Orchestrator` 扩展为 plan 生成管线
 
 ### 4c 规则移植（~4–6 周，v1 Top 100–150）
 

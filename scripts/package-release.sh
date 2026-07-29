@@ -18,6 +18,14 @@ build_arch() {
   cargo build -q -p vole-cli --release --target "$arch"
 }
 
+maybe_codesign() {
+  local bin_path="$1"
+  if [[ -z "${VOLE_CODESIGN_IDENTITY:-}" ]]; then
+    return 0
+  fi
+  VOLE_BIN="$bin_path" bash "$ROOT/scripts/sign-and-notarize.sh"
+}
+
 package_arch() {
   local arch="$1"
   local name="vole-${VERSION}-${arch}"
@@ -25,6 +33,7 @@ package_arch() {
   rm -rf "$stage"
   mkdir -p "$stage/bin" "$stage/share/vole/rules"
   install -m 755 "target/$arch/release/vole" "$stage/bin/vole"
+  maybe_codesign "$stage/bin/vole"
   cp "$RULES_SRC"/*.toml "$stage/share/vole/rules/"
   tar -C "$OUT_DIR" -czf "$OUT_DIR/${name}.tar.gz" "$name"
   rm -rf "$stage"

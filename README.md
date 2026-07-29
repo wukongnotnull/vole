@@ -53,19 +53,29 @@ export PATH="$HOME/.local/bin:$PATH"
 export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"
 ```
 
-**预编译包**（GitHub Release [v0.0.2](https://github.com/wukongnotnull/vole/releases/tag/v0.0.2)，ad-hoc 未公证）：
+**预编译包**（GitHub Release [v0.0.7](https://github.com/wukongnotnull/vole/releases/tag/v0.0.7)，ad-hoc 未公证）：
 
 ```bash
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v0.0.2/vole-0.0.2-aarch64-apple-darwin.tar.gz
-tar xzf vole-0.0.2-aarch64-apple-darwin.tar.gz
-install -m 755 vole-0.0.2-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-mkdir -p ~/.local/share/vole && cp -R vole-0.0.2-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v0.0.7/vole-0.0.7-aarch64-apple-darwin.tar.gz
+tar xzf vole-0.0.7-aarch64-apple-darwin.tar.gz
+install -m 755 vole-0.0.7-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+mkdir -p ~/.local/share/vole && cp -R vole-0.0.7-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"
 ```
 
 Intel 将 `aarch64-apple-darwin` 换为 `x86_64-apple-darwin`。Gatekeeper 拦截：`xattr -cr ~/.local/bin/vole`。
 
-**Homebrew（草稿）**：`brew install --HEAD ./HomebrewFormula/vole.rb`
+**Homebrew（stable v0.0.7）**：
+
+```bash
+brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
+brew install vole
+export VOLE_RULES_DIR="$(brew --prefix vole)/share/vole/rules"
+```
+
+本地仓库开发：`brew tap wukongnotnull/vole "$(pwd)" && brew install wukongnotnull/vole/vole`
+
+源码 HEAD：`brew install --HEAD wukongnotnull/vole/vole`
 
 ### 使用
 

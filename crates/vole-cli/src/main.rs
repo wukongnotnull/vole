@@ -2,6 +2,7 @@
 #![forbid(unsafe_code)]
 
 mod clean;
+mod history_cmd;
 mod signals;
 mod terminal;
 mod tui;
@@ -95,6 +96,15 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    /// 查看操作历史与删除审计（对齐 mole history）。
+    History {
+        /// 输出 JSON。
+        #[arg(long)]
+        json: bool,
+        /// 最多展示的 session / deletion 条数（1..=200，默认 20）。
+        #[arg(long, default_value_t = 20)]
+        limit: u32,
+    },
 }
 
 fn main() {
@@ -137,6 +147,9 @@ fn main() {
                 eprintln!("vole analyze: {}", e);
                 std::process::exit(1);
             }
+        }
+        Command::History { json, limit } => {
+            std::process::exit(history_cmd::run(json, limit));
         }
     }
 }

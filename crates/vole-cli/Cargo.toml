@@ -16,3 +16,6 @@ serde_json.workspace = true
 ratatui = "0.30"
 crossterm = "0.28"
 signal-hook = "0.3"
+
+[dev-dependencies]
+tempfile = "3"

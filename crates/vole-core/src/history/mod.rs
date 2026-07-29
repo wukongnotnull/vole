@@ -9,6 +9,36 @@ pub use json::{
     DEFAULT_LIMIT, MAX_LIMIT, normalize_limit,
 };
 
+use std::path::PathBuf;
+
+/// Default operations.log path (mole-compatible env overrides).
+pub fn operations_log_path() -> PathBuf {
+    if let Some(p) = std::env::var_os("MOLE_OPERATIONS_LOG") {
+        return PathBuf::from(p);
+    }
+    if let Some(p) = std::env::var_os("OPERATIONS_LOG_FILE") {
+        return PathBuf::from(p);
+    }
+    std::env::var_os("HOME")
+        .map(|h| PathBuf::from(h).join("Library/Logs/mole/operations.log"))
+        .unwrap_or_else(|| PathBuf::from("Library/Logs/mole/operations.log"))
+}
+
+/// Default deletions.log path (shares delete config / MOLE_DELETE_LOG).
+pub fn deletions_log_path() -> PathBuf {
+    crate::delete::deletion_log_path()
+}
+
+/// Load from default mole log paths.
+pub fn load_default() -> HistoryReport {
+    HistoryReport::load(operations_log_path(), deletions_log_path())
+}
+
+/// Human-readable text aligned with mole `history_render_text` sections.
+pub fn render_text(report: &HistoryReport, limit: u32) -> String {
+    json::render_text(report, limit)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

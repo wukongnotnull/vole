@@ -1,0 +1,9 @@
+{
+  "id": "smoke",
+  "entries": [
+    { "kind": "dir", "path": "Library/Caches/com.example.app" },
+    { "kind": "file", "path": "Library/Caches/com.example.app/blob", "size_kb": 64 },
+    { "kind": "dir", "path": "Library/Logs/com.example.app" },
+    { "kind": "file", "path": "Library/Logs/com.example.app/run.log", "size_kb": 8 }
+  ]
+}

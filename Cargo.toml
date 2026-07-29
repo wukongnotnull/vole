@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/vole-proto", "crates/vole-sys", "crates/vole-core", "crates/vole-cli"]
+members = ["crates/vole-proto", "crates/vole-sys", "crates/vole-core", "crates/vole-cli", "conformance"]
 
 [workspace.package]
 version = "0.0.1"

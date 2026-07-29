@@ -31,11 +31,17 @@ enum Command {
     /// 清理缓存与残留文件。
     Clean {
         /// 只产出候选集，不改动任何文件（默认行为；对齐 mole --dry-run）。
-        #[arg(long)]
+        #[arg(long, conflicts_with = "apply")]
         plan: bool,
         /// 同 `--plan`。
-        #[arg(long = "dry-run", short = 'n')]
+        #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
         dry_run: bool,
+        /// 执行 plan 文件中的条目（须通过 TTL 与 TOCTOU 重验）。
+        #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
+        apply: Option<PathBuf>,
+        /// 永久删除而非移入废纸篓（仅与 `--apply` 联用）。
+        #[arg(long, requires = "apply")]
+        permanent: bool,
         /// 输出 JSON 而非人类可读文本。
         #[arg(long)]
         json: bool,
@@ -43,7 +49,7 @@ enum Command {
         #[arg(long = "json-stream")]
         json_stream: bool,
         /// 将 plan JSON 写入文件。
-        #[arg(long)]
+        #[arg(long, conflicts_with = "apply")]
         plan_out: Option<PathBuf>,
     },
     /// 实时系统监控。
@@ -71,6 +77,8 @@ fn main() {
         Command::Clean {
             plan: _,
             dry_run: _,
+            apply,
+            permanent,
             json,
             json_stream,
             plan_out,
@@ -79,6 +87,8 @@ fn main() {
                 json,
                 json_stream,
                 plan_out,
+                apply_plan: apply,
+                permanent,
             });
             std::process::exit(code);
         }

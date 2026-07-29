@@ -926,3 +926,161 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+
+# Batch 5 — Phase 4c v1 cap batch (+24 → ~150 total)
+[[rule]]
+id = "miaoyan-cache"
+category = "app-caches"
+label = "MiaoYan cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.tw93.MiaoYan/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "klee-cache"
+category = "app-caches"
+label = "Klee cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.klee.desktop/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "quark-video-cache"
+category = "app-caches"
+label = "Quark video cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Quark/Cache/videoCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "folo-cache"
+category = "app-caches"
+label = "Folo cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/is.follow/Data/Library/Application Support/Folo/Cache/Cache_Data/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "plex-cache"
+category = "app-caches"
+label = "Plex cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/tv.plex.player.desktop"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "netease-music-cache"
+category = "app-caches"
+label = "NetEase Music cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.netease.163music"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qq-music-cache"
+category = "app-caches"
+label = "QQ Music cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.tencent.QQMusic/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qq-music-mac-cache"
+category = "app-caches"
+label = "QQ Music Mac cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.tencent.QQMusicMac/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "iina-cache"
+category = "app-caches"
+label = "IINA cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.colliderli.iina"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "vlc-cache"
+category = "app-caches"
+label = "VLC cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/org.videolan.vlc"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "bilibili-cache"
+category = "app-caches"
+label = "Bilibili cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/tv.danmaku.bili/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "stremio-cache"
+category = "app-caches"
+label = "Stremio cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/smart.stremio*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+

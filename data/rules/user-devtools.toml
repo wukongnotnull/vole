@@ -641,3 +641,161 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+
+# Batch 5 — Phase 4c v1 cap batch (+24 → ~150 total)
+[[rule]]
+id = "android-build-cache"
+category = "user-devtools"
+label = "Android build cache"
+platform = ["macos"]
+paths = ["~/.android/build-cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "android-sdk-cache"
+category = "user-devtools"
+label = "Android SDK cache"
+platform = ["macos"]
+paths = ["~/.android/cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "xcode-ib-cache"
+category = "user-devtools"
+label = "Xcode Interface Builder cache"
+platform = ["macos"]
+paths = ["~/Library/Developer/Xcode/UserData/IB Support/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "expo-native-modules-cache"
+category = "user-devtools"
+label = "Expo native modules cache"
+platform = ["macos"]
+paths = ["~/.expo/native-modules-cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "expo-schema-cache"
+category = "user-devtools"
+label = "Expo schema cache"
+platform = ["macos"]
+paths = ["~/.expo/schema-cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "expo-template-cache"
+category = "user-devtools"
+label = "Expo template cache"
+platform = ["macos"]
+paths = ["~/.expo/template-cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "expo-versions-cache"
+category = "user-devtools"
+label = "Expo versions cache"
+platform = ["macos"]
+paths = ["~/.expo/versions-cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "gradle-build-cache"
+category = "user-devtools"
+label = "Gradle build cache"
+platform = ["macos"]
+paths = ["~/.gradle/caches/build-cache-*/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "composer-cache-legacy"
+category = "user-devtools"
+label = "PHP Composer cache (legacy)"
+platform = ["macos"]
+paths = ["~/.composer/cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "composer-cache"
+category = "user-devtools"
+label = "PHP Composer cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/composer/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "deno-cache"
+category = "user-devtools"
+label = "Deno cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/deno/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "terraform-cache"
+category = "user-devtools"
+label = "Terraform cache"
+platform = ["macos"]
+paths = ["~/.cache/terraform/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+

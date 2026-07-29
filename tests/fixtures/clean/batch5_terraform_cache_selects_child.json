@@ -1,0 +1,14 @@
+{
+  "id": "batch5_terraform_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "terraform-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/.cache/terraform/plugin-cache"
+    }
+  ],
+  "expect_selected": [
+    "~/.cache/terraform/plugin-cache|Terraform cache"
+  ],
+  "expect_not_selected": []
+}

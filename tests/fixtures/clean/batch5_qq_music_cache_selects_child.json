@@ -1,0 +1,14 @@
+{
+  "id": "batch5_qq_music_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "qq-music-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.tencent.QQMusic/cache"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.tencent.QQMusic/cache|QQ Music cache"
+  ],
+  "expect_not_selected": []
+}

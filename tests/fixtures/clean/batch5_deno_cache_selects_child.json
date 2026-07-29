@@ -1,0 +1,14 @@
+{
+  "id": "batch5_deno_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "deno-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/deno/gen"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/deno/gen|Deno cache"
+  ],
+  "expect_not_selected": []
+}

@@ -1,0 +1,14 @@
+{
+  "id": "batch5_xcode_ib_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "xcode-ib-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Developer/Xcode/UserData/IB Support/storyboard"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Developer/Xcode/UserData/IB Support/storyboard|Xcode Interface Builder cache"
+  ],
+  "expect_not_selected": []
+}

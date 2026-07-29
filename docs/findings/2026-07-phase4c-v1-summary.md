@@ -141,7 +141,7 @@ cargo clippy -p vole-core -- -D warnings
 
 ### C. 产品化 clean 报告
 
-- plan 输出中对未覆盖 mole 类别给出「继续用 Mole」提示（若尚未实现）
+- plan 输出中对未覆盖 mole 类别给出「继续用 Mole」提示（**已实现**：`Plan.coverage_note` / `done.report.coverage_note`；人类 plan  footer 见 stderr）
 - 可选：`VOLE_TEST_ROOT` 双跑纳入 CI disposable job（非阻塞）
 
 ### D. 其他 Phase

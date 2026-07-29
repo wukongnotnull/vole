@@ -65,6 +65,7 @@ mod tests {
                 skipped_by_reason: vec![],
                 trashed_bytes: 0,
                 deleted_bytes: 0,
+                coverage_note: None,
             },
         };
         let v = serde_json::to_value(&e).unwrap();

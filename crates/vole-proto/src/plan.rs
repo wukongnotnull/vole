@@ -49,6 +49,9 @@ pub struct Plan {
     pub created_at: SystemTime,
     pub ttl_secs: u64,
     pub entries: Vec<PlanEntry>,
+    /// plan 阶段：规则覆盖说明（可选；Phase 4c v1 未移植类别提示）。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub coverage_note: Option<String>,
 }
 
 #[cfg(test)]
@@ -62,6 +65,7 @@ mod tests {
             schema_version: SCHEMA_VERSION,
             created_at: UNIX_EPOCH + Duration::from_secs(1_700_000_000),
             ttl_secs: 900,
+            coverage_note: None,
             entries: vec![PlanEntry {
                 id: "chrome-cache-0".into(),
                 path: PathBuf::from("/Users/test/Library/Caches/Google"),

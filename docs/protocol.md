@@ -26,11 +26,13 @@
 ## Plan 文件
 
 JSON 对象：`schema_version`, `created_at`, `ttl_secs`（默认 900）, `entries[]`。
+可选 `coverage_note`（字符串）：plan 阶段规则覆盖说明（未移植 mole 类别提示）。
 每条 entry：`id`, `path`, `label`, `size`, `rule_id`, `skip_reason`, `dev`, `ino`, `mtime`（Unix 秒）。
 
 ## Report
 
 `succeeded`, `skipped`, `failed`, `skipped_by_reason[]`, `trashed_bytes`, `deleted_bytes`。
+可选 `coverage_note`（字符串）：plan 阶段 `--json-stream` 的 `done.report` 可携带与 Plan 相同的覆盖说明；apply 阶段通常省略。
 
 废纸篓语义见设计文档 5.7——不得用单一「freed」字段。
 

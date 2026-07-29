@@ -37,7 +37,7 @@
 
 ### 4c 规则移植（~4–6 周，v1 Top 100–150）
 
-- [ ] Task 10: bats → JSON fixture 抽取脚本
+- [x] Task 10: bats → JSON fixture 抽取脚本
 - [ ] Task 11: 首批规则批次 + `verify-clean-candidates.sh` 双跑 diff
 
 ### 4d plan/apply 与 CLI（~1 周）

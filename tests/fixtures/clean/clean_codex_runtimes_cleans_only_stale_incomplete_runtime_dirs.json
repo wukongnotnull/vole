@@ -1,0 +1,16 @@
+{
+  "id": "clean_codex_runtimes_cleans_only_stale_incomplete_runtime_dirs",
+  "source_bats": "third_party/mole-1.48.1/tests/clean_dev_caches.bats",
+  "source_test": "clean_codex_runtimes cleans only stale incomplete runtime dirs",
+  "fixture": [
+    {
+      "mkdir": "~/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin"
+    },
+    {
+      "mkdir": "~/.cache/codex-runtimes/incomplete-old"
+    }
+  ],
+  "expect_selected": [
+    "~/.cache/codex-runtimes/incomplete-old|Codex CLI runtimes"
+  ]
+}

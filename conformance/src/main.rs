@@ -4,6 +4,7 @@
 //! 这是预期结果——目的是证明链路通了，而不是证明两者一致。
 #![forbid(unsafe_code)]
 
+mod clean_fixture;
 mod fixture;
 mod guard;
 

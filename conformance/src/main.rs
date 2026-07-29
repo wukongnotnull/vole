@@ -53,8 +53,7 @@ fn load_fixture(path: &Path) -> LoadedFixture {
     let text = std::fs::read_to_string(path).unwrap_or_else(|e| {
         panic!("打不开 fixture {}: {e}", path.display());
     });
-    let value: serde_json::Value =
-        serde_json::from_str(&text).expect("fixture 不是合法 JSON");
+    let value: serde_json::Value = serde_json::from_str(&text).expect("fixture 不是合法 JSON");
     if value.get("fixture").is_some() {
         LoadedFixture::Clean(
             clean_fixture::CleanFixture::load(path).expect("CleanFixture 解析失败"),
@@ -62,10 +61,7 @@ fn load_fixture(path: &Path) -> LoadedFixture {
     } else if value.get("entries").is_some() {
         LoadedFixture::Legacy(serde_json::from_value(value).expect("Fixture 解析失败"))
     } else {
-        panic!(
-            "fixture {} 缺少 fixture[] 或 entries[]",
-            path.display()
-        );
+        panic!("fixture {} 缺少 fixture[] 或 entries[]", path.display());
     }
 }
 
@@ -218,9 +214,7 @@ fn report_clean_fixture(
         });
         let path = normalize_fixture_path(path);
 
-        let vole_ok = vole
-            .iter()
-            .any(|c| c.path == path && c.label == label);
+        let vole_ok = vole.iter().any(|c| c.path == path && c.label == label);
         let mole_ok = mole.iter().any(|c| c.path == path);
 
         if vole_ok {

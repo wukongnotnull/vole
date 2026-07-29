@@ -103,10 +103,11 @@ pub fn should_protect_path(path: &str, catalog: &ProtectionCatalog) -> bool {
     }
 
     // 6. Full-path pattern lists
-    if !container_cache && !is_explicit_clean_cache_path(path) {
-        if catalog.matches_cleanup_pattern(path) {
-            return true;
-        }
+    if !container_cache
+        && !is_explicit_clean_cache_path(path)
+        && catalog.matches_cleanup_pattern(path)
+    {
+        return true;
     }
 
     // 7. Filename fallback — skip for explicit cache/log targets (align mole safe_clean).

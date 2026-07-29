@@ -10,7 +10,9 @@ mod strategy;
 pub use candidate::{Candidate, RuleCandidate};
 pub use custom_handlers::select_custom;
 pub use glob::{collect_path_candidates, expand_rule_path, GlobError};
-pub use load::{load_rules_from_dir, load_rules_from_file, load_rules_from_str, LoadError};
+pub use load::{
+    default_rules_dir, load_rules_from_dir, load_rules_from_file, load_rules_from_str, LoadError,
+};
 pub use schema::{
     BrokenSymlinkAction, GuardsConfig, Rule, RulesFile, StrategyConfig, StrategyKind,
 };

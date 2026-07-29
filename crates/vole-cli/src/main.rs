@@ -1,6 +1,7 @@
 //! vole 命令行入口。
 #![forbid(unsafe_code)]
 
+mod clean;
 mod signals;
 mod terminal;
 mod tui;
@@ -29,12 +30,21 @@ struct Cli {
 enum Command {
     /// 清理缓存与残留文件。
     Clean {
-        /// 只产出候选集，不改动任何文件。
+        /// 只产出候选集，不改动任何文件（默认行为；对齐 mole --dry-run）。
         #[arg(long)]
         plan: bool,
+        /// 同 `--plan`。
+        #[arg(long = "dry-run", short = 'n')]
+        dry_run: bool,
+        /// 输出 JSON 而非人类可读文本。
+        #[arg(long)]
+        json: bool,
         /// 以 NDJSON 事件流输出到 stdout。
         #[arg(long = "json-stream")]
         json_stream: bool,
+        /// 将 plan JSON 写入文件。
+        #[arg(long)]
+        plan_out: Option<PathBuf>,
     },
     /// 实时系统监控。
     Status {
@@ -58,7 +68,20 @@ enum Command {
 fn main() {
     let cli = Cli::parse();
     match cli.command {
-        Command::Clean { plan, json_stream } => cmd_clean(plan, json_stream),
+        Command::Clean {
+            plan: _,
+            dry_run: _,
+            json,
+            json_stream,
+            plan_out,
+        } => {
+            let code = clean::run_clean(clean::CleanOptions {
+                json,
+                json_stream,
+                plan_out,
+            });
+            std::process::exit(code);
+        }
         Command::Status { json, json_stream } => {
             if let Err(e) = cmd_status(json, json_stream) {
                 eprintln!("vole status: {}", e);
@@ -71,15 +94,6 @@ fn main() {
                 std::process::exit(1);
             }
         }
-    }
-}
-
-fn cmd_clean(plan: bool, json_stream: bool) {
-    if plan && json_stream {
-        println!(
-            r#"{{"schema_version":{},"type":"done","candidates":0}}"#,
-            vole_core::vole_proto::SCHEMA_VERSION
-        );
     }
 }
 

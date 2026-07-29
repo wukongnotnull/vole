@@ -17,6 +17,26 @@ pub fn load_rules_from_file(path: impl AsRef<Path>) -> Result<Vec<Rule>, LoadErr
     load_rules_from_str(&content)
 }
 
+/// 默认规则数据目录：开发构建用 `data/rules`，安装布局或 `VOLE_RULES_DIR` 可覆盖。
+pub fn default_rules_dir() -> PathBuf {
+    if let Ok(dir) = std::env::var("VOLE_RULES_DIR") {
+        return PathBuf::from(dir);
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            for candidate in [
+                parent.join("data/rules"),
+                parent.join("../share/vole/rules"),
+            ] {
+                if candidate.is_dir() {
+                    return candidate;
+                }
+            }
+        }
+    }
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/rules")
+}
+
 /// 加载目录下全部 `*.toml` 规则文件（按文件名排序后拼接）。
 pub fn load_rules_from_dir(dir: impl AsRef<Path>) -> Result<Vec<Rule>, LoadError> {
     let mut paths: Vec<PathBuf> = fs::read_dir(dir.as_ref())?

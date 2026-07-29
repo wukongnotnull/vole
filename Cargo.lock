@@ -2244,6 +2244,7 @@ name = "vole-cli"
 version = "0.0.1"
 dependencies = [
  "clap",
+ "crossbeam-channel",
  "crossterm 0.28.1",
  "ratatui",
  "serde_json",

@@ -156,4 +156,4 @@ scripts/
 | 本批目标条数 | **40**（区间 30–50） |
 | 是否纳入 Block C mtime 规则 | 可选；默认 0–5 条，不足则从 Block A/B 补 `all` |
 | 是否做体积排序 | 否（不阻塞） |
-| Batch 4 方向 | 剩余 app_caches + 少量 guard 预研 |
+| Batch 4 方向 | 剩余 app_caches + 少量 guard 预研（Batch 4 已完成，见 `docs/wukong-code/specs/2026-07-29-phase4c-rules-batch4-design.md`） |

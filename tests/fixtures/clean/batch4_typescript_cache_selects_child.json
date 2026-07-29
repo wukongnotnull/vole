@@ -1,0 +1,14 @@
+{
+  "id": "batch4_typescript_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "typescript-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/.cache/typescript/5.0"
+    }
+  ],
+  "expect_selected": [
+    "~/.cache/typescript/5.0|TypeScript cache"
+  ],
+  "expect_not_selected": []
+}

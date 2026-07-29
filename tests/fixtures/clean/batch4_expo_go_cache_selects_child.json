@@ -1,0 +1,14 @@
+{
+  "id": "batch4_expo_go_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "expo-go-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/.expo/expo-go/bin"
+    }
+  ],
+  "expect_selected": [
+    "~/.expo/expo-go/bin|Expo Go cache"
+  ],
+  "expect_not_selected": []
+}

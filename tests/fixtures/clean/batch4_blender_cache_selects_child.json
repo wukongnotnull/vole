@@ -1,0 +1,14 @@
+{
+  "id": "batch4_blender_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "blender-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/org.blenderfoundation.blender/temp"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/org.blenderfoundation.blender/temp|Blender cache"
+  ],
+  "expect_not_selected": []
+}

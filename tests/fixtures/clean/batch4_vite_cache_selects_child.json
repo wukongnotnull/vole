@@ -1,0 +1,14 @@
+{
+  "id": "batch4_vite_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "vite-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/.vite/cache/deps"
+    }
+  ],
+  "expect_selected": [
+    "~/.vite/cache/deps|Vite cache"
+  ],
+  "expect_not_selected": []
+}

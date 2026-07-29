@@ -690,3 +690,239 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+
+# Batch 4
+[[rule]]
+id = "teams-legacy-application-cache"
+category = "app-caches"
+label = "Microsoft Teams legacy application cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Microsoft/Teams/Application Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "teams-legacy-code-cache"
+category = "app-caches"
+label = "Microsoft Teams legacy code cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Microsoft/Teams/Code Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "teams-legacy-gpu-cache"
+category = "app-caches"
+label = "Microsoft Teams legacy GPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Microsoft/Teams/GPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "dingtalk-holmes-logs"
+category = "app-caches"
+label = "DingTalk holmes logs"
+platform = ["macos"]
+paths = ["~/Library/Application Support/iDingTalk/holmeslogs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "sketch-app-cache"
+category = "app-caches"
+label = "Sketch app cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/com.bohemiancoding.sketch3/cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "davinci-resolve-cache"
+category = "app-caches"
+label = "DaVinci Resolve cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.blackmagic-design.DaVinciResolve/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "davinci-resolve-cacheclip"
+category = "app-caches"
+label = "DaVinci Resolve CacheClip"
+platform = ["macos"]
+paths = ["~/Movies/CacheClip/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "premiere-pro-cache"
+category = "app-caches"
+label = "Premiere Pro cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.adobe.PremierePro.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "blender-cache"
+category = "app-caches"
+label = "Blender cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/org.blenderfoundation.blender/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "cinema-4d-cache"
+category = "app-caches"
+label = "Cinema 4D cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.maxon.cinema4d/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "autodesk-cache"
+category = "app-caches"
+label = "Autodesk cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.autodesk.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "sketchup-cache"
+category = "app-caches"
+label = "SketchUp cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.sketchup.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "spotify-cache"
+category = "app-caches"
+label = "Spotify cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.spotify.client/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "apple-music-cache"
+category = "app-caches"
+label = "Apple Music cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.Music"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "apple-podcasts-cache"
+category = "app-caches"
+label = "Apple Podcasts cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.podcasts"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "netnewswire-cache"
+category = "app-caches"
+label = "NetNewsWire cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.ranchero.NetNewsWire-Evergreen/Data/Library/Caches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "mindnode-cache"
+category = "app-caches"
+label = "MindNode cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.ideasoncanvas.mindnode/Data/Library/Caches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "flomo-cache"
+category = "app-caches"
+label = "Flomo cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.flomoapp.mac/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+

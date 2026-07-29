@@ -18,3 +18,4 @@ toml = "0.8"
 
 [dev-dependencies]
 proptest = "1"
+tempfile = "3"

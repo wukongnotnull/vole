@@ -22,10 +22,7 @@ impl PathEntry {
 
     #[cfg(test)]
     fn with_secs(path: impl Into<PathBuf>, secs: u64) -> Self {
-        Self::new(
-            path,
-            std::time::UNIX_EPOCH + Duration::from_secs(secs),
-        )
+        Self::new(path, std::time::UNIX_EPOCH + Duration::from_secs(secs))
     }
 }
 

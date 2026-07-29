@@ -1,0 +1,14 @@
+{
+  "id": "batch9_spark_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "spark-cache selects bundle cache dir",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.readdle.smartemail-Mac"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.readdle.smartemail-Mac|Spark cache"
+  ],
+  "expect_not_selected": []
+}

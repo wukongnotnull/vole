@@ -1,0 +1,14 @@
+{
+  "id": "batch9_warp_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "warp-cache explicit Library/Caches child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/dev.warp.Warp-Stable/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/dev.warp.Warp-Stable/item|Warp cache"
+  ],
+  "expect_not_selected": []
+}

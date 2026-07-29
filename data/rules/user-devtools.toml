@@ -1582,3 +1582,263 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+[[rule]]
+id = "filo-gpu-cache"
+category = "user-devtools"
+label = "Filo GPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Filo/production/GPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "filo-dawn-cache"
+category = "user-devtools"
+label = "Filo Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Filo/production/DawnGraphiteCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "filo-webgpu-cache"
+category = "user-devtools"
+label = "Filo WebGPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Filo/production/DawnWebGPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qoder-extension-cache"
+category = "user-devtools"
+label = "Qoder extension cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Qoder/CachedExtensionVSIXs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qoder-dawn-cache"
+category = "user-devtools"
+label = "Qoder Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Qoder/DawnGraphiteCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qoder-webgpu-cache"
+category = "user-devtools"
+label = "Qoder WebGPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Qoder/DawnWebGPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "wondershare-installer-payload"
+category = "user-devtools"
+label = "Wondershare installer payload"
+platform = ["macos"]
+paths = ["~/Library/Application Support/com.wondershare.Installer/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "git-config-lock"
+category = "user-devtools"
+label = "Git config lock"
+platform = ["macos"]
+paths = ["~/.gitconfig.lock"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "git-config-backup"
+category = "user-devtools"
+label = "Git config backup"
+platform = ["macos"]
+paths = ["~/.gitconfig.bak*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "oh-my-zsh-cache"
+category = "user-devtools"
+label = "Oh My Zsh cache"
+platform = ["macos"]
+paths = ["~/.oh-my-zsh/cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "fish-shell-backup"
+category = "user-devtools"
+label = "Fish shell backup"
+platform = ["macos"]
+paths = ["~/.config/fish/fish_history.bak*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "bash-history-backup"
+category = "user-devtools"
+label = "Bash history backup"
+platform = ["macos"]
+paths = ["~/.bash_history.bak*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "zsh-history-backup"
+category = "user-devtools"
+label = "Zsh history backup"
+platform = ["macos"]
+paths = ["~/.zsh_history.bak*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "pre-commit-cache"
+category = "user-devtools"
+label = "pre-commit cache"
+platform = ["macos"]
+paths = ["~/.cache/pre-commit/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "curl-cache"
+category = "user-devtools"
+label = "curl cache"
+platform = ["macos"]
+paths = ["~/.cache/curl/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "wget-cache"
+category = "user-devtools"
+label = "wget cache"
+platform = ["macos"]
+paths = ["~/.cache/wget/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "macos-curl-cache"
+category = "user-devtools"
+label = "macOS curl cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/curl/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "macos-wget-cache"
+category = "user-devtools"
+label = "macOS wget cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/wget/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "hex-cache"
+category = "user-devtools"
+label = "Hex cache"
+platform = ["macos"]
+paths = ["~/.hex/cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "cabal-install-cache"
+category = "user-devtools"
+label = "Cabal install cache"
+platform = ["macos"]
+paths = ["~/.cabal/packages/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+

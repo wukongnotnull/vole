@@ -1,0 +1,14 @@
+{
+  "id": "batch9_minecraft_web_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "minecraft-web-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/minecraft/webcache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/minecraft/webcache/item|Minecraft web cache"
+  ],
+  "expect_not_selected": []
+}

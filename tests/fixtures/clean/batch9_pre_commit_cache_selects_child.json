@@ -1,0 +1,14 @@
+{
+  "id": "batch9_pre_commit_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "pre-commit-cache selects ~/.cache child",
+  "fixture": [
+    {
+      "mkdir": "~/.cache/pre-commit/repo123"
+    }
+  ],
+  "expect_selected": [
+    "~/.cache/pre-commit/repo123|pre-commit cache"
+  ],
+  "expect_not_selected": []
+}

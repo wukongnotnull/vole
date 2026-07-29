@@ -62,4 +62,4 @@ Target: **40** rules (Phase 4c+ first post-v1 batch; 150 → **190**)
 
 ## Milestone
 
-Phase 4c+ Batch 6 — enabled rules **190**；库存 `ported` **184/513**（≈36%）。
+Phase 4c+ Batch 6 — enabled rules **190**；库存 `ported` **185/513**（≈36%）。

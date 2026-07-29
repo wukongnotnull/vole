@@ -1,0 +1,65 @@
+[
+  {
+    "name": "perfect",
+    "cpu": { "usage": 10 },
+    "memory": { "used_percent": 20, "pressure": "normal" },
+    "disks": [{ "used_percent": 30, "smart_status": "verified" }],
+    "disk_io": { "read_rate": 5, "write_rate": 5 },
+    "thermal": { "cpu_temp": 40 },
+    "batteries": [],
+    "uptime_seconds": 0,
+    "want_score": 100,
+    "want_msg_contains": "Excellent"
+  },
+  {
+    "name": "detects_issues",
+    "cpu": { "usage": 95 },
+    "memory": { "used_percent": 95, "pressure": "critical" },
+    "disks": [{ "used_percent": 98, "smart_status": "verified" }],
+    "disk_io": { "read_rate": 120, "write_rate": 80 },
+    "thermal": { "cpu_temp": 90 },
+    "batteries": [],
+    "uptime_seconds": 0,
+    "want_score_max": 59,
+    "want_msg_contains": "High CPU"
+  },
+  {
+    "name": "failing_smart_caps_44",
+    "cpu": { "usage": 10 },
+    "memory": { "used_percent": 20, "pressure": "normal" },
+    "disks": [
+      { "used_percent": 30, "smart_status": "verified" },
+      { "used_percent": 20, "smart_status": "failing" }
+    ],
+    "disk_io": { "read_rate": 5, "write_rate": 5 },
+    "thermal": { "cpu_temp": 40 },
+    "batteries": [],
+    "uptime_seconds": 0,
+    "want_score": 44,
+    "want_msg_contains": "Disk SMART Failing"
+  },
+  {
+    "name": "unsupported_smart_no_penalty",
+    "cpu": { "usage": 10 },
+    "memory": { "used_percent": 20, "pressure": "normal" },
+    "disks": [{ "used_percent": 30, "smart_status": "unsupported" }],
+    "disk_io": { "read_rate": 5, "write_rate": 5 },
+    "thermal": { "cpu_temp": 40 },
+    "batteries": [],
+    "uptime_seconds": 0,
+    "want_score": 100,
+    "want_msg_contains": "Excellent"
+  },
+  {
+    "name": "unknown_smart_no_penalty",
+    "cpu": { "usage": 10 },
+    "memory": { "used_percent": 20, "pressure": "normal" },
+    "disks": [{ "used_percent": 30, "smart_status": "unknown" }],
+    "disk_io": { "read_rate": 5, "write_rate": 5 },
+    "thermal": { "cpu_temp": 40 },
+    "batteries": [],
+    "uptime_seconds": 0,
+    "want_score": 100,
+    "want_msg_contains": "Excellent"
+  }
+]

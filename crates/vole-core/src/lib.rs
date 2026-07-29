@@ -10,6 +10,7 @@ pub mod mutex;
 pub mod oplog;
 pub mod ops;
 pub mod spike_toctou;
+pub mod status;
 pub mod units;
 pub mod whitelist;
 

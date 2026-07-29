@@ -2,6 +2,8 @@
 #![forbid(unsafe_code)]
 
 mod clean;
+mod history_cmd;
+mod interactive;
 mod signals;
 mod terminal;
 mod tui;
@@ -10,7 +12,8 @@ use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
+use clap_complete::{generate, Shell};
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
@@ -20,10 +23,15 @@ use vole_core::status::{CollectionMode, StatusCollector, REFRESH_INTERVAL};
 use vole_core::vole_proto::AnalyzeOutput;
 
 #[derive(Parser)]
-#[command(name = "vole", version, about = "macOS cleanup and monitoring")]
+#[command(
+    name = "vole",
+    version,
+    about = "macOS cleanup and monitoring",
+    after_help = "Run `vole` with no subcommand in a terminal to open a simple menu."
+)]
 struct Cli {
     #[command(subcommand)]
-    command: Command,
+    command: Option<Command>,
 }
 
 #[derive(Subcommand)]
@@ -95,12 +103,48 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    /// 查看操作历史与删除审计（对齐 mole history）。
+    History {
+        /// 输出 JSON。
+        #[arg(long)]
+        json: bool,
+        /// 最多展示的 session / deletion 条数（1..=200，默认 20）。
+        #[arg(long, default_value_t = 20)]
+        limit: u32,
+    },
+    /// 生成 shell 补全脚本（stdout）。
+    Completions {
+        /// 目标 shell：bash / zsh / fish / elvish / powershell
+        shell: CompletionShell,
+    },
+}
+
+#[derive(Clone, ValueEnum)]
+enum CompletionShell {
+    Bash,
+    Zsh,
+    Fish,
+    Elvish,
+    Powershell,
+}
+
+impl From<CompletionShell> for Shell {
+    fn from(value: CompletionShell) -> Self {
+        match value {
+            CompletionShell::Bash => Shell::Bash,
+            CompletionShell::Zsh => Shell::Zsh,
+            CompletionShell::Fish => Shell::Fish,
+            CompletionShell::Elvish => Shell::Elvish,
+            CompletionShell::Powershell => Shell::PowerShell,
+        }
+    }
 }
 
 fn main() {
     let cli = Cli::parse();
     match cli.command {
-        Command::Clean {
+        None => std::process::exit(interactive::run()),
+        Some(Command::Clean {
             plan: _,
             dry_run: _,
             apply,
@@ -112,7 +156,7 @@ fn main() {
             whitelist_add,
             whitelist_remove,
             whitelist_list,
-        } => {
+        }) => {
             let code = clean::run_clean(clean::CleanOptions {
                 json,
                 json_stream,
@@ -126,17 +170,24 @@ fn main() {
             });
             std::process::exit(code);
         }
-        Command::Status { json, json_stream } => {
+        Some(Command::Status { json, json_stream }) => {
             if let Err(e) = cmd_status(json, json_stream) {
                 eprintln!("vole status: {}", e);
                 std::process::exit(1);
             }
         }
-        Command::Analyze { path, json } => {
+        Some(Command::Analyze { path, json }) => {
             if let Err(e) = cmd_analyze(path, json) {
                 eprintln!("vole analyze: {}", e);
                 std::process::exit(1);
             }
+        }
+        Some(Command::History { json, limit }) => {
+            std::process::exit(history_cmd::run(json, limit));
+        }
+        Some(Command::Completions { shell }) => {
+            let mut cmd = Cli::command();
+            generate(Shell::from(shell), &mut cmd, "vole", &mut io::stdout());
         }
     }
 }
@@ -148,7 +199,7 @@ fn should_use_json(force: bool) -> bool {
     !io::stdout().is_terminal()
 }
 
-fn cmd_status(force_json: bool, json_stream: bool) -> io::Result<()> {
+pub(crate) fn cmd_status(force_json: bool, json_stream: bool) -> io::Result<()> {
     if json_stream {
         return cmd_status_stream();
     }

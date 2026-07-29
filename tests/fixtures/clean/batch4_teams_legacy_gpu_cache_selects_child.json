@@ -1,0 +1,14 @@
+{
+  "id": "batch4_teams_legacy_gpu_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "teams-legacy-gpu-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Microsoft/Teams/GPUCache/data"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Microsoft/Teams/GPUCache/data|Microsoft Teams legacy GPU cache"
+  ],
+  "expect_not_selected": []
+}

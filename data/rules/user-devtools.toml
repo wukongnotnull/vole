@@ -353,3 +353,291 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+
+# Batch 4
+[[rule]]
+id = "gem-package-cache"
+category = "user-devtools"
+label = "gem package cache"
+platform = ["macos"]
+paths = ["~/.gem/ruby/*/cache/*.gem"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "cpan-sources"
+category = "user-devtools"
+label = "CPAN source cache"
+platform = ["macos"]
+paths = ["~/.cpan/sources/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "aws-cli-cache"
+category = "user-devtools"
+label = "AWS CLI cache"
+platform = ["macos"]
+paths = ["~/.aws/cli/cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "gcloud-logs"
+category = "user-devtools"
+label = "Google Cloud logs"
+platform = ["macos"]
+paths = ["~/.config/gcloud/logs/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "azure-logs"
+category = "user-devtools"
+label = "Azure CLI logs"
+platform = ["macos"]
+paths = ["~/.azure/logs/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "typescript-cache"
+category = "user-devtools"
+label = "TypeScript cache"
+platform = ["macos"]
+paths = ["~/.cache/typescript/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "electron-cache"
+category = "user-devtools"
+label = "Electron cache"
+platform = ["macos"]
+paths = ["~/.cache/electron/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "node-gyp-cache"
+category = "user-devtools"
+label = "node-gyp cache"
+platform = ["macos"]
+paths = ["~/.cache/node-gyp/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "node-gyp-build-cache"
+category = "user-devtools"
+label = "node-gyp build cache"
+platform = ["macos"]
+paths = ["~/.node-gyp/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "turbo-cache"
+category = "user-devtools"
+label = "Turbo cache"
+platform = ["macos"]
+paths = ["~/.turbo/cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "vite-cache"
+category = "user-devtools"
+label = "Vite cache"
+platform = ["macos"]
+paths = ["~/.vite/cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "vite-global-cache"
+category = "user-devtools"
+label = "Vite global cache"
+platform = ["macos"]
+paths = ["~/.cache/vite/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "webpack-cache"
+category = "user-devtools"
+label = "Webpack cache"
+platform = ["macos"]
+paths = ["~/.cache/webpack/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "parcel-cache"
+category = "user-devtools"
+label = "Parcel cache"
+platform = ["macos"]
+paths = ["~/.parcel-cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "eslint-cache"
+category = "user-devtools"
+label = "ESLint cache"
+platform = ["macos"]
+paths = ["~/.cache/eslint/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "prettier-cache"
+category = "user-devtools"
+label = "Prettier cache"
+platform = ["macos"]
+paths = ["~/.cache/prettier/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "android-studio-cache"
+category = "user-devtools"
+label = "Android Studio cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/Google/AndroidStudio*/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "swift-pm-cache"
+category = "user-devtools"
+label = "Swift package manager cache"
+platform = ["macos"]
+paths = ["~/.cache/swift-package-manager/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "swift-pm-library-cache"
+category = "user-devtools"
+label = "Swift package manager library cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/org.swift.swiftpm/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "expo-go-cache"
+category = "user-devtools"
+label = "Expo Go cache"
+platform = ["macos"]
+paths = ["~/.expo/expo-go/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "expo-android-apk-cache"
+category = "user-devtools"
+label = "Expo Android APK cache"
+platform = ["macos"]
+paths = ["~/.expo/android-apk-cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "expo-ios-simulator-cache"
+category = "user-devtools"
+label = "Expo iOS simulator app cache"
+platform = ["macos"]
+paths = ["~/.expo/ios-simulator-app-cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+

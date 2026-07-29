@@ -1,0 +1,14 @@
+{
+  "id": "batch4_spotify_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "spotify-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.spotify.client/data"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.spotify.client/data|Spotify cache"
+  ],
+  "expect_not_selected": []
+}

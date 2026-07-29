@@ -1,0 +1,14 @@
+{
+  "id": "batch4_netnewswire_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "netnewswire-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Containers/com.ranchero.NetNewsWire-Evergreen/Data/Library/Caches/images"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Containers/com.ranchero.NetNewsWire-Evergreen/Data/Library/Caches/images|NetNewsWire cache"
+  ],
+  "expect_not_selected": []
+}

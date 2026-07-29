@@ -73,7 +73,9 @@ pub fn validate_path_for_deletion(
 
     if let Ok(meta) = fs::symlink_metadata(path) {
         if meta.file_type().is_symlink() {
-            if let Some(resolved) = resolve_symlink_target(path).map_err(|_| ValidationError::UnreadableSymlink)? {
+            if let Some(resolved) =
+                resolve_symlink_target(path).map_err(|_| ValidationError::UnreadableSymlink)?
+            {
                 let resolved = normalize_policy_path(&resolved);
                 if is_critical_deletion_path(&resolved) {
                     return Err(ValidationError::SymlinkToCritical);
@@ -144,11 +146,8 @@ fn ancestor_symlink_redirects_to_critical(path: &str, protection: &dyn PathProte
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_default();
-    let resolved_path = normalize_policy_path(&format!(
-        "{}/{}",
-        resolved_parent.to_string_lossy(),
-        leaf
-    ));
+    let resolved_path =
+        normalize_policy_path(&format!("{}/{}", resolved_parent.to_string_lossy(), leaf));
 
     if resolved_parent != parent_dir && is_critical_deletion_path(&resolved_path) {
         return true;
@@ -189,7 +188,8 @@ mod tests {
     }
 
     fn scratch(tag: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("vole-validate-{}-{}", tag, std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("vole-validate-{}-{}", tag, std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -285,5 +285,33 @@ mod tests {
             ),
             Err(ValidationError::EndpointSecurityCache)
         );
+    }
+
+    #[test]
+    fn rejects_app_protected_cleanup_paths() {
+        use crate::protection::AppProtection;
+
+        let p = AppProtection::new();
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/test".into());
+        assert_eq!(
+            validate_path_for_deletion(
+                &format!("{home}/Library/Caches/ms-playwright/chromium-123"),
+                &p
+            ),
+            Err(ValidationError::ProtectedPath)
+        );
+        assert_eq!(
+            validate_path_for_deletion(
+                &format!("{home}/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite"),
+                &p
+            ),
+            Err(ValidationError::ProtectedPath)
+        );
+        let dir = scratch("app-protect-ok");
+        let cache = dir.join("real/Caches/cache.db");
+        fs::create_dir_all(cache.parent().unwrap()).unwrap();
+        fs::write(&cache, b"x").unwrap();
+        assert!(validate_path_for_deletion(&cache.to_string_lossy(), &p).is_ok());
+        let _ = fs::remove_dir_all(&dir);
     }
 }

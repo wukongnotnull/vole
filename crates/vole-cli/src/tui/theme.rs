@@ -13,6 +13,8 @@ pub struct Theme {
     pub danger: Style,
     pub label: Style,
     pub value: Style,
+    pub normal: Style,
+    pub selected: Style,
 }
 
 impl Default for Theme {
@@ -26,6 +28,10 @@ impl Default for Theme {
             danger: Style::default().fg(Color::Red),
             label: Style::default().fg(Color::DarkGray),
             value: Style::default().fg(Color::White),
+            normal: Style::default().fg(Color::White),
+            selected: Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
         }
     }
 }

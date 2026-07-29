@@ -19,3 +19,5 @@ GPL-3.0。因为 Vole 是 GPL-3.0 作品的衍生作品，这是唯一可选的�
 
 计划中的 v1 只实现 Mole 十二个子命令中的三个：`status`、`analyze`、`clean`。
 设计文档见 `docs/wukong-code/specs/`。
+
+**Phase 1 状态（2026-07-29）**：协议类型（`vole-proto`）、NDJSON 规格（`docs/protocol.md`）、单位格式化、whitelist、oplog、flock 互斥、`CancelToken`、`vole-sys` 平台 trait 骨架与 `ops` 编排骨架已落地；**尚无** `status` / `analyze` / `clean` 用户功能（CLI 仍为 Phase 0 的 `clean` stub）。TCC 完整矩阵与 Developer ID 行为 deferred，见 `docs/findings/2026-07-phase1-tcc-deferred.md`。

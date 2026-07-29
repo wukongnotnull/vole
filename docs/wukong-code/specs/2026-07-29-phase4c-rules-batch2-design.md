@@ -21,7 +21,7 @@
 
 1. 建立**可持续的分批移植流程**（库存 → 选批 → TOML → fixture → 验证）。
 2. 完成本期 **Batch 2**：净增约 **30–50** 条可用规则（以纯路径 `all` + `keep_newest_*` 为主）。
-3. 为后续 Batch 3+ 逼近 100–150 留下可重复的工具与验收门禁。
+3. 为后续 Batch 3+ 逼近 100–150 留下可重复的工具与验收门禁（Batch 3 设计见 `docs/wukong-code/specs/2026-07-29-phase4c-rules-batch3-design.md`）。
 
 ### 非目标（本批）
 

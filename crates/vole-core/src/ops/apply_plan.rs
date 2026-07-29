@@ -220,6 +220,7 @@ pub fn apply_plan(
         skipped_by_reason: skip_tracker.into_summaries(),
         trashed_bytes,
         deleted_bytes,
+        coverage_note: None,
     };
 
     if let Some(event) = &ctx.on_event {
@@ -327,6 +328,7 @@ mod tests {
             schema_version: SCHEMA_VERSION,
             created_at: SystemTime::now(),
             ttl_secs: 900,
+            coverage_note: None,
             entries,
         }
     }
@@ -364,6 +366,7 @@ mod tests {
             schema_version: SCHEMA_VERSION,
             created_at: UNIX_EPOCH,
             ttl_secs: 60,
+            coverage_note: None,
             entries: vec![],
         };
         let protection = AppProtection::new();

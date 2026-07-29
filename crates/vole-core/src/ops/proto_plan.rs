@@ -23,6 +23,7 @@ pub fn plan_to_proto(plan: &Plan) -> Result<ProtoPlan, ProtoPlanError> {
         schema_version: SCHEMA_VERSION,
         created_at: plan.generated_at,
         ttl_secs: plan.ttl.as_secs(),
+        coverage_note: None,
         entries,
     })
 }
@@ -88,10 +89,12 @@ mod tests {
 
     #[test]
     fn proto_plan_json_roundtrip() {
-        let proto = plan_to_proto(&sample_plan()).unwrap();
+        let mut proto = plan_to_proto(&sample_plan()).unwrap();
+        proto.coverage_note = Some("test note".into());
         let json = serde_json::to_string(&proto).unwrap();
         let back: ProtoPlan = serde_json::from_str(&json).unwrap();
         assert_eq!(back, proto);
+        assert_eq!(back.coverage_note.as_deref(), Some("test note"));
     }
 
     #[test]

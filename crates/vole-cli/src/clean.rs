@@ -8,8 +8,8 @@ use crossbeam_channel::unbounded;
 use vole_core::cancel::CancelToken;
 use vole_core::mutex::{try_lock_clean, MutexError};
 use vole_core::ops::{
-    apply_proto_plan, plan_to_proto, ApplyPlanError, ApplyPlanOptions, OpsError, Orchestrator,
-    Plan, ProtoPlanError,
+    apply_proto_plan, coverage_note, enabled_rule_count, plan_to_proto, ApplyPlanError,
+    ApplyPlanOptions, OpsError, Orchestrator, Plan, ProtoPlanError,
 };
 use vole_core::protection::AppProtection;
 use vole_core::rules::{default_rules_dir, load_rules_from_dir, LoadError};
@@ -67,6 +67,8 @@ fn run_clean_inner(opts: CleanOptions) -> io::Result<()> {
 
 fn run_plan(opts: CleanOptions) -> io::Result<()> {
     let rules = load_rules_from_dir(default_rules_dir()).map_err(map_load_error)?;
+    let enabled = enabled_rule_count(&rules);
+    let note = coverage_note(enabled);
     let whitelist_patterns = whitelist::load_clean()?;
     let protection = AppProtection::new();
 
@@ -111,7 +113,7 @@ fn run_plan(opts: CleanOptions) -> io::Result<()> {
 
     if opts.json_stream {
         orch.emit(StreamEvent::Done {
-            report: zero_report(),
+            report: plan_done_report(&note),
         });
     }
     drop(orch);
@@ -121,8 +123,9 @@ fn run_plan(opts: CleanOptions) -> io::Result<()> {
             .map_err(|_| io::Error::other("stream writer panicked"))??;
     }
 
-    let proto = plan_to_proto(&plan).map_err(map_proto_error)?;
-    write_plan_output(&opts, &plan, &proto)?;
+    let mut proto = plan_to_proto(&plan).map_err(map_proto_error)?;
+    proto.coverage_note = Some(note.clone());
+    write_plan_output(&opts, &plan, &proto, &note)?;
     Ok(())
 }
 
@@ -187,7 +190,12 @@ fn write_stream_event(out: &mut impl Write, event: StreamEvent) -> io::Result<()
     out.flush()
 }
 
-fn write_plan_output(opts: &CleanOptions, plan: &Plan, proto: &ProtoPlan) -> io::Result<()> {
+fn write_plan_output(
+    opts: &CleanOptions,
+    plan: &Plan,
+    proto: &ProtoPlan,
+    coverage: &str,
+) -> io::Result<()> {
     if let Some(path) = &opts.plan_out {
         let json = serde_json::to_string_pretty(proto).map_err(io::Error::other)?;
         std::fs::write(path, format!("{json}\n"))?;
@@ -203,7 +211,7 @@ fn write_plan_output(opts: &CleanOptions, plan: &Plan, proto: &ProtoPlan) -> io:
         return Ok(());
     }
 
-    print_human_plan(plan);
+    print_human_plan(plan, coverage);
     Ok(())
 }
 
@@ -229,7 +237,7 @@ fn should_use_json(force: bool) -> bool {
     !io::stdout().is_terminal()
 }
 
-fn print_human_plan(plan: &Plan) {
+fn print_human_plan(plan: &Plan, coverage: &str) {
     println!(
         "Plan: {} candidate(s), TTL {}s",
         plan.entries.len(),
@@ -243,6 +251,8 @@ fn print_human_plan(plan: &Plan) {
             entry.rule_id
         );
     }
+    eprintln!();
+    eprintln!("{coverage}");
 }
 
 fn print_human_report(report: &Report) {
@@ -370,7 +380,7 @@ fn run_whitelist_interactive() -> io::Result<()> {
     Ok(())
 }
 
-fn zero_report() -> Report {
+fn plan_done_report(coverage: &str) -> Report {
     Report {
         succeeded: 0,
         skipped: 0,
@@ -378,6 +388,7 @@ fn zero_report() -> Report {
         skipped_by_reason: vec![],
         trashed_bytes: 0,
         deleted_bytes: 0,
+        coverage_note: Some(coverage.to_string()),
     }
 }
 

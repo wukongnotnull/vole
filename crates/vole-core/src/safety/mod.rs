@@ -5,6 +5,9 @@ mod endpoint;
 mod plan_verify;
 mod validate;
 
+#[cfg(test)]
+mod property;
+
 pub use critical::{is_critical_deletion_path, is_private_allowlisted, normalize_policy_path};
 pub use endpoint::is_endpoint_security_cache_path;
 pub use plan_verify::{

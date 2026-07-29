@@ -1,0 +1,19 @@
+{
+  "id": "clean_editor_obsolete_extensions_rejects_path_traversal_keys_in_obsolete_910",
+  "source_bats": "third_party/mole-1.48.1/tests/clean_app_caches.bats",
+  "source_test": "clean_editor_obsolete_extensions rejects path-traversal keys in .obsolete (#910)",
+  "fixture": [
+    {
+      "mkdir": "~/.cursor/extensions"
+    },
+    {
+      "mkdir": "~/.cursor/extensions/publisher.legit-1.0.0"
+    },
+    {
+      "mkdir": "~/obsolete-victim"
+    }
+  ],
+  "expect_not_selected": [
+    "obsolete-victim"
+  ]
+}

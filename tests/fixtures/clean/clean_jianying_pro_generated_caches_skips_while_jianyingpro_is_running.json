@@ -1,0 +1,13 @@
+{
+  "id": "clean_jianying_pro_generated_caches_skips_while_jianyingpro_is_running",
+  "source_bats": "third_party/mole-1.48.1/tests/clean_app_caches.bats",
+  "source_test": "clean_jianying_pro_generated_caches skips while JianyingPro is running",
+  "fixture": [
+    {
+      "mkdir": "~/Movies/JianyingPro/User Data/Cache/recognize"
+    }
+  ],
+  "expect_not_selected": [
+    "unexpected safe_clean"
+  ]
+}

@@ -1,6 +1,6 @@
 # Phase 4c Batch 2：Clean 规则扩展 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use wukong-code:subagent-driven-development (recommended) or wukong-code:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use wukong-code:subagent-driven-development (recommended) or wukong-code:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 建立 mole 规则库存工具，并完成本期 Batch 2——净增约 30–50 条以 `all` / `keep_newest_*` 为主的 clean 规则，配套 fixture 与 `verify-clean-candidates` 门禁。
 
@@ -50,7 +50,7 @@ tests/fixtures/clean/             # 新增若干 JSON
 
 **Steps:**
 
-- [ ] **Step 1: 写最小可运行脚本骨架** — 扫描 `third_party/mole-1.48.1/lib/clean/*.sh`，用正则匹配：
+- [x] **Step 1: 写最小可运行脚本骨架** — 扫描 `third_party/mole-1.48.1/lib/clean/*.sh`，用正则匹配：
 
 ```python
 # 匹配: safe_clean <path> "label"
@@ -61,9 +61,9 @@ SAFE_CLEAN_RE = re.compile(
 
 对含 `sudo` 的行标记 `complexity_guess=sudo`；含 `keep`/`mtime`/版本保留逻辑的邻近上下文标 `mtime`；否则默认 `all`。
 
-- [ ] **Step 2: 加载已移植 id** — 解析 `data/rules/*.toml` 中所有 `id = "..."`；输出里 `ported=true` 若 label 规范化后已存在近似 id（或仅列出未匹配 path，人工选批）。
+- [x] **Step 2: 加载已移植 id** — 解析 `data/rules/*.toml` 中所有 `id = "..."`；输出里 `ported=true` 若 label 规范化后已存在近似 id（或仅列出未匹配 path，人工选批）。
 
-- [ ] **Step 3: 本地跑通**
+- [x] **Step 3: 本地跑通**
 
 ```bash
 python3 scripts/inventory-mole-rules.py --json /tmp/mole-rules.json
@@ -72,7 +72,7 @@ python3 -c 'import json; d=json.load(open("/tmp/mole-rules.json")); print(len(d)
 
 Expected: 条目数 ≫ 已移植数；`app_caches.sh` 中 Xcode/VS Code 行出现。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add scripts/inventory-mole-rules.py
@@ -105,9 +105,9 @@ EOF
 | vscode-logs | VS Code logs | `~/Library/Application Support/Code/logs/*` | all |
 | simulator-cache | Simulator cache | `~/Library/Developer/CoreSimulator/Caches/*` | all |
 
-- [ ] **Step 1: 跑库存，人工勾选填表**（目标计数写在文首：`Target: N rules`）
+- [x] **Step 1: 跑库存，人工勾选填表**（目标计数写在文首：`Target: N rules`）
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add docs/findings/2026-07-phase4c-batch2-selection.md
@@ -164,11 +164,11 @@ kind = "all"
 
 **Steps:**
 
-- [ ] **Step 1: 写 1 个失败 fixture + 空/缺规则** — 先提交 fixture，确认 `cargo test -p vole-core verify_clean_fixtures` **FAIL**
+- [x] **Step 1: 写 1 个失败 fixture + 空/缺规则** — 先提交 fixture，确认 `cargo test -p vole-core verify_clean_fixtures` **FAIL**
 
-- [ ] **Step 2: 写入对应 TOML 规则使该 fixture 绿**
+- [x] **Step 2: 写入对应 TOML 规则使该 fixture 绿**
 
-- [ ] **Step 3: 按选批清单追加至 ~15–20 条 `all`，每增加一组就跑：**
+- [x] **Step 3: 按选批清单追加至 ~15–20 条 `all`，每增加一组就跑：**
 
 ```bash
 cargo test -p vole-core verify_clean_fixtures -- --nocapture
@@ -176,7 +176,7 @@ cargo test -p vole-core verify_clean_fixtures -- --nocapture
 
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add data/rules/app-caches.toml tests/fixtures/clean/
@@ -197,11 +197,11 @@ EOF
 
 **Steps:**
 
-- [ ] **Step 1: 按选批清单追加剩余 `all` 规则**（Discord/Slack/Zoom/WeChat 等 mole 已有 `safe_clean` 且无 sudo）
+- [x] **Step 1: 按选批清单追加剩余 `all` 规则**（Discord/Slack/Zoom/WeChat 等 mole 已有 `safe_clean` 且无 sudo）
 
-- [ ] **Step 2: fixture + `verify_clean_fixtures` 绿**
+- [x] **Step 2: fixture + `verify_clean_fixtures` 绿**
 
-- [ ] **Step 3: 计数检查**
+- [x] **Step 3: 计数检查**
 
 ```bash
 rg -c '^\[\[rule\]\]' data/rules/*.toml
@@ -209,7 +209,7 @@ rg -c '^\[\[rule\]\]' data/rules/*.toml
 
 记录总数与 Batch 2 增量（相对 `main` 上 ai-agents/codex/example）。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -247,9 +247,9 @@ keep = 5
 
 **Steps:**
 
-- [ ] **Step 1: 红 fixture → 绿 TOML**（TDD）
+- [x] **Step 1: 红 fixture → 绿 TOML**（TDD）
 
-- [ ] **Step 2: 确认无新增 `kind = "custom"`**
+- [x] **Step 2: 确认无新增 `kind = "custom"`**
 
 ```bash
 rg 'kind = "custom"' data/rules/
@@ -257,7 +257,7 @@ rg 'kind = "custom"' data/rules/
 
 Expected: 仅既有 ai-agents 等，本批文件无新增。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -277,15 +277,15 @@ EOF
 
 **Steps:**
 
-- [ ] **Step 1: 对候选 bats 试跑抽取，人工校对后纳入 `tests/fixtures/clean/`**
+- [x] **Step 1: 对候选 bats 试跑抽取，人工校对后纳入 `tests/fixtures/clean/`**
 
 ```bash
 python3 scripts/extract-clean-fixtures.py --bats clean_dev_caches.bats
 ```
 
-- [ ] **Step 2: `verify_clean_fixtures` 仍绿；失败则修正 TOML label/path 或丢掉坏 fixture**
+- [x] **Step 2: `verify_clean_fixtures` 仍绿；失败则修正 TOML label/path 或丢掉坏 fixture**
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -309,7 +309,7 @@ EOF
 
 **Steps:**
 
-- [ ] **Step 1: 全量验证**
+- [x] **Step 1: 全量验证**
 
 ```bash
 cargo test -p vole-core
@@ -319,11 +319,11 @@ cargo clippy -p vole-core -- -D warnings
 
 Expected: 全绿（无 `VOLE_TEST_ROOT` 时双跑 SKIP 可接受）。
 
-- [ ] **Step 2: 计数门禁** — Batch 2 净增 ∈ [30,50] 或 findings 下调说明。
+- [x] **Step 2: 计数门禁** — Batch 2 净增 ∈ [30,50] 或 findings 下调说明。
 
-- [ ] **Step 3: 更新本计划所有 Task checkbox 为 `[x]`**
+- [x] **Step 3: 更新本计划所有 Task checkbox 为 `[x]`**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -339,9 +339,9 @@ EOF
 
 **Steps:**
 
-- [ ] 在一次性目录导出 `VOLE_TEST_ROOT`，对 3–5 条高信心规则跑 mole dry-run vs `vole clean --plan`（按 `verify-clean-candidates.sh` 后半段）
-- [ ] 保护相关分歧 → **停**并修；仅标签差异记 findings
-- [ ] Commit findings only if new
+- [x] 在一次性目录导出 `VOLE_TEST_ROOT`，对 3–5 条高信心规则跑 mole dry-run vs `vole clean --plan`（按 `verify-clean-candidates.sh` 后半段）
+- [x] 保护相关分歧 → **停**并修；仅标签差异记 findings
+- [x] Commit findings only if new
 
 ---
 

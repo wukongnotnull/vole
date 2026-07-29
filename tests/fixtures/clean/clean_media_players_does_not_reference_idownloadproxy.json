@@ -1,0 +1,13 @@
+{
+  "id": "clean_media_players_does_not_reference_idownloadproxy",
+  "source_bats": "third_party/mole-1.48.1/tests/clean_app_caches.bats",
+  "source_test": "clean_media_players does not reference iDownloadProxy",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Containers/com.tencent.QQMusicMac/Data/Library/Application Support/QQMusicMac"
+    }
+  ],
+  "expect_not_selected": [
+    "iDownloadProxy"
+  ]
+}

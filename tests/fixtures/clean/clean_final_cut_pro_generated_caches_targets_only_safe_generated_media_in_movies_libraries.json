@@ -1,0 +1,31 @@
+{
+  "id": "clean_final_cut_pro_generated_caches_targets_only_safe_generated_media_in_movies_libraries",
+  "source_bats": "third_party/mole-1.48.1/tests/clean_app_caches.bats",
+  "source_test": "clean_final_cut_pro_generated_caches targets only safe generated media in Movies libraries",
+  "fixture": [
+    {
+      "mkdir": "~/Documents/Other.fcpbundle/Event/Render Files/High Quality Media"
+    },
+    {
+      "mkdir": "~/Movies/Project.fcpbundle/Event/Analysis Files/Stabilization"
+    },
+    {
+      "mkdir": "~/Movies/Project.fcpbundle/Event/Original Media/Render Files/High Quality Media"
+    },
+    {
+      "mkdir": "~/Movies/Project.fcpbundle/Event/Render Files/High Quality Media"
+    },
+    {
+      "mkdir": "~/Movies/Project.fcpbundle/Event/Transcoded Media/High Quality Media"
+    },
+    {
+      "mkdir": "~/Movies/Project.fcpbundle/Event/Transcoded Media/Proxy Media"
+    }
+  ],
+  "expect_not_selected": [
+    "Analysis Files",
+    "Documents/Other.fcpbundle",
+    "Original Media",
+    "Transcoded Media/High Quality Media"
+  ]
+}

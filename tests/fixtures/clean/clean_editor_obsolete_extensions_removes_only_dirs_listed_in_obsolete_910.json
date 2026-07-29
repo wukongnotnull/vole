@@ -1,0 +1,16 @@
+{
+  "id": "clean_editor_obsolete_extensions_removes_only_dirs_listed_in_obsolete_910",
+  "source_bats": "third_party/mole-1.48.1/tests/clean_app_caches.bats",
+  "source_test": "clean_editor_obsolete_extensions removes only dirs listed in .obsolete (#910)",
+  "fixture": [
+    {
+      "mkdir": "~/.vscode/extensions/pub.ext-new-1.1.0"
+    },
+    {
+      "mkdir": "~/.vscode/extensions/pub.ext-old-1.0.0"
+    }
+  ],
+  "expect_not_selected": [
+    "pub.ext-new-1.1.0"
+  ]
+}

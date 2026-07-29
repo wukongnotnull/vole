@@ -1,0 +1,17 @@
+{
+  "id": "clean_code_editors_includes_vs_code_webstorage_cachestorage_only",
+  "source_bats": "third_party/mole-1.48.1/tests/clean_app_caches.bats",
+  "source_test": "clean_code_editors includes VS Code WebStorage CacheStorage only",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Code/WebStorage/29/CacheStorage/uuid-1"
+    },
+    {
+      "mkdir": "~/Library/Application Support/Code/WebStorage/29/Local Storage"
+    }
+  ],
+  "expect_not_selected": [
+    "Local Storage",
+    "QuotaManager"
+  ]
+}

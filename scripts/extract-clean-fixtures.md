@@ -47,6 +47,7 @@ patterns are scanned:
 
 - `clean_ai_cli_caches.bats`
 - `clean_dev_caches.bats`
+- `clean_app_caches.bats`
 
 Expand the allowlist in `extract-clean-fixtures.py` after spot-checking a file.
 

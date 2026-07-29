@@ -1,6 +1,7 @@
 # Phase 4c Batch 2 selection
 
-Target: 40 rules
+Target: 40 rules  
+**Actual: 40** (app-caches 35 + user-devtools 5). Total enabled rules in tree ≈ 46 including prior AI/Codex/example.
 
 ## Block A — `data/rules/app-caches.toml` (`all`)
 
@@ -59,3 +60,7 @@ Target: 40 rules
 - brew cleanup (`brew` subprocess)
 - new `custom` handlers (quota: 0 this batch)
 
+
+## Custom ratio note
+
+Batch 2 added **0** custom handlers. Pre-existing custom rules: 3. Total rules: 46 → custom ratio ≈ 6.5% (slightly above 5% hard cap). Next batch should prefer `all`/`keep_*` only until ratio ≤ 5%.

@@ -17,6 +17,7 @@ from typing import Any
 ALLOWLIST = (
     "clean_ai_cli_caches.bats",
     "clean_dev_caches.bats",
+    "clean_app_caches.bats",
 )
 
 RE_TEST = re.compile(r'@test\s+"([^"]+)"\s*\{', re.MULTILINE)

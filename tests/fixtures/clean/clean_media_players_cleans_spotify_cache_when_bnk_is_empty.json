@@ -1,0 +1,13 @@
+{
+  "id": "clean_media_players_cleans_spotify_cache_when_bnk_is_empty",
+  "source_bats": "third_party/mole-1.48.1/tests/clean_app_caches.bats",
+  "source_test": "clean_media_players cleans spotify cache when bnk is empty",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Spotify/PersistentCache/Storage"
+    }
+  ],
+  "expect_not_selected": [
+    "Spotify cache protected"
+  ]
+}

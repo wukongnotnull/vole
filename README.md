@@ -121,7 +121,7 @@ v1 聚焦高频三命令 + `history`。`uninstall` / `optimize` / `purge` / `ins
 | Phase 2 `status` | 可用 |
 | Phase 3 `analyze` | 可用（目录模式） |
 | Phase 4 `clean` | 可用；规则 **430** 条（Phase 4c+ Batch 12） |
-| Phase 5 `history` + 协议冻结 + 菜单 / 补全 | 可用；**v0.0.5** ad-hoc Release（Batch 12 待 v0.0.6） |
+| Phase 5 `history` + 协议冻结 + 菜单 / 补全 | 可用；**v0.0.6** ad-hoc Release（430 规则） |
 
 设计与计划见 `docs/wukong-code/`；规则收官总结见 [`docs/findings/2026-07-phase4c-v1-summary.md`](docs/findings/2026-07-phase4c-v1-summary.md)。
 

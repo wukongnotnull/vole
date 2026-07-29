@@ -1,0 +1,14 @@
+{
+  "id": "batch13_microsoft_word_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "microsoft-word-cache selects bundle cache dir",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.microsoft.Word"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.microsoft.Word|Microsoft Word cache"
+  ],
+  "expect_not_selected": []
+}

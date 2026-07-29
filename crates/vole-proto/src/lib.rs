@@ -8,11 +8,13 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+pub mod analyze;
 pub mod events;
 pub mod plan;
 pub mod report;
 pub mod status;
 
+pub use analyze::{AnalyzeEntry, AnalyzeFileEntry, AnalyzeOutput};
 pub use events::StreamEvent;
 pub use plan::{Plan, PlanEntry};
 pub use report::{Report, SkipSummary};

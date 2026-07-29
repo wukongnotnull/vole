@@ -30,6 +30,9 @@ jobs:
       - name: Crate dependency direction
         run: ./scripts/check-dep-direction.sh
 
+      - name: Protocol doc
+        run: ./scripts/check-protocol-doc.sh
+
       - name: Format
         run: cargo fmt --all -- --check
 

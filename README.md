@@ -15,7 +15,7 @@
 | **Mole 兼容 JSON** | `status` / `analyze` / `history` 同名字段口径对齐，现有脚本可平滑迁移 |
 | **废纸篓口径诚实** | 报告区分 `trashed_bytes` / `deleted_bytes`，不把「进废纸篓」吹成「已释放」 |
 | **扫描更扎实** | 硬链接去重、折叠目录、`jwalk` 并行遍历 |
-| **规则数据化** | **230** 条高价值清理规则以 TOML 声明，可 diff、可禁用、可 fixture 回归 |
+| **规则数据化** | **270** 条高价值清理规则以 TOML 声明，可 diff、可禁用、可 fixture 回归 |
 
 适合：想要更现代、更可脚本化、更偏「安全预览再执行」的日常清理与磁盘洞察。若你需要成熟全家桶（卸载、系统优化、purge 等），请继续用 [Mole](https://github.com/tw93/Mole)。
 
@@ -31,7 +31,7 @@
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |
 | 外部依赖 | 无第三方 CLI 依赖 | 部分场景推荐 `fd` 等 |
-| 规则规模 | **230** 条高价值规则（Phase 4c+ 持续扩展） | 全量数百条 `safe_clean` 目标 |
+| 规则规模 | **270** 条高价值规则（Phase 4c+ 持续扩展） | 全量数百条 `safe_clean` 目标 |
 | 桌面端路线 | 协议已为 SwiftUI sidecar 预留 | 另有商业 [Mole for Mac](https://mole.fit) |
 | 许可证 | GPL-3.0（衍生作品，唯一可选） | GPL-3.0 |
 
@@ -53,13 +53,13 @@ export PATH="$HOME/.local/bin:$PATH"
 export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"
 ```
 
-**预编译包**（GitHub Release [v0.0.1](https://github.com/wukongnotnull/vole/releases/tag/v0.0.1)，ad-hoc 未公证）：
+**预编译包**（GitHub Release [v0.0.2](https://github.com/wukongnotnull/vole/releases/tag/v0.0.2)，ad-hoc 未公证）：
 
 ```bash
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v0.0.1/vole-0.0.1-aarch64-apple-darwin.tar.gz
-tar xzf vole-0.0.1-aarch64-apple-darwin.tar.gz
-install -m 755 vole-0.0.1-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-mkdir -p ~/.local/share/vole && cp -R vole-0.0.1-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v0.0.2/vole-0.0.2-aarch64-apple-darwin.tar.gz
+tar xzf vole-0.0.2-aarch64-apple-darwin.tar.gz
+install -m 755 vole-0.0.2-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+mkdir -p ~/.local/share/vole && cp -R vole-0.0.2-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"
 ```
 
@@ -120,8 +120,8 @@ v1 聚焦高频三命令 + `history`。`uninstall` / `optimize` / `purge` / `ins
 | Phase 1 基础设施（协议、oplog、互斥） | 已落地 |
 | Phase 2 `status` | 可用 |
 | Phase 3 `analyze` | 可用（目录模式） |
-| Phase 4 `clean` | 可用；规则 **230** 条（Phase 4c+ Batch 7） |
-| Phase 5 `history` + 协议冻结 + 菜单 / 补全 | 可用；**v0.0.1** ad-hoc Release；Developer ID / Homebrew stable 待证书 |
+| Phase 4 `clean` | 可用；规则 **270** 条（Phase 4c+ Batch 8） |
+| Phase 5 `history` + 协议冻结 + 菜单 / 补全 | 可用；**v0.0.2** ad-hoc Release（270 规则） |
 
 设计与计划见 `docs/wukong-code/`；规则收官总结见 [`docs/findings/2026-07-phase4c-v1-summary.md`](docs/findings/2026-07-phase4c-v1-summary.md)。
 

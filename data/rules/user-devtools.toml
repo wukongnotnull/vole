@@ -1321,3 +1321,264 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+# Batch 8 wave
+
+[[rule]]
+id = "claude-cache"
+category = "user-devtools"
+label = "Claude cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Claude/Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "claude-code-cache"
+category = "user-devtools"
+label = "Claude code cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Claude/Code Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "claude-gpu-cache"
+category = "user-devtools"
+label = "Claude GPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Claude/GPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "claude-sentry-cache"
+category = "user-devtools"
+label = "Claude sentry cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Claude/sentry/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "claude-dawn-cache"
+category = "user-devtools"
+label = "Claude Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Claude/DawnGraphiteCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "claude-webgpu-cache"
+category = "user-devtools"
+label = "Claude WebGPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Claude/DawnWebGPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qoder-cache"
+category = "user-devtools"
+label = "Qoder cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Qoder/Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qoder-cached-data"
+category = "user-devtools"
+label = "Qoder cached data"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Qoder/CachedData/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qoder-code-cache"
+category = "user-devtools"
+label = "Qoder code cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Qoder/Code Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qoder-gpu-cache"
+category = "user-devtools"
+label = "Qoder GPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Qoder/GPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qoder-logs"
+category = "user-devtools"
+label = "Qoder logs"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Qoder/logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "opencode-snapshots"
+category = "user-devtools"
+label = "OpenCode snapshots"
+platform = ["macos"]
+paths = ["~/.local/share/opencode/snapshot/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "opencode-logs"
+category = "user-devtools"
+label = "OpenCode logs"
+platform = ["macos"]
+paths = ["~/.local/share/opencode/log/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "navicat-cache"
+category = "user-devtools"
+label = "Navicat cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.navicat.*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "dbeaver-cache"
+category = "user-devtools"
+label = "DBeaver cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.dbeaver.*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "mongodb-compass-cache"
+category = "user-devtools"
+label = "MongoDB Compass cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.mongodb.compass/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "redis-insight-cache"
+category = "user-devtools"
+label = "Redis Insight cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.redis.RedisInsight"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "paw-api-cache"
+category = "user-devtools"
+label = "Paw API cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.getpaw.Paw/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "charles-proxy-cache"
+category = "user-devtools"
+label = "Charles Proxy cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.charlesproxy.charles/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "proxyman-cache"
+category = "user-devtools"
+label = "Proxyman cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.proxyman.NSProxy/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"

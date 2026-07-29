@@ -1,0 +1,14 @@
+{
+  "id": "batch8_obsidian_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "obsidian-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/md.obsidian/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/md.obsidian/item|Obsidian cache"
+  ],
+  "expect_not_selected": []
+}

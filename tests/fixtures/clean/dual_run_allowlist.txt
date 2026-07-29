@@ -1,6 +1,6 @@
 # Default dual-run allowlist (5 fixtures, ~5 min in CI).
-batch6_bazel_cache_selects_child.json
-batch6_postman_cache_selects_child.json
-batch7_steam_cache_selects_child.json
+batch8_claude_cache_selects_child.json
+batch8_navicat_cache_selects_child.json
+batch8_steam_web_cache_selects_child.json
 batch7_figma_cache_selects_child.json
-batch7_insomnia_cache_selects_child.json
+batch6_bazel_cache_selects_child.json

@@ -1,0 +1,14 @@
+{
+  "id": "batch8_navicat_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "navicat-cache after protection refine",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.navicat.premium"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.navicat.premium|Navicat cache"
+  ],
+  "expect_not_selected": []
+}

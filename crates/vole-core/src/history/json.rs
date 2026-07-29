@@ -63,11 +63,16 @@ pub struct HistoryReport {
 impl HistoryReport {
     /// Load history from log paths. Missing files are treated as empty.
     pub fn load(operations_log: impl AsRef<Path>, deletions_log: impl AsRef<Path>) -> Self {
+        let operations_log = operations_log.as_ref().to_path_buf();
+        let deletions_log = deletions_log.as_ref().to_path_buf();
+        let sessions = crate::history::session::load_sessions(&operations_log);
+        // Deletions parsing lands in Task 3; keep empty for now beyond path wiring.
+        let deletions = Vec::new();
         Self {
-            operations_log: operations_log.as_ref().to_path_buf(),
-            deletions_log: deletions_log.as_ref().to_path_buf(),
-            sessions: Vec::new(),
-            deletions: Vec::new(),
+            operations_log,
+            deletions_log,
+            sessions,
+            deletions,
         }
     }
 

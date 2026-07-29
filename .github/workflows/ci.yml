@@ -56,5 +56,15 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Placeholder until Task 8 lands the harness
-        run: echo "harness 在 Task 8 接入"
+      - name: Build
+        run: cargo build --workspace
+      - name: Run plan-stage conformance
+        # 只跑 plan 阶段：不删任何文件。apply 阶段用例留给一次性环境。
+        run: |
+          export VOLE_TEST_ROOT=$(mktemp -d)
+          # 本阶段 vole 候选集恒为空，diff 必然非空，退出码 1 是预期。
+          # Phase 4 规则引擎接入后把 `|| true` 去掉。
+          cargo run -p conformance -- \
+            --fixture conformance/fixtures/smoke.json \
+            --mole third_party/mole-1.48.1/bin/clean.sh \
+            --vole target/debug/vole || true

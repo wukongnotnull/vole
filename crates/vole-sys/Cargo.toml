@@ -6,3 +6,9 @@ license.workspace = true
 
 [dependencies]
 vole-proto = { path = "../vole-proto" }
+rustix = { version = "1", features = ["fs", "process"] }
+thiserror = "2"
+plist = "1.10"
+rusqlite = { version = "0.37", features = ["bundled"] }
+trash = "5.2"
+sysinfo = "0.39"

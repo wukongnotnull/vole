@@ -1,0 +1,31 @@
+diff --git a/bin/clean.sh b/bin/clean.sh
+index 5d2cc2d..2ade57b 100755
+--- a/bin/clean.sh
++++ b/bin/clean.sh
+@@ -972,6 +972,26 @@ safe_clean() {
+         fi
+     done
+ 
++    # --- BEGIN vole conformance patch (test-only, not for distribution) ---
++    # 只在 VOLE_CONFORMANCE_OUT 设置时输出，不改动任何控制流。
++    # existing_paths 此刻正是通过全部 guard 的候选集。
++    if [[ -n "${VOLE_CONFORMANCE_OUT:-}" ]]; then
++        _vole_json_str() {
++            local s=$1
++            s=${s//\\/\\\\}
++            s=${s//\"/\\\"}
++            printf '"%s"' "$s"
++        }
++        local _vole_p
++        for _vole_p in ${existing_paths[@]+"${existing_paths[@]}"}; do
++            printf '{"type":"candidate","path":%s,"label":%s}\n' \
++                "$(_vole_json_str "$_vole_p")" \
++                "$(_vole_json_str "$description")" \
++                >> "$VOLE_CONFORMANCE_OUT"
++        done
++    fi
++    # --- END vole conformance patch ---
++
+     debug_timer_end "$description: path scan" _perf_scan_start
+ 
+     # Keep the spinner alive between phases; the next phase swaps its text in

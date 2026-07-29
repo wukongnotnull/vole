@@ -1,0 +1,34 @@
+# 示例规则（Phase 4b Task 7 schema 演示）
+
+[[rule]]
+id = "chrome-cache"
+category = "browser"
+label = "Chrome cache"
+platform = ["macos"]
+paths = [
+  "~/Library/Caches/Google/Chrome/*/Cache",
+  "~/Library/Caches/Google/Chrome/*/Code Cache",
+]
+impact = "Chrome 将在下次启动时重建缓存，不影响登录状态"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "xcode-derived-data-stale"
+category = "developer"
+label = "Xcode DerivedData older than 30 days"
+platform = ["macos"]
+paths = ["~/Library/Developer/Xcode/DerivedData/*"]
+impact = "删除 30 天未修改的 DerivedData 子目录，不影响当前构建缓存"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "older_than_days"
+days = 30
+
+[rule.guards]
+min_free_space = "1GB"

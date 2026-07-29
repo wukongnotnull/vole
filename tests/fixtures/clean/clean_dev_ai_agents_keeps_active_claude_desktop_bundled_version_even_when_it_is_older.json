@@ -1,0 +1,45 @@
+{
+  "id": "clean_dev_ai_agents_keeps_active_claude_desktop_bundled_version_even_when_it_is_older",
+  "source_bats": "third_party/mole-1.48.1/tests/clean_ai_cli_caches.bats",
+  "source_test": "clean_dev_ai_agents keeps active Claude Desktop bundled version even when it is older",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Claude/claude-code-vm/2.1.140",
+      "mtime": "2026-04-01T00:00"
+    },
+    {
+      "mkdir": "~/Library/Application Support/Claude/claude-code-vm/2.1.142",
+      "mtime": "2026-04-15T00:00"
+    },
+    {
+      "mkdir": "~/Library/Application Support/Claude/claude-code-vm/2.1.150",
+      "mtime": "2026-04-25T00:00"
+    },
+    {
+      "mkdir": "~/Library/Application Support/Claude/claude-code/2.1.140",
+      "mtime": "2026-04-01T00:00"
+    },
+    {
+      "mkdir": "~/Library/Application Support/Claude/claude-code/2.1.142",
+      "mtime": "2026-04-15T00:00"
+    },
+    {
+      "mkdir": "~/Library/Application Support/Claude/claude-code/2.1.150",
+      "mtime": "2026-04-25T00:00"
+    },
+    {
+      "write": "~/Library/Application Support/Claude/claude-code-vm/.sdk-version",
+      "content": "2.1.140"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Claude/claude-code-vm/2.1.142|Claude Desktop bundled Claude Code VM old version",
+    "~/Library/Application Support/Claude/claude-code/2.1.142|Claude Desktop bundled Claude Code old version"
+  ],
+  "expect_not_selected": [
+    "~/Library/Application Support/Claude/claude-code-vm/2.1.140",
+    "~/Library/Application Support/Claude/claude-code-vm/2.1.150",
+    "~/Library/Application Support/Claude/claude-code/2.1.140",
+    "~/Library/Application Support/Claude/claude-code/2.1.150"
+  ]
+}

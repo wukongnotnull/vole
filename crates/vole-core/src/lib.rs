@@ -5,13 +5,19 @@
 
 pub use vole_sys::vole_proto;
 
+#[cfg(test)]
+mod clean_fixture;
+
 pub mod analyze;
 pub mod cancel;
+pub mod delete;
 pub mod mutex;
 pub mod oplog;
 pub mod ops;
+pub mod protection;
+pub mod rules;
+pub mod safety;
 pub mod scan;
-pub mod spike_toctou;
 pub mod status;
 pub mod units;
 pub mod whitelist;

@@ -22,6 +22,34 @@ pub fn load_clean() -> io::Result<Vec<String>> {
     Ok(parse_lines(&text))
 }
 
+pub fn add_clean(pattern: &str) -> io::Result<()> {
+    let pat = pattern.trim();
+    if pat.is_empty() || pat.starts_with('#') {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "无效的白名单 pattern",
+        ));
+    }
+    let mut patterns = load_clean()?;
+    if patterns.iter().any(|p| p == pat) {
+        return Ok(());
+    }
+    patterns.push(pat.to_string());
+    save_clean(&patterns)
+}
+
+pub fn remove_clean(pattern: &str) -> io::Result<bool> {
+    let pat = pattern.trim();
+    let mut patterns = load_clean()?;
+    let before = patterns.len();
+    patterns.retain(|p| p != pat);
+    if patterns.len() == before {
+        return Ok(false);
+    }
+    save_clean(&patterns)?;
+    Ok(true)
+}
+
 pub fn save_clean(patterns: &[String]) -> io::Result<()> {
     let path = config_path();
     if let Some(parent) = path.parent() {
@@ -71,6 +99,7 @@ pub fn is_match(path: &Path, patterns: &[String]) -> bool {
 mod tests {
     use super::*;
     use crate::test_env;
+    use std::io;
     use std::path::Path;
 
     #[test]
@@ -90,5 +119,30 @@ mod tests {
     fn prefix_star_matches() {
         assert!(is_match(Path::new("/tmp/abc"), &["/tmp/a*".into()]));
         assert!(!is_match(Path::new("/other"), &["/tmp/a*".into()]));
+    }
+
+    #[test]
+    fn add_remove_roundtrip() {
+        let _guard = test_env::lock();
+        let home = std::env::temp_dir().join(format!("vole-wl-ar-{}", std::process::id()));
+        std::env::set_var("HOME", home.join("h"));
+        add_clean("/tmp/keep*").unwrap();
+        add_clean("/tmp/other").unwrap();
+        assert!(!remove_clean("/tmp/missing").unwrap());
+        let loaded = load_clean().unwrap();
+        assert!(loaded.contains(&"/tmp/keep*".to_string()));
+        assert!(loaded.contains(&"/tmp/other".to_string()));
+        assert!(remove_clean("/tmp/keep*").unwrap());
+        let loaded = load_clean().unwrap();
+        assert!(!loaded.contains(&"/tmp/keep*".to_string()));
+        assert!(loaded.contains(&"/tmp/other".to_string()));
+        std::env::remove_var("HOME");
+        std::fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
+    fn add_rejects_empty_pattern() {
+        let err = add_clean("  ").unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidInput);
     }
 }

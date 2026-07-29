@@ -1,6 +1,7 @@
 //! vole 命令行入口。
 #![forbid(unsafe_code)]
 
+mod clean;
 mod signals;
 mod terminal;
 mod tui;
@@ -29,12 +30,53 @@ struct Cli {
 enum Command {
     /// 清理缓存与残留文件。
     Clean {
-        /// 只产出候选集，不改动任何文件。
-        #[arg(long)]
+        /// 只产出候选集，不改动任何文件（默认行为；对齐 mole --dry-run）。
+        #[arg(long, conflicts_with = "apply")]
         plan: bool,
+        /// 同 `--plan`。
+        #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
+        dry_run: bool,
+        /// 执行 plan 文件中的条目（须通过 TTL 与 TOCTOU 重验）。
+        #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
+        apply: Option<PathBuf>,
+        /// 永久删除而非移入废纸篓（仅与 `--apply` 联用）。
+        #[arg(long, requires = "apply")]
+        permanent: bool,
+        /// 输出 JSON 而非人类可读文本。
+        #[arg(long)]
+        json: bool,
         /// 以 NDJSON 事件流输出到 stdout。
         #[arg(long = "json-stream")]
         json_stream: bool,
+        /// 将 plan JSON 写入文件。
+        #[arg(long, conflicts_with = "apply")]
+        plan_out: Option<PathBuf>,
+        /// 交互式管理受保护路径白名单（对齐 mole `clean --whitelist`）。
+        #[arg(
+            long,
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent"]
+        )]
+        whitelist: bool,
+        /// 向白名单添加路径 pattern（非交互）。
+        #[arg(
+            long = "whitelist-add",
+            value_name = "PATH",
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist"]
+        )]
+        whitelist_add: Option<String>,
+        /// 从白名单移除路径 pattern（非交互）。
+        #[arg(
+            long = "whitelist-remove",
+            value_name = "PATH",
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist"]
+        )]
+        whitelist_remove: Option<String>,
+        /// 列出当前白名单（非交互）。
+        #[arg(
+            long = "whitelist-list",
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist"]
+        )]
+        whitelist_list: bool,
     },
     /// 实时系统监控。
     Status {
@@ -58,7 +100,32 @@ enum Command {
 fn main() {
     let cli = Cli::parse();
     match cli.command {
-        Command::Clean { plan, json_stream } => cmd_clean(plan, json_stream),
+        Command::Clean {
+            plan: _,
+            dry_run: _,
+            apply,
+            permanent,
+            json,
+            json_stream,
+            plan_out,
+            whitelist,
+            whitelist_add,
+            whitelist_remove,
+            whitelist_list,
+        } => {
+            let code = clean::run_clean(clean::CleanOptions {
+                json,
+                json_stream,
+                plan_out,
+                apply_plan: apply,
+                permanent,
+                whitelist,
+                whitelist_add,
+                whitelist_remove,
+                whitelist_list,
+            });
+            std::process::exit(code);
+        }
         Command::Status { json, json_stream } => {
             if let Err(e) = cmd_status(json, json_stream) {
                 eprintln!("vole status: {}", e);
@@ -71,15 +138,6 @@ fn main() {
                 std::process::exit(1);
             }
         }
-    }
-}
-
-fn cmd_clean(plan: bool, json_stream: bool) {
-    if plan && json_stream {
-        println!(
-            r#"{{"schema_version":{},"type":"done","candidates":0}}"#,
-            vole_core::vole_proto::SCHEMA_VERSION
-        );
     }
 }
 

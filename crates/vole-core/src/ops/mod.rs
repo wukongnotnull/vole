@@ -1,15 +1,28 @@
 //! 编排骨架：进度事件经 channel 发出，供 CLI/TUI/sidecar 消费。
 
+mod apply_plan;
+mod plan;
+mod proto_plan;
+
 use crate::vole_proto::StreamEvent;
 use crossbeam_channel::Sender;
 use thiserror::Error;
 
 use crate::cancel::{CancelToken, Cancelled};
+use crate::rules::StrategyBuildError;
+
+pub use apply_plan::{
+    apply_plan, apply_proto_plan, ApplyPlanContext, ApplyPlanError, ApplyPlanOptions,
+};
+pub use plan::{Plan, PlanBuilder, PlanEntry, DEFAULT_PLAN_TTL};
+pub use proto_plan::{plan_to_proto, ProtoPlanError};
 
 #[derive(Debug, Error)]
 pub enum OpsError {
     #[error("操作已取消")]
     Cancelled,
+    #[error("strategy build failed: {0}")]
+    Strategy(#[from] StrategyBuildError),
 }
 
 impl From<Cancelled> for OpsError {

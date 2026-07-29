@@ -7,3 +7,7 @@ license.workspace = true
 [dependencies]
 vole-sys = { path = "../vole-sys" }
 rustix = { version = "1", features = ["fs"] }
+thiserror = "2"
+anyhow = "1"
+crossbeam-channel = "0.5"
+serde_json.workspace = true

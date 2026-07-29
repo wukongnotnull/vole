@@ -1,0 +1,14 @@
+{
+  "id": "batch10_notion_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "notion-cache explicit Library/Caches child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/notion.id/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/notion.id/item|Notion cache"
+  ],
+  "expect_not_selected": []
+}

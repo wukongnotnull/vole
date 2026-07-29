@@ -1,0 +1,14 @@
+{
+  "id": "batch10_cocoapods_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "cocoapods-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/CocoaPods/repo"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/CocoaPods/repo|CocoaPods cache"
+  ],
+  "expect_not_selected": []
+}

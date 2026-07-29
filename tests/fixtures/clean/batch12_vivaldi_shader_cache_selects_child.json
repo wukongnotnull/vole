@@ -1,0 +1,14 @@
+{
+  "id": "batch12_vivaldi_shader_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "vivaldi-shader-cache in app-caches selects child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Vivaldi/ShaderCache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Vivaldi/ShaderCache/item|Vivaldi shader cache"
+  ],
+  "expect_not_selected": []
+}

@@ -2359,4 +2359,263 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+[[rule]]
+id = "brave-profile-gr-shader-cache"
+category = "user-devtools"
+label = "Brave profile GR shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/BraveSoftware/Brave-Browser/*/GrShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "brave-profile-graphite-dawn-cache"
+category = "user-devtools"
+label = "Brave profile Graphite Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/BraveSoftware/Brave-Browser/*/GraphiteDawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "brave-gr-shader-cache"
+category = "user-devtools"
+label = "Brave GR shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/BraveSoftware/Brave-Browser/GrShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "brave-dawn-cache"
+category = "user-devtools"
+label = "Brave Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/BraveSoftware/Brave-Browser/GraphiteDawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "helium-cache"
+category = "user-devtools"
+label = "Helium cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/net.imput.helium/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "helium-gpu-cache"
+category = "user-devtools"
+label = "Helium GPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/net.imput.helium/*/GPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "helium-component-cache"
+category = "user-devtools"
+label = "Helium component cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/net.imput.helium/component_crx_cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "helium-shader-cache"
+category = "user-devtools"
+label = "Helium shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/net.imput.helium/GrShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "helium-app-cache"
+category = "user-devtools"
+label = "Helium app cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/net.imput.helium/*/Application Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "yandex-cache"
+category = "user-devtools"
+label = "Yandex cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/Yandex/YandexBrowser/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "yandex-shader-cache"
+category = "user-devtools"
+label = "Yandex shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Yandex/YandexBrowser/ShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "vivaldi-graphite-dawn-cache"
+category = "user-devtools"
+label = "Vivaldi Graphite Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Vivaldi/*/GraphiteDawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "vivaldi-gr-shader-cache"
+category = "user-devtools"
+label = "Vivaldi GR shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Vivaldi/GrShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "vivaldi-crash-reports"
+category = "user-devtools"
+label = "Vivaldi crash reports"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Vivaldi/Crashpad/completed/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "comet-cache"
+category = "user-devtools"
+label = "Comet cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/Comet/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "orion-cache"
+category = "user-devtools"
+label = "Orion cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.kagi.kagimacOS/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "zen-cache"
+category = "user-devtools"
+label = "Zen cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/zen/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qq-browser-dawn-cache"
+category = "user-devtools"
+label = "QQ Browser Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/QQBrowser3/GraphiteDawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qq-browser-component-cache"
+category = "user-devtools"
+label = "QQ Browser component cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/QQBrowser3/component_crx_cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qq-browser-crash-reports"
+category = "user-devtools"
+label = "QQ Browser crash reports"
+platform = ["macos"]
+paths = ["~/Library/Application Support/QQBrowser3/Crashpad/completed/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
 

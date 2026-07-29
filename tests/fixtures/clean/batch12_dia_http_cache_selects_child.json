@@ -1,0 +1,14 @@
+{
+  "id": "batch12_dia_http_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "dia-http-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/Dia/User Data/Default/Cache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/Dia/User Data/Default/Cache/item|Dia HTTP cache"
+  ],
+  "expect_not_selected": []
+}

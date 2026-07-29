@@ -1,0 +1,14 @@
+{
+  "id": "batch12_yandex_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "yandex-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/Yandex/YandexBrowser/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/Yandex/YandexBrowser/item|Yandex cache"
+  ],
+  "expect_not_selected": []
+}

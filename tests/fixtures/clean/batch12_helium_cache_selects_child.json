@@ -1,0 +1,14 @@
+{
+  "id": "batch12_helium_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "helium-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/net.imput.helium/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/net.imput.helium/item|Helium cache"
+  ],
+  "expect_not_selected": []
+}

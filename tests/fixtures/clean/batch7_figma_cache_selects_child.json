@@ -1,0 +1,14 @@
+{
+  "id": "batch7_figma_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "figma-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.figma.Desktop/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.figma.Desktop/item|Figma cache"
+  ],
+  "expect_not_selected": []
+}

@@ -1,0 +1,14 @@
+{
+  "id": "batch7_qbittorrent_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "qbittorrent-cache selects cache dir",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.qbittorrent.qBittorrent"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.qbittorrent.qBittorrent|qBittorrent cache"
+  ],
+  "expect_not_selected": []
+}

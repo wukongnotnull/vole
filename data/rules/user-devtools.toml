@@ -1060,3 +1060,264 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+# Batch 7 wave: API/DB clients, gradle, crash reports
+
+[[rule]]
+id = "antigravity-webgpu-cache"
+category = "user-devtools"
+label = "Antigravity WebGPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Antigravity/DawnWebGPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "prisma-cache"
+category = "user-devtools"
+label = "Prisma cache"
+platform = ["macos"]
+paths = ["~/.cache/prisma/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "opencode-cache"
+category = "user-devtools"
+label = "OpenCode cache"
+platform = ["macos"]
+paths = ["~/.cache/opencode/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "playwright-browsers"
+category = "user-devtools"
+label = "Playwright browsers"
+platform = ["macos"]
+paths = ["~/Library/Caches/ms-playwright/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "filo-code-cache"
+category = "user-devtools"
+label = "Filo code cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Filo/production/Code Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "insomnia-cache"
+category = "user-devtools"
+label = "Insomnia cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.konghq.insomnia/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "unity-cache"
+category = "user-devtools"
+label = "Unity cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.unity3d.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "figma-cache"
+category = "user-devtools"
+label = "Figma cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.figma.Desktop/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "github-desktop-cache"
+category = "user-devtools"
+label = "GitHub Desktop cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.github.GitHubDesktop/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "antigravity-cache"
+category = "user-devtools"
+label = "Antigravity cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Antigravity/Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "antigravity-code-cache"
+category = "user-devtools"
+label = "Antigravity code cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Antigravity/Code Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "antigravity-gpu-cache"
+category = "user-devtools"
+label = "Antigravity GPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Antigravity/GPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "antigravity-dawn-cache"
+category = "user-devtools"
+label = "Antigravity Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Antigravity/DawnGraphiteCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "gradle-notifications-cache"
+category = "user-devtools"
+label = "Gradle notifications cache"
+platform = ["macos"]
+paths = ["~/.gradle/notifications/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "gradle-daemon"
+category = "user-devtools"
+label = "Gradle daemon"
+platform = ["macos"]
+paths = ["~/.gradle/daemon/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "gradle-workers"
+category = "user-devtools"
+label = "Gradle workers"
+platform = ["macos"]
+paths = ["~/.gradle/workers/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "simulator-runtime-cache"
+category = "user-devtools"
+label = "Simulator runtime cache"
+platform = ["macos"]
+paths = ["~/Library/Developer/CoreSimulator/Profiles/Runtimes/*/Contents/Resources/RuntimeRoot/System/Library/Caches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "sentry-crash-reports"
+category = "user-devtools"
+label = "Sentry crash reports"
+platform = ["macos"]
+paths = ["~/Library/Caches/SentryCrash/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "kscrash-reports"
+category = "user-devtools"
+label = "KSCrash reports"
+platform = ["macos"]
+paths = ["~/Library/Caches/KSCrash/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "crashlytics-data"
+category = "user-devtools"
+label = "Crashlytics data"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.crashlytics.data/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"

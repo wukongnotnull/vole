@@ -1345,3 +1345,264 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+# Batch 7 wave: gaming/download/productivity app caches
+
+[[rule]]
+id = "klee-desktop-cache"
+category = "app-caches"
+label = "Klee desktop cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/klee_desktop/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "podcasts-streamed-media"
+category = "app-caches"
+label = "Podcasts streamed media"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.podcasts/Data/tmp/StreamedMedia"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "podcasts-artwork-cache"
+category = "app-caches"
+label = "Podcasts artwork cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.podcasts/Data/tmp/*.heic"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "podcasts-image-cache"
+category = "app-caches"
+label = "Podcasts image cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.podcasts/Data/tmp/*.img"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "podcasts-download-temp"
+category = "app-caches"
+label = "Podcasts download temp"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.podcasts/Data/tmp/*CFNetworkDownload*.tmp"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qbittorrent-cache"
+category = "app-caches"
+label = "qBittorrent cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.qbittorrent.qBittorrent"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "downie-cache"
+category = "app-caches"
+label = "Downie cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.downie.Downie-*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "folx-cache"
+category = "app-caches"
+label = "Folx cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.folx.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "steam-cache"
+category = "app-caches"
+label = "Steam cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.valvesoftware.steam/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "epic-games-cache"
+category = "app-caches"
+label = "Epic Games cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.epicgames.EpicGamesLauncher/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "battle-net-cache"
+category = "app-caches"
+label = "Battle.net cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.blizzard.Battle.net/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "ea-origin-cache"
+category = "app-caches"
+label = "EA Origin cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.ea.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "gog-galaxy-cache"
+category = "app-caches"
+label = "GOG Galaxy cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.gog.galaxy/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "riot-games-cache"
+category = "app-caches"
+label = "Riot Games cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.riotgames.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "cleanshot-cache"
+category = "app-caches"
+label = "CleanShot cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.cleanshot.*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "camo-cache"
+category = "app-caches"
+label = "Camo cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.reincubate.camo"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "xnip-cache"
+category = "app-caches"
+label = "Xnip cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.xnipapp.xnip"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "youdao-dictionary-cache"
+category = "app-caches"
+label = "Youdao Dictionary cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.youdao.YoudaoDict"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "eudict-cache"
+category = "app-caches"
+label = "Eudict cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.eudic.*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "bob-translation-cache"
+category = "app-caches"
+label = "Bob Translation cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.bob-build.Bob"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"

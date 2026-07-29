@@ -1,0 +1,14 @@
+{
+  "id": "batch7_github_desktop_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "github-desktop-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.github.GitHubDesktop/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.github.GitHubDesktop/item|GitHub Desktop cache"
+  ],
+  "expect_not_selected": []
+}

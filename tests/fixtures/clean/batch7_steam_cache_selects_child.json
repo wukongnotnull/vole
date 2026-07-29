@@ -1,0 +1,14 @@
+{
+  "id": "batch7_steam_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "steam-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.valvesoftware.steam/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.valvesoftware.steam/item|Steam cache"
+  ],
+  "expect_not_selected": []
+}

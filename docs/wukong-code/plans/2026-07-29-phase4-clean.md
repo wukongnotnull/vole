@@ -26,7 +26,7 @@
 - [x] Task 2: `is_endpoint_security_cache_path` + 前缀数据
 - [x] Task 3: `should_protect_path` 数据化（TOML）+ 判定引擎
 - [x] Task 4: `mole_delete` / 废纸篓后端 + `safe_remove` 包装
-- [ ] Task 5: 合并 `spike_toctou` → `safety::verify_plan_entry` + plan 威胁模型测试
+- [x] Task 5: 合并 `spike_toctou` → `safety::verify_plan_entry` + plan 威胁模型测试
 - [ ] Task 6: property test（随机路径 ∩ 保护清单 = ∅）
 
 ### 4b 规则引擎（~1.5 周）

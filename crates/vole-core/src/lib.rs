@@ -14,7 +14,6 @@ pub mod ops;
 pub mod protection;
 pub mod safety;
 pub mod scan;
-pub mod spike_toctou;
 pub mod status;
 pub mod units;
 pub mod whitelist;

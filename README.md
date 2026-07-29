@@ -26,13 +26,7 @@ v1 子命令：`status`、`analyze`、`clean`、`history`（另有 `completions`
 
 **Phase 4 状态（2026-07-29）**：`vole clean` 可用——`--plan` / `--apply` 两阶段、`--json-stream` NDJSON、`--whitelist` 白名单管理；默认移入废纸篓，`--permanent` 永久删除。报告区分 `trashed_bytes` / `deleted_bytes`。验证：`scripts/verify-clean-candidates.sh`。计划见 `docs/wukong-code/plans/2026-07-29-phase4-clean.md`。
 
-**Phase 4c Batch 2（2026-07-29）**：规则覆盖扩至约 **46** 条（本批净增 40：`data/rules/app-caches.toml` + `user-devtools.toml`）。仍远低于设计 Top 100–150；下一批继续。选批见 `docs/findings/2026-07-phase4c-batch2-selection.md`。计划见 `docs/wukong-code/plans/2026-07-29-phase4c-rules-batch2.md`。
-
-**Phase 4c Batch 3（2026-07-29）**：规则覆盖扩至约 **86** 条（本批净增 40：通讯/AI/创意 app 缓存 + 开发者工具缓存）。custom 占比 ≈ 3.5%（3/86）。选批见 `docs/findings/2026-07-phase4c-batch3-selection.md`。计划见 `docs/wukong-code/plans/2026-07-29-phase4c-rules-batch3.md`。
-
-**Phase 4c Batch 4（2026-07-29）**：规则覆盖扩至约 **126** 条（本批净增 40：创意/媒体 app + 前端/移动 dev 缓存）。**已跨过设计 Top 100 里程碑**。选批见 `docs/findings/2026-07-phase4c-batch4-selection.md`。计划见 `docs/wukong-code/plans/2026-07-29-phase4c-rules-batch4.md`。
-
-**Phase 4c Batch 5 / v1 收官（2026-07-29）**：规则覆盖 **≈ 150** 条（本批净增 24：音乐/视频 app + 移动/构建链剩余）。**Phase 4c v1 Top 100–150 目标已完成**；未移植类别在报告中提示继续用 Mole。选批见 `docs/findings/2026-07-phase4c-batch5-selection.md`。
+**Phase 4c v1 收官（2026-07-29）**：规则 **150** 条，Top 100–150 目标完成（Batch 2–5 共 +144）。总结见 [`docs/findings/2026-07-phase4c-v1-summary.md`](docs/findings/2026-07-phase4c-v1-summary.md)。各批选批：`docs/findings/2026-07-phase4c-batch{2,3,4,5}-selection.md`。
 
 **Phase 5 状态（2026-07-29）**：`vole history`（文本 / `--json` / `--limit`，对齐 mole）；`docs/protocol.md` 已 FROZEN；无参 `vole` 进入轻量菜单；`vole completions <shell>` 生成补全。验证：`scripts/verify-history-mole.sh`、`scripts/check-protocol-doc.sh`。计划见 `docs/wukong-code/plans/2026-07-29-phase5-history-protocol.md`。签名 / Homebrew 仍为占位，见 `docs/findings/2026-07-phase5-signing.md`。
 

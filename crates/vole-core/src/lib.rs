@@ -10,6 +10,7 @@ pub mod cancel;
 pub mod mutex;
 pub mod oplog;
 pub mod ops;
+pub mod safety;
 pub mod scan;
 pub mod spike_toctou;
 pub mod status;

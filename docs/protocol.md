@@ -30,6 +30,11 @@ JSON 对象：`schema_version`, `created_at`, `ttl_secs`（默认 900）, `entri
 
 废纸篓语义见设计文档 5.7——不得用单一「freed」字段。
 
+## Status 流（Phase 2）
+
+`vole status --json-stream` 每行一个 JSON 对象，字段集与 `mo status --watch` 对齐（`StatusSnapshot`）。
+取消时进程退出，不保证额外 `aborted` 行（Phase 2–3 可扩展）。
+
 ## 冻结时点
 
 Phase 4 结束前可破坏性修改；之后只能追加字段/枚举变体。

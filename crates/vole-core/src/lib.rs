@@ -12,6 +12,7 @@ pub mod mutex;
 pub mod oplog;
 pub mod ops;
 pub mod protection;
+pub mod rules;
 pub mod safety;
 pub mod scan;
 pub mod status;

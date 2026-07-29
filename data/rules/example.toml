@@ -1,0 +1,53 @@
+# 示例规则（Phase 4b Task 7 schema 演示）
+
+[[rule]]
+id = "chrome-cache"
+category = "browser"
+label = "Chrome cache"
+platform = ["macos"]
+paths = [
+  "~/Library/Caches/Google/Chrome/*/Cache",
+  "~/Library/Caches/Google/Chrome/*/Code Cache",
+]
+impact = "Chrome 将在下次启动时重建缓存，不影响登录状态"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "claude-code-old-versions"
+category = "ai-agents"
+label = "Claude Code old versions"
+platform = ["macos"]
+paths = ["~/.local/share/claude/versions/*"]
+impact = "保留最新版本，删除旧版本目录"
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "keep_newest_by_mtime"
+keep = 1
+env_override = "MOLE_AI_AGENTS_KEEP"
+
+[rule.guards]
+not_running = ["claude"]
+protect_symlink_target = "~/.local/bin/claude"
+on_broken_symlink = "skip_rule"
+
+[[rule]]
+id = "xcode-derived-data-stale"
+category = "developer"
+label = "Xcode DerivedData older than 30 days"
+platform = ["macos"]
+paths = ["~/Library/Developer/Xcode/DerivedData/*"]
+impact = "删除 30 天未修改的 DerivedData 子目录，不影响当前构建缓存"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "older_than_days"
+days = 30
+
+[rule.guards]
+min_free_space = "1GB"

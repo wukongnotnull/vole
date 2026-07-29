@@ -31,7 +31,7 @@
 
 ### 4b 规则引擎（~1.5 周）
 
-- [ ] Task 7: 规则 TOML schema + 策略 trait（glob、mtime、pgrep…）
+- [x] Task 7: 规则 TOML schema + 策略 trait（glob、mtime、pgrep…）
 - [ ] Task 8: guard 与路径语义（设计 6.2 八条）
 - [ ] Task 9: `Orchestrator` 扩展为 plan 生成管线
 

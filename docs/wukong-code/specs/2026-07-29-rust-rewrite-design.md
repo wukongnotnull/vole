@@ -214,7 +214,7 @@ Mole 有 `check_tcc_permissions()`（`lib/clean/caches.sh:8`），在清理前�
 
 重点观察三件事：重新编译后是否重新弹窗（直接影响开发迭代效率）、授权能否从终端继承、以及 app spawn 时授权归属于谁。
 
-**Phase 0.5 最小子集**：本机 ad-hoc 签名下读 `~/Library/Containers` 退出码 0，未观测弹窗；不足以代表 Full Disk Access 场景。**Phase 1 仍须跑完整矩阵，并建议尽早申请 Developer ID。**
+**Phase 0.5 最小子集**：本机 ad-hoc 签名下读 `~/Library/Containers` 退出码 0，未观测弹窗；不足以代表 Full Disk Access 场景。**Phase 1 完整矩阵 deferred**（无 Developer ID），见 `docs/findings/2026-07-phase1-tcc-deferred.md`；ad-hoc 子集结果已写入该文档。
 
 ### 4.2 提权模型：v1 不提权，但必须响亮地告知
 
@@ -864,13 +864,16 @@ Phase 0–3（只读的 `status` + `analyze`）净 **10 周**，含 buffer 约 1
 
 以下事项尚未决策，需要在对应阶段前确认。
 
-1. **签名身份**。SwiftUI app 对外分发是硬要求；CLI 走 Homebrew **Formula** 无强制公证，**Cask** 需 Developer ID。**Phase 1 前申请 Developer ID（$99/yr）**。macOS 磁盘 I/O 速率支持待实测；不够则需自己写 IOKit 绑定，Phase 2 加约 3 天。
-5. **`defaults` 的 17 次调用**。v1 保留子进程，但若 TCC 或性能实测显示有问题，需提前迁到 `CFPreferences*` API。
-6. **规则数据能否独立于二进制更新**。纯内嵌（`include_str!`）最简单，但 `disabled` 应急开关就必须发版才能生效；允许用户目录覆盖则应急更快，代价是多一条不可信输入路径需要校验。**Phase 4b 前决定**，见 [6.3](#63-规则的过期与复核)。
-7. **规则优先级排序依据**。若触发 Phase 4c 的收缩方案，「Top 100 条」按什么排序？建议按真实机器上实测的释放空间，但需要先有一个采集脚本。
-8. **vole 二进制如何随 app 分发**。内嵌进 app bundle（两者同为 GPL，法律上无障碍），还是要求用户先装 Homebrew 版？内嵌的好处是签名身份与 TCC 授权可控，代价是同一台机器上可能有两份 vole，版本不一致时协议兼容性靠 `schema_version` 兜。**需在 app 项目启动前决定，不影响 v1。**
-9. **`status` 是否需要同进程 FFI**。实时面板走 sidecar 会有进程间延迟。若 Phase 2 实测发现 NDJSON 往返对刷新率有可感知影响，可能需要单独为 `status` 加一条 C ABI 路径。**Phase 2 实测后回答。**
+1. **签名身份**。SwiftUI app 对外分发是硬要求；CLI 走 Homebrew **Formula** 无强制公证，**Cask** 需 Developer ID。**Phase 1 前申请 Developer ID（$99/yr）**。
+2. **`sysinfo` 是否够用**。macOS 磁盘 I/O 速率支持待实测；不够则需自己写 IOKit 绑定，Phase 2 加约 3 天。
+3. **`defaults` 的 17 次调用**。v1 保留子进程，但若 TCC 或性能实测显示有问题，需提前迁到 `CFPreferences*` API。
+4. **规则数据能否独立于二进制更新**。纯内嵌（`include_str!`）最简单，但 `disabled` 应急开关就必须发版才能生效；允许用户目录覆盖则应急更快，代价是多一条不可信输入路径需要校验。**Phase 4b 前决定**，见 [6.3](#63-规则的过期与复核)。
+5. **规则优先级排序依据**。Phase 4c 已触发收缩方案；「Top 100–150 条」按真实机器上实测的释放空间排序。**Phase 4c 启动前需有采集脚本。**
+6. **vole 二进制如何随 app 分发**。内嵌进 app bundle（两者同为 GPL，法律上无障碍），还是要求用户先装 Homebrew 版？内嵌的好处是签名身份与 TCC 授权可控，代价是同一台机器上可能有两份 vole，版本不一致时协议兼容性靠 `schema_version` 兜。**需在 app 项目启动前决定，不影响 v1。**
+7. **`status` 是否需要同进程 FFI**。实时面板走 sidecar 会有进程间延迟。若 Phase 2 实测发现 NDJSON 往返对刷新率有可感知影响，可能需要单独为 `status` 加一条 C ABI 路径。**Phase 2 实测后回答。**
 
 ### 已关闭的问题
 
 - ~~`--json` schema 是否允许扩展~~ → 已决策为「mole 的字段集是 Vole 的子集」，见 [三种契约](#三种契约必须分开)。
+- ~~Homebrew 是否要求签名与公证~~ → Cask 2026-09 起强制；Formula 豁免。见 [5.5](#55-分发签名与公证) 与 `docs/findings/2026-07-spike-platform.md`。
+- ~~TCC 授权的粒度（最小子集）~~ → 本机 ad-hoc 未弹窗；完整矩阵与 Developer ID 行为留 Phase 1。见 `docs/findings/2026-07-spike-platform.md`。

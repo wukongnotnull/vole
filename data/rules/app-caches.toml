@@ -454,3 +454,239 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+
+# Batch 3: mole app_caches.sh wave 3 (comms / AI desktop / creative)
+
+[[rule]]
+id = "whatsapp-cache"
+category = "app-caches"
+label = "WhatsApp cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/net.whatsapp.WhatsApp/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "skype-cache"
+category = "app-caches"
+label = "Skype cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.skype.skype/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "tencent-meeting-cache"
+category = "app-caches"
+label = "Tencent Meeting cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.tencent.meeting/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "wecom-cache"
+category = "app-caches"
+label = "WeCom cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.tencent.WeWorkMac/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qq-cache"
+category = "app-caches"
+label = "QQ cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.tencent.qq/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "feishu-cache"
+category = "app-caches"
+label = "Feishu cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.feishu.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "teams-legacy-cache"
+category = "app-caches"
+label = "Microsoft Teams legacy cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Microsoft/Teams/Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "teams-legacy-logs"
+category = "app-caches"
+label = "Microsoft Teams legacy logs"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Microsoft/Teams/logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "teams-legacy-tmp"
+category = "app-caches"
+label = "Microsoft Teams legacy temp files"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Microsoft/Teams/tmp/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "dingtalk-cache"
+category = "app-caches"
+label = "DingTalk iDingTalk cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/dd.work.exclusive4aliding/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "dingtalk-logs"
+category = "app-caches"
+label = "DingTalk logs"
+platform = ["macos"]
+paths = ["~/Library/Application Support/iDingTalk/log/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "chatgpt-cache"
+category = "app-caches"
+label = "ChatGPT cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.openai.chat/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "claude-desktop-cache"
+category = "app-caches"
+label = "Claude desktop cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.anthropic.claudefordesktop/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "claude-logs"
+category = "app-caches"
+label = "Claude logs"
+platform = ["macos"]
+paths = ["~/Library/Logs/Claude/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "lm-studio-cache"
+category = "app-caches"
+label = "LM Studio cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.lmstudio.lmstudio/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "sketch-cache"
+category = "app-caches"
+label = "Sketch cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.bohemiancoding.sketch3/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "adobe-cache"
+category = "app-caches"
+label = "Adobe cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/Adobe/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "screenflow-cache"
+category = "app-caches"
+label = "ScreenFlow cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/net.telestream.screenflow10/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"

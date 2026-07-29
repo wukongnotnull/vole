@@ -1,0 +1,14 @@
+{
+  "id": "batch3_cargo_registry_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "cargo-registry-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/.cargo/registry/cache/index"
+    }
+  ],
+  "expect_selected": [
+    "~/.cargo/registry/cache/index|Rust cargo cache"
+  ],
+  "expect_not_selected": []
+}

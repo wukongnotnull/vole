@@ -65,3 +65,291 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "keep_newest_by_mtime"
 keep = 5
+
+# Batch 3: mole dev.sh developer caches (strategy=all)
+
+[[rule]]
+id = "tnpm-cacache"
+category = "user-devtools"
+label = "tnpm cache directory"
+platform = ["macos"]
+paths = ["~/.tnpm/_cacache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "yarn-cache"
+category = "user-devtools"
+label = "Yarn cache"
+platform = ["macos"]
+paths = ["~/.yarn/cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "yarn-v1-cache"
+category = "user-devtools"
+label = "Yarn v1 cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/Yarn/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "pyenv-cache"
+category = "user-devtools"
+label = "pyenv cache"
+platform = ["macos"]
+paths = ["~/.pyenv/cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "poetry-cache"
+category = "user-devtools"
+label = "Poetry cache"
+platform = ["macos"]
+paths = ["~/.cache/poetry/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "ruff-cache"
+category = "user-devtools"
+label = "Ruff cache"
+platform = ["macos"]
+paths = ["~/.cache/ruff/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "mypy-cache"
+category = "user-devtools"
+label = "MyPy cache"
+platform = ["macos"]
+paths = ["~/.cache/mypy/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "pytest-cache"
+category = "user-devtools"
+label = "Pytest cache"
+platform = ["macos"]
+paths = ["~/.pytest_cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "jupyter-runtime"
+category = "user-devtools"
+label = "Jupyter runtime cache"
+platform = ["macos"]
+paths = ["~/.jupyter/runtime/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "huggingface-cache"
+category = "user-devtools"
+label = "Hugging Face cache"
+platform = ["macos"]
+paths = ["~/.cache/huggingface/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "pytorch-cache"
+category = "user-devtools"
+label = "PyTorch cache"
+platform = ["macos"]
+paths = ["~/.cache/torch/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "tensorflow-cache"
+category = "user-devtools"
+label = "TensorFlow cache"
+platform = ["macos"]
+paths = ["~/.cache/tensorflow/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "wandb-cache"
+category = "user-devtools"
+label = "Weights & Biases cache"
+platform = ["macos"]
+paths = ["~/.cache/wandb/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "cargo-registry-cache"
+category = "user-devtools"
+label = "Rust cargo cache"
+platform = ["macos"]
+paths = ["~/.cargo/registry/cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "cargo-git-cache"
+category = "user-devtools"
+label = "Cargo git cache"
+platform = ["macos"]
+paths = ["~/.cargo/git/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "rustup-downloads"
+category = "user-devtools"
+label = "Rust downloads cache"
+platform = ["macos"]
+paths = ["~/.rustup/downloads/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "rbenv-cache"
+category = "user-devtools"
+label = "rbenv download cache"
+platform = ["macos"]
+paths = ["~/.rbenv/cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "gem-spec-cache"
+category = "user-devtools"
+label = "gem spec cache"
+platform = ["macos"]
+paths = ["~/.gem/specs/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "bundler-cache"
+category = "user-devtools"
+label = "Ruby Bundler cache"
+platform = ["macos"]
+paths = ["~/.bundle/cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "docker-buildx-cache"
+category = "user-devtools"
+label = "Docker BuildX cache"
+platform = ["macos"]
+paths = ["~/.docker/buildx/cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "kube-cache"
+category = "user-devtools"
+label = "Kubernetes cache"
+platform = ["macos"]
+paths = ["~/.kube/cache/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "cpan-build"
+category = "user-devtools"
+label = "CPAN build artifacts"
+platform = ["macos"]
+paths = ["~/.cpan/build/*"]
+impact = "Developer tool residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"

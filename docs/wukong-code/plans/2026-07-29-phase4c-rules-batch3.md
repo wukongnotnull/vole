@@ -1,6 +1,6 @@
 # Phase 4c Batch 3：Clean 规则扩展 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use wukong-code:subagent-driven-development (recommended) or wukong-code:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use wukong-code:subagent-driven-development (recommended) or wukong-code:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 在 Batch 2（46 条）基础上净增约 **40** 条以 `all` 为主的 clean 规则，累计 ≈ **86** 条；压低 custom 占比至 ≤5%；配套 fixture 与门禁。
 
@@ -46,7 +46,7 @@ scripts/
 
 **Steps:**
 
-- [ ] **Step 1: 确认 main 基线**
+- [x] **Step 1: 确认 main 基线**
 
 ```bash
 rg -c '^\[\[rule\]\]' data/rules/*.toml
@@ -56,7 +56,7 @@ python3 -c 'import json; d=json.load(open("/tmp/mole-rules-b3.json")); print("po
 
 Expected: ported=40, unported_all≈416, total enabled rules≈46.
 
-- [ ] **Step 2: 记录 custom 占比**
+- [x] **Step 2: 记录 custom 占比**
 
 ```bash
 rg 'kind = "custom"' data/rules/
@@ -64,7 +64,7 @@ rg 'kind = "custom"' data/rules/
 
 Expected: 3 处（ai-agents×2, codex×1）；本批不得新增。
 
-- [ ] **Step 3: Commit**（若仅 findings 基线段）
+- [x] **Step 3: Commit**（若仅 findings 基线段）
 
 ```bash
 git add docs/findings/2026-07-phase4c-batch3-selection.md
@@ -142,13 +142,13 @@ EOF
 
 **Steps:**
 
-- [ ] **Step 1: 跑库存核对 path/label 与 mole 一致**
+- [x] **Step 1: 跑库存核对 path/label 与 mole 一致**
 
 ```bash
 python3 scripts/inventory-mole-rules.py | rg -i 'whatsapp|yarn|huggingface|adobe'
 ```
 
-- [ ] **Step 2: 填表并 commit**
+- [x] **Step 2: 填表并 commit**
 
 ```bash
 git add docs/findings/2026-07-phase4c-batch3-selection.md
@@ -186,15 +186,15 @@ kind = "all"
 
 **Steps:**
 
-- [ ] **Step 1: TDD — 先写 1 个失败 fixture**
-- [ ] **Step 2: 写入 TOML 使 fixture 绿**
-- [ ] **Step 3: 追加至 ~10 条 Block A 首批（通讯类）**
+- [x] **Step 1: TDD — 先写 1 个失败 fixture**
+- [x] **Step 2: 写入 TOML 使 fixture 绿**
+- [x] **Step 3: 追加至 ~10 条 Block A 首批（通讯类）**
 
 ```bash
 cargo test -p vole-core verify_clean_fixtures -- --nocapture
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -214,9 +214,9 @@ EOF
 
 **Steps:**
 
-- [ ] **Step 1: 追加剩余 Block A 规则**
-- [ ] **Step 2: fixture + verify 绿**
-- [ ] **Step 3: Commit**
+- [x] **Step 1: 追加剩余 Block A 规则**
+- [x] **Step 2: fixture + verify 绿**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -236,9 +236,9 @@ EOF
 
 **Steps:**
 
-- [ ] **Step 1: 红 fixture → 绿 TOML（TDD，至少 3 条代表）**
-- [ ] **Step 2: 追加全部 Block B 规则**
-- [ ] **Step 3: 确认无新增 custom**
+- [x] **Step 1: 红 fixture → 绿 TOML（TDD，至少 3 条代表）**
+- [x] **Step 2: 追加全部 Block B 规则**
+- [x] **Step 3: 确认无新增 custom**
 
 ```bash
 rg 'kind = "custom"' data/rules/user-devtools.toml data/rules/app-caches.toml
@@ -246,7 +246,7 @@ rg 'kind = "custom"' data/rules/user-devtools.toml data/rules/app-caches.toml
 
 Expected: 无匹配。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -266,15 +266,15 @@ EOF
 
 **Steps:**
 
-- [ ] **Step 1: 试跑 `clean_dev_caches.bats` 抽取**
+- [x] **Step 1: 试跑 `clean_dev_caches.bats` 抽取**
 
 ```bash
 python3 scripts/extract-clean-fixtures.py --bats clean_dev_caches.bats
 ```
 
-- [ ] **Step 2: 人工校对后纳入 `tests/fixtures/clean/`**
-- [ ] **Step 3: `verify_clean_fixtures` 仍绿**
-- [ ] **Step 4: Commit**（或无可靠抽取则跳过，在 findings 注明）
+- [x] **Step 2: 人工校对后纳入 `tests/fixtures/clean/`**
+- [x] **Step 3: `verify_clean_fixtures` 仍绿**
+- [x] **Step 4: Commit**（或无可靠抽取则跳过，在 findings 注明）
 
 ---
 
@@ -287,7 +287,7 @@ python3 scripts/extract-clean-fixtures.py --bats clean_dev_caches.bats
 
 **Steps:**
 
-- [ ] **Step 1: 全量验证**
+- [x] **Step 1: 全量验证**
 
 ```bash
 cargo test -p vole-core
@@ -295,7 +295,7 @@ bash scripts/verify-clean-candidates.sh
 cargo clippy -p vole-core -- -D warnings
 ```
 
-- [ ] **Step 2: 计数门禁**
+- [x] **Step 2: 计数门禁**
 
 ```bash
 rg -c '^\[\[rule\]\]' data/rules/*.toml
@@ -304,8 +304,8 @@ python3 scripts/inventory-mole-rules.py | head -5
 
 Expected: 净增 40；ported=80；custom 占比 ≤5%。
 
-- [ ] **Step 3: 更新本计划所有 Task checkbox 为 `[x]`**
-- [ ] **Step 4: Commit**
+- [x] **Step 3: 更新本计划所有 Task checkbox 为 `[x]`**
+- [x] **Step 4: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -321,9 +321,9 @@ EOF
 
 **Steps:**
 
-- [ ] 对 3–5 条高信心规则（如 yarn-cache、huggingface-cache、whatsapp-cache）跑 mole dry-run vs `vole clean --plan`
-- [ ] 保护分歧 → 停并修；标签差异记 findings
-- [ ] Commit findings only if new
+- [x] 对 3–5 条高信心规则（如 yarn-cache、huggingface-cache、whatsapp-cache）跑 mole dry-run vs `vole clean --plan`
+- [x] 保护分歧 → 停并修；标签差异记 findings
+- [x] Commit findings only if new
 
 ---
 

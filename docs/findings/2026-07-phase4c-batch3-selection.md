@@ -1,7 +1,7 @@
 # Phase 4c Batch 3 selection
 
 Target: **40** rules  
-**Actual: TBD** (planning doc only; freeze during implementation Task 2)
+**Actual: 40** (app-caches +18, user-devtools +22). Total enabled rules in tree ≈ **86** including prior AI/Codex/example.
 
 Baseline after Batch 2 merge: **46** enabled rules (40 inventory-ported + AI/Codex/example); **416** unported `all` candidates.
 

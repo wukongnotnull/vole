@@ -31,8 +31,12 @@ pub fn verify(root: &Path, relative: &Path, expect: &Identity) -> Result<(), Str
         dir = next;
     }
 
-    let st = rustix::fs::statat(&dir, leaf.as_os_str(), rustix::fs::AtFlags::SYMLINK_NOFOLLOW)
-        .map_err(|e| format!("statat 失败: {e}"))?;
+    let st = rustix::fs::statat(
+        &dir,
+        leaf.as_os_str(),
+        rustix::fs::AtFlags::SYMLINK_NOFOLLOW,
+    )
+    .map_err(|e| format!("statat 失败: {e}"))?;
 
     if st.st_dev as u64 != expect.dev {
         return Err("跨设备，拒绝".into());

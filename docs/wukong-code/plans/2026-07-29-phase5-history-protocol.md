@@ -1,6 +1,6 @@
 # Phase 5：History 优先 + 协议冻结与收尾 实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use wukong-code:subagent-driven-development (recommended) or wukong-code:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use wukong-code:subagent-driven-development (recommended) or wukong-code:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 先落地 mole 兼容的 `vole history`（文本 + `--json`），再正式冻结 `docs/protocol.md`，最后补齐 completion / 轻量交互入口，并把签名与 Homebrew 收尾做成可执行但不阻塞 history 的后置任务。
 
@@ -104,9 +104,9 @@ vole/
 
 **Steps:**
 
-- [ ] **Step 1: 写失败测试** — 对空日志目录调用 `history::load(...).to_json(limit)`，断言含 `limit`、`sessions: []`、`deletions: []`、`logs.operations` / `logs.deletions` 路径字段
+- [x] **Step 1: 写失败测试** — 对空日志目录调用 `history::load(...).to_json(limit)`，断言含 `limit`、`sessions: []`、`deletions: []`、`logs.operations` / `logs.deletions` 路径字段
 
-- [ ] **Step 2: 运行测试确认失败**
+- [x] **Step 2: 运行测试确认失败**
 
 ```bash
 cargo test -p vole-core history_json -- --nocapture
@@ -114,11 +114,11 @@ cargo test -p vole-core history_json -- --nocapture
 
 Expected: FAIL（module / 类型不存在）
 
-- [ ] **Step 3: 最小骨架** — `HistoryReport { logs, limit, sessions, deletions }` + serde，空实现返回空数组
+- [x] **Step 3: 最小骨架** — `HistoryReport { logs, limit, sessions, deletions }` + serde，空实现返回空数组
 
-- [ ] **Step 4: 测试通过**
+- [x] **Step 4: 测试通过**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add crates/vole-core/src/history crates/vole-core/src/lib.rs
@@ -150,15 +150,15 @@ EOF
 
 **Steps:**
 
-- [ ] **Step 1: 写失败测试** — fixture：一条 start、若干 trashed、一条 end；断言 session 的 `command`、`actions.trashed`、`operation_count`、`ended_at` 非空
+- [x] **Step 1: 写失败测试** — fixture：一条 start、若干 trashed、一条 end；断言 session 的 `command`、`actions.trashed`、`operation_count`、`ended_at` 非空
 
-- [ ] **Step 2: 运行确认失败**
+- [x] **Step 2: 运行确认失败**
 
-- [ ] **Step 3: 实现解析与聚合**
+- [x] **Step 3: 实现解析与聚合**
 
-- [ ] **Step 4: 测试通过**；另加「无 start 的孤儿行」与「未 end」用例
+- [x] **Step 4: 测试通过**；另加「无 start 的孤儿行」与「未 end」用例
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -184,15 +184,15 @@ EOF
 
 **Steps:**
 
-- [ ] **Step 1: 写失败测试** — 写入 2 行 deletion，`limit=1` 只返回最新 1 条
+- [x] **Step 1: 写失败测试** — 写入 2 行 deletion，`limit=1` 只返回最新 1 条
 
-- [ ] **Step 2: 运行确认失败**
+- [x] **Step 2: 运行确认失败**
 
-- [ ] **Step 3: 实现**
+- [x] **Step 3: 实现**
 
-- [ ] **Step 4: 通过**
+- [x] **Step 4: 通过**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -224,21 +224,21 @@ vole history [--json] [--limit N]
 
 **Steps:**
 
-- [ ] **Step 1: 写 CLI 测试** — temp HOME 下写 mini oplog，跑 `vole history --json --limit 5`，`jq` 检查 `limit==5` 与 session 字段
+- [x] **Step 1: 写 CLI 测试** — temp HOME 下写 mini oplog，跑 `vole history --json --limit 5`，`jq` 检查 `limit==5` 与 session 字段
 
-- [ ] **Step 2: 确认失败（子命令不存在）**
+- [x] **Step 2: 确认失败（子命令不存在）**
 
-- [ ] **Step 3: 实现 clap + 文本渲染**
+- [x] **Step 3: 实现 clap + 文本渲染**
 
-- [ ] **Step 4: `cargo test -p vole-cli` + 手动：
+- [x] **Step 4: `cargo test -p vole-cli` + 手动：
 
 ```bash
 cargo run -p vole-cli -- history --json --limit 5
 ```
 
-- [ ] **Step 5: 可选** — `scripts/verify-history-mole.sh`：同一 fixture 下对比 mole `bin/history.sh --json` 与 `vole history --json` 的 sessions/deletions 关键字段（允许 path 字符串差异仅来自 HOME）
+- [x] **Step 5: 可选** — `scripts/verify-history-mole.sh`：同一 fixture 下对比 mole `bin/history.sh --json` 与 `vole history --json` 的 sessions/deletions 关键字段（允许 path 字符串差异仅来自 HOME）
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -264,18 +264,18 @@ EOF
 
 **Steps:**
 
-- [ ] **Step 1: 审计** — `rg` `StreamEvent` / `protocol.md` 与 `vole-proto` 字段仍一致；`bash scripts/check-protocol-doc.sh` 已绿
+- [x] **Step 1: 审计** — `rg` `StreamEvent` / `protocol.md` 与 `vole-proto` 字段仍一致；`bash scripts/check-protocol-doc.sh` 已绿
 
-- [ ] **Step 2: 写入 FROZEN 声明 + History 附录（字段表）**
+- [x] **Step 2: 写入 FROZEN 声明 + History 附录（字段表）**
 
-- [ ] **Step 3: CI/脚本仍通过**
+- [x] **Step 3: CI/脚本仍通过**
 
 ```bash
 bash scripts/check-protocol-doc.sh
 cargo test -p vole-proto
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -296,13 +296,13 @@ EOF
 
 **Steps:**
 
-- [ ] **Step 1: 选方案** — 优先 `clap_complete` 生成；子命令 `vole completions <shell>` 或隐藏 flag
+- [x] **Step 1: 选方案** — 优先 `clap_complete` 生成；子命令 `vole completions <shell>` 或隐藏 flag
 
-- [ ] **Step 2: 实现 + 生成物可打印到 stdout（不强制提交生成文件）**
+- [x] **Step 2: 实现 + 生成物可打印到 stdout（不强制提交生成文件）**
 
-- [ ] **Step 3: 本地验证 zsh/bash 至少一种
+- [x] **Step 3: 本地验证 zsh/bash 至少一种
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -328,13 +328,13 @@ EOF
 
 **Steps:**
 
-- [ ] **Step 1: 约定入口**（推荐：`vole` 无 args → 菜单；`vole --help` 仍显示帮助）
+- [x] **Step 1: 约定入口**（推荐：`vole` 无 args → 菜单；`vole --help` 仍显示帮助）
 
-- [ ] **Step 2: 实现最小循环**
+- [x] **Step 2: 实现最小循环**
 
-- [ ] **Step 3: 手动点选验证**
+- [x] **Step 3: 手动点选验证**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -361,11 +361,11 @@ EOF
 
 **Steps:**
 
-- [ ] **Step 1: 写 findings：当前无证书时的状态 + 所需 Apple 账号步骤**
+- [x] **Step 1: 写 findings：当前无证书时的状态 + 所需 Apple 账号步骤**
 
-- [ ] **Step 2: 占位脚本 + Homebrew formula 草稿（url/sha256 待 release）**
+- [x] **Step 2: 占位脚本 + Homebrew formula 草稿（url/sha256 待 release）**
 
-- [ ] **Step 3: Commit（允许标记 partial）**
+- [x] **Step 3: Commit（允许标记 partial）**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -381,21 +381,21 @@ EOF
 
 **Steps:**
 
-- [ ] `vole history --json` 对 mole 写出的日志可读；对 vole 自己写出的 oplog/deletions 可读
+- [x] `vole history --json` 对 mole 写出的日志可读；对 vole 自己写出的 oplog/deletions 可读
 
-- [ ] `scripts/verify-oplog-mole.sh` 仍绿（写路径未破坏）
+- [x] `scripts/verify-oplog-mole.sh` 仍绿（写路径未破坏）
 
-- [ ] `docs/protocol.md` 含 FROZEN；`check-protocol-doc.sh` 绿
+- [x] `docs/protocol.md` 含 FROZEN；`check-protocol-doc.sh` 绿
 
-- [ ] completion 至少一种 shell 可生成
+- [x] completion 至少一种 shell 可生成
 
-- [ ] 交互入口可启动并调用 history/status/clean --plan 之一
+- [x] 交互入口可启动并调用 history/status/clean --plan 之一
 
-- [ ] `cargo test` / `cargo clippy -D warnings`（工作区）通过
+- [x] `cargo test` / `cargo clippy -D warnings`（工作区）通过
 
-- [ ] 更新本计划所有 Task checkbox 为 `[x]`
+- [x] 更新本计划所有 Task checkbox 为 `[x]`
 
-- [ ] Commit plan 勾选状态
+- [x] Commit plan 勾选状态
 
 ```bash
 git commit -m "$(cat <<'EOF'

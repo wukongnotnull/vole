@@ -74,16 +74,19 @@ impl Guard {
     }
 }
 
-fn collect(dir: &Path, out: &mut HashMap<PathBuf, Option<SystemTime>>) -> io::Result<()> {
-    if !dir.exists() {
-        out.insert(dir.to_path_buf(), None);
+fn collect(path: &Path, out: &mut HashMap<PathBuf, Option<SystemTime>>) -> io::Result<()> {
+    if !path.exists() {
+        out.insert(path.to_path_buf(), None);
         return Ok(());
     }
     out.insert(
-        dir.to_path_buf(),
-        std::fs::metadata(dir).and_then(|m| m.modified()).ok(),
+        path.to_path_buf(),
+        std::fs::metadata(path).and_then(|m| m.modified()).ok(),
     );
-    for entry in std::fs::read_dir(dir)? {
+    if !path.is_dir() {
+        return Ok(());
+    }
+    for entry in std::fs::read_dir(path)? {
         let path = entry?.path();
         out.insert(
             path.clone(),

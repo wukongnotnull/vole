@@ -1,0 +1,27 @@
+# Full dual-run allowlist (25 fixtures; local only — mole dry-run is slow).
+# Use: VOLE_DUAL_RUN_ALLOWLIST=tests/fixtures/clean/dual_run_allowlist.full.txt bash scripts/verify-clean-candidates.sh
+batch2_discord_cache_selects_child.json
+batch2_npm_cacache_selects_child.json
+batch2_simulator_cache_selects_child.json
+batch2_vscode_logs_selects_child.json
+batch2_xcode_cache_selects_child.json
+batch2_zed_cache_selects_child.json
+batch3_adobe_cache_selects_child.json
+batch3_cargo_registry_cache_selects_child.json
+batch3_chatgpt_cache_selects_child.json
+batch3_huggingface_cache_selects_child.json
+batch3_teams_legacy_cache_selects_child.json
+batch3_whatsapp_cache_selects_child.json
+batch3_yarn_cache_selects_child.json
+batch4_blender_cache_selects_child.json
+batch4_expo_go_cache_selects_child.json
+batch4_netnewswire_cache_selects_child.json
+batch4_spotify_cache_selects_child.json
+batch4_teams_legacy_gpu_cache_selects_child.json
+batch4_typescript_cache_selects_child.json
+batch4_vite_cache_selects_child.json
+batch5_bilibili_cache_selects_child.json
+batch5_deno_cache_selects_child.json
+batch5_qq_music_cache_selects_child.json
+batch5_terraform_cache_selects_child.json
+batch5_xcode_ib_cache_selects_child.json

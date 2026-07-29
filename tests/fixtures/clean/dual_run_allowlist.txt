@@ -1,0 +1,7 @@
+# Default dual-run allowlist (5 fixtures, ~5 min in CI).
+# Override with VOLE_DUAL_RUN_ALLOWLIST=tests/fixtures/clean/dual_run_allowlist.full.txt
+batch2_zed_cache_selects_child.json
+batch2_discord_cache_selects_child.json
+batch3_yarn_cache_selects_child.json
+batch4_spotify_cache_selects_child.json
+batch5_deno_cache_selects_child.json

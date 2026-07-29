@@ -1,0 +1,41 @@
+{
+  "id": "batch2_npm_logs_keeps_newest_five",
+  "source_bats": "manual",
+  "source_test": "npm-logs-keep-newest keeps 5 newest",
+  "fixture": [
+    {
+      "mkdir": "~/.npm/_logs/log1",
+      "mtime": "2026-01-01T12:00"
+    },
+    {
+      "mkdir": "~/.npm/_logs/log2",
+      "mtime": "2026-01-02T12:00"
+    },
+    {
+      "mkdir": "~/.npm/_logs/log3",
+      "mtime": "2026-01-03T12:00"
+    },
+    {
+      "mkdir": "~/.npm/_logs/log4",
+      "mtime": "2026-01-04T12:00"
+    },
+    {
+      "mkdir": "~/.npm/_logs/log5",
+      "mtime": "2026-01-05T12:00"
+    },
+    {
+      "mkdir": "~/.npm/_logs/log6",
+      "mtime": "2026-01-06T12:00"
+    }
+  ],
+  "expect_selected": [
+    "~/.npm/_logs/log1|npm logs"
+  ],
+  "expect_not_selected": [
+    "~/.npm/_logs/log2",
+    "~/.npm/_logs/log3",
+    "~/.npm/_logs/log4",
+    "~/.npm/_logs/log5",
+    "~/.npm/_logs/log6"
+  ]
+}

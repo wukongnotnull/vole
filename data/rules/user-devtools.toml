@@ -1,0 +1,67 @@
+# Batch 2: npm/tnpm residual caches (mole clean_dev_npm)
+
+[[rule]]
+id = "npm-cacache"
+category = "user-devtools"
+label = "npm cache directory"
+platform = ["macos"]
+paths = ["~/.npm/_cacache/*"]
+impact = "Package manager residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "npm-npx-cache"
+category = "user-devtools"
+label = "npm npx cache"
+platform = ["macos"]
+paths = ["~/.npm/_npx/*"]
+impact = "Package manager residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "npm-prebuilds"
+category = "user-devtools"
+label = "npm prebuilds"
+platform = ["macos"]
+paths = ["~/.npm/_prebuilds/*"]
+impact = "Package manager residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "tnpm-logs"
+category = "user-devtools"
+label = "tnpm logs"
+platform = ["macos"]
+paths = ["~/.tnpm/_logs/*"]
+impact = "Package manager residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "npm-logs-keep-newest"
+category = "user-devtools"
+label = "npm logs"
+platform = ["macos"]
+paths = ["~/.npm/_logs/*"]
+impact = "Package manager residual caches/logs"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "keep_newest_by_mtime"
+keep = 5

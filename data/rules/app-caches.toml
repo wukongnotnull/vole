@@ -1,0 +1,456 @@
+# Batch 2 wave: mole app_caches.sh safe_clean paths (strategy=all)
+
+[[rule]]
+id = "xcode-documentation-index"
+category = "app-caches"
+label = "Xcode documentation index"
+platform = ["macos"]
+paths = ["~/Library/Developer/Xcode/DocumentationIndex/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "vs-code-extension-cache"
+category = "app-caches"
+label = "VS Code extension cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Code/CachedExtensions/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "ios-device-logs"
+category = "app-caches"
+label = "iOS device logs"
+platform = ["macos"]
+paths = ["~/Library/Developer/Xcode/iOS Device Logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "vs-code-cache"
+category = "app-caches"
+label = "VS Code cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Code/Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "vs-code-data-cache"
+category = "app-caches"
+label = "VS Code data cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Code/CachedData/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "zed-cache"
+category = "app-caches"
+label = "Zed cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/Zed/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "xcode-build-products"
+category = "app-caches"
+label = "Xcode build products"
+platform = ["macos"]
+paths = ["~/Library/Developer/Xcode/Products/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "zed-logs"
+category = "app-caches"
+label = "Zed logs"
+platform = ["macos"]
+paths = ["~/Library/Logs/Zed/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "xcode-cache"
+category = "app-caches"
+label = "Xcode cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.dt.Xcode/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "simulator-temp-files"
+category = "app-caches"
+label = "Simulator temp files"
+platform = ["macos"]
+paths = ["~/Library/Developer/CoreSimulator/Devices/*/data/tmp/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "vs-code-webview-cache"
+category = "app-caches"
+label = "VS Code webview cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Code/WebStorage/*/CacheStorage/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "coresimulator-logs"
+category = "app-caches"
+label = "CoreSimulator logs"
+platform = ["macos"]
+paths = ["~/Library/Logs/CoreSimulator/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "xcode-documentation-cache"
+category = "app-caches"
+label = "Xcode documentation cache"
+platform = ["macos"]
+paths = ["~/Library/Developer/Xcode/DocumentationCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "vs-code-logs"
+category = "app-caches"
+label = "VS Code logs"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Code/logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "watchos-device-logs"
+category = "app-caches"
+label = "watchOS device logs"
+platform = ["macos"]
+paths = ["~/Library/Developer/Xcode/watchOS Device Logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "zed-npm-cache"
+category = "app-caches"
+label = "Zed npm cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Zed/node/node-v*/cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "simulator-cache"
+category = "app-caches"
+label = "Simulator cache"
+platform = ["macos"]
+paths = ["~/Library/Developer/CoreSimulator/Caches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "sublime-text-cache"
+category = "app-caches"
+label = "Sublime Text cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.sublimetext.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "codebuddy-extension-cache"
+category = "app-caches"
+label = "CodeBuddy Extension cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/CodeBuddyExtension/Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "codebuddy-extension-logs"
+category = "app-caches"
+label = "CodeBuddy Extension logs"
+platform = ["macos"]
+paths = ["~/Library/Application Support/CodeBuddyExtension/logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "codebuddy-cn-cache"
+category = "app-caches"
+label = "CodeBuddy CN cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/CodeBuddy CN/Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "codebuddy-cn-cached-data"
+category = "app-caches"
+label = "CodeBuddy CN cached data"
+platform = ["macos"]
+paths = ["~/Library/Application Support/CodeBuddy CN/CachedData/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "codebuddy-cn-extension-cache"
+category = "app-caches"
+label = "CodeBuddy CN extension cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/CodeBuddy CN/CachedExtensionVSIXs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "codebuddy-cn-code-cache"
+category = "app-caches"
+label = "CodeBuddy CN code cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/CodeBuddy CN/Code Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "codebuddy-cn-gpu-cache"
+category = "app-caches"
+label = "CodeBuddy CN GPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/CodeBuddy CN/GPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "codebuddy-cn-dawn-cache"
+category = "app-caches"
+label = "CodeBuddy CN Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/CodeBuddy CN/DawnGraphiteCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "codebuddy-cn-webgpu-cache"
+category = "app-caches"
+label = "CodeBuddy CN WebGPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/CodeBuddy CN/DawnWebGPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "codebuddy-cn-logs"
+category = "app-caches"
+label = "CodeBuddy CN logs"
+platform = ["macos"]
+paths = ["~/Library/Application Support/CodeBuddy CN/logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "discord-cache"
+category = "app-caches"
+label = "Discord cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/discord/Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "legcord-cache"
+category = "app-caches"
+label = "Legcord cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/legcord/Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "slack-cache"
+category = "app-caches"
+label = "Slack cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Slack/Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "zoom-cache"
+category = "app-caches"
+label = "Zoom cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/us.zoom.xos/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "wechat-cache"
+category = "app-caches"
+label = "WeChat cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.tencent.xinWeChat/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "telegram-cache"
+category = "app-caches"
+label = "Telegram cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/ru.keepcoder.Telegram/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "microsoft-teams-cache"
+category = "app-caches"
+label = "Microsoft Teams cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.microsoft.teams2/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"

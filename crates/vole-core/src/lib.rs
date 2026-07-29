@@ -5,4 +5,13 @@
 
 pub use vole_sys::vole_proto;
 
+pub mod cancel;
+pub mod mutex;
+pub mod oplog;
+pub mod ops;
 pub mod spike_toctou;
+pub mod units;
+pub mod whitelist;
+
+#[cfg(test)]
+mod test_env;

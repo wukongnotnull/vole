@@ -1,8 +1,7 @@
 //! 系统健康分，移植自 mole `metrics_health.go`。
 
 use crate::vole_proto::status::{
-    BatteryStatus, CpuStatus, DiskIoStatus, DiskStatus, MemoryStatus, ThermalStatus,
-    smart_status,
+    smart_status, BatteryStatus, CpuStatus, DiskIoStatus, DiskStatus, MemoryStatus, ThermalStatus,
 };
 
 const HEALTH_CPU_WEIGHT: f64 = 30.0;
@@ -55,11 +54,10 @@ pub fn calculate_health_score(
     let mut cpu_penalty = 0.0;
     if cpu.usage > CPU_NORMAL_THRESHOLD {
         if cpu.usage > CPU_HIGH_THRESHOLD {
-            cpu_penalty =
-                HEALTH_CPU_WEIGHT * (cpu.usage - CPU_NORMAL_THRESHOLD) / (100.0 - CPU_NORMAL_THRESHOLD);
+            cpu_penalty = HEALTH_CPU_WEIGHT * (cpu.usage - CPU_NORMAL_THRESHOLD)
+                / (100.0 - CPU_NORMAL_THRESHOLD);
         } else {
-            cpu_penalty = (HEALTH_CPU_WEIGHT / 2.0)
-                * (cpu.usage - CPU_NORMAL_THRESHOLD)
+            cpu_penalty = (HEALTH_CPU_WEIGHT / 2.0) * (cpu.usage - CPU_NORMAL_THRESHOLD)
                 / (CPU_HIGH_THRESHOLD - CPU_NORMAL_THRESHOLD);
         }
     }
@@ -71,12 +69,10 @@ pub fn calculate_health_score(
     let mut mem_penalty = 0.0;
     if mem.used_percent > MEM_NORMAL_THRESHOLD {
         if mem.used_percent > MEM_HIGH_THRESHOLD {
-            mem_penalty = HEALTH_MEM_WEIGHT
-                * (mem.used_percent - MEM_NORMAL_THRESHOLD)
+            mem_penalty = HEALTH_MEM_WEIGHT * (mem.used_percent - MEM_NORMAL_THRESHOLD)
                 / (100.0 - MEM_NORMAL_THRESHOLD);
         } else {
-            mem_penalty = (HEALTH_MEM_WEIGHT / 2.0)
-                * (mem.used_percent - MEM_NORMAL_THRESHOLD)
+            mem_penalty = (HEALTH_MEM_WEIGHT / 2.0) * (mem.used_percent - MEM_NORMAL_THRESHOLD)
                 / (MEM_HIGH_THRESHOLD - MEM_NORMAL_THRESHOLD);
         }
     }
@@ -102,12 +98,10 @@ pub fn calculate_health_score(
         let disk_usage = disks[0].used_percent;
         if disk_usage > DISK_WARN_THRESHOLD {
             if disk_usage > DISK_CRIT_THRESHOLD {
-                disk_penalty = HEALTH_DISK_WEIGHT
-                    * (disk_usage - DISK_WARN_THRESHOLD)
+                disk_penalty = HEALTH_DISK_WEIGHT * (disk_usage - DISK_WARN_THRESHOLD)
                     / (100.0 - DISK_WARN_THRESHOLD);
             } else {
-                disk_penalty = (HEALTH_DISK_WEIGHT / 2.0)
-                    * (disk_usage - DISK_WARN_THRESHOLD)
+                disk_penalty = (HEALTH_DISK_WEIGHT / 2.0) * (disk_usage - DISK_WARN_THRESHOLD)
                     / (DISK_CRIT_THRESHOLD - DISK_WARN_THRESHOLD);
             }
         }
@@ -174,12 +168,7 @@ pub fn calculate_health_score(
         score -= 1.0;
     }
 
-    if score < 0.0 {
-        score = 0.0;
-    }
-    if score > 100.0 {
-        score = 100.0;
-    }
+    score = score.clamp(0.0, 100.0);
 
     let mut msg = match score as i32 {
         s if s >= SCORE_EXCELLENT_THRESHOLD => "Excellent",

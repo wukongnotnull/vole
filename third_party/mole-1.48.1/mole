@@ -1,0 +1,322 @@
+#!/bin/bash
+# Mole - Main CLI entrypoint.
+# Routes subcommands and interactive menu.
+# Handles update/remove flows.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# The path of THIS entrypoint, captured before anything is sourced. The update
+# flow reinstalls over the exact `mole` that was invoked, so it must resolve the
+# entrypoint, not the lib file it happens to run from. `BASH_SOURCE[0]` inside a
+# sourced function names that function's file, so the value has to be taken here.
+MOLE_ENTRY_SCRIPT="${BASH_SOURCE[0]}"
+
+declare -a MOLE_CLI_ARGS=()
+MOLE_CLI_DEBUG=false
+
+mole_collect_cli_args() {
+    local arg
+
+    MOLE_CLI_ARGS=()
+    MOLE_CLI_DEBUG=false
+    for arg in "$@"; do
+        case "$arg" in
+            --debug)
+                MOLE_CLI_DEBUG=true
+                ;;
+            *)
+                MOLE_CLI_ARGS+=("$arg")
+                ;;
+        esac
+    done
+}
+
+mole_dispatch_history_early() {
+    [[ "${MOLE_TEST_MODE:-0}" == "1" && "${MOLE_SKIP_MAIN:-0}" == "1" ]] && return 0
+
+    mole_collect_cli_args "$@"
+    [[ "${MOLE_CLI_ARGS[0]:-}" == "history" ]] || return 0
+
+    [[ "$MOLE_CLI_DEBUG" == "true" ]] && export MO_DEBUG=1
+    if [[ "${#MOLE_CLI_ARGS[@]}" -gt 1 ]]; then
+        exec "$SCRIPT_DIR/bin/history.sh" "${MOLE_CLI_ARGS[@]:1}"
+    fi
+    exec "$SCRIPT_DIR/bin/history.sh"
+}
+
+mole_dispatch_history_early "$@"
+
+source "$SCRIPT_DIR/lib/core/common.sh"
+source "$SCRIPT_DIR/lib/core/commands.sh"
+
+trap cleanup_temp_files EXIT INT TERM
+
+# Version and update helpers
+VERSION="1.48.1"
+MOLE_TAGLINE="Deep clean and optimize your Mac."
+
+is_touchid_configured() {
+    grep -q "pam_tid.so" /etc/pam.d/sudo /etc/pam.d/sudo_local 2> /dev/null
+}
+
+# Update and remove flows live in lib/manage/{update,remove}.sh; this file
+# stays a router. They are sourced (not exec'd) because the interactive menu
+# and the update banner call them in-process.
+source "$SCRIPT_DIR/lib/manage/update.sh"
+source "$SCRIPT_DIR/lib/manage/remove.sh"
+
+# Build the main-menu controls hint line. Pure so the show/hide logic can be
+# tested without a tty (the caller only renders it inside `[[ -t 0 ]]`).
+# Args: $1 touchid_configured (true/false), $2 show_update (true/false).
+_main_menu_controls_line() {
+    local touchid_configured="$1"
+    local show_update="$2"
+    local controls="${GRAY}↑↓  |  Enter  |  M More  |  V Version"
+    if [[ "$touchid_configured" != "true" ]]; then
+        controls="${controls}  |  T TouchID"
+    elif [[ "$show_update" == "true" ]]; then
+        controls="${controls}  |  U Update"
+    fi
+    controls="${controls}  |  Q Quit${NC}"
+    printf '%s' "$controls"
+}
+
+# Menu UI
+show_main_menu() {
+    local selected="${1:-1}"
+    local _full_draw="${2:-true}" # Kept for compatibility (unused)
+    local banner="${MAIN_MENU_BANNER:-}"
+    local update_message="${MAIN_MENU_UPDATE_MESSAGE:-}"
+
+    if [[ -z "$banner" ]]; then
+        banner="$(show_brand_banner)"
+        MAIN_MENU_BANNER="$banner"
+    fi
+
+    printf '\033[H'
+
+    local line=""
+    printf '\r\033[2K\n'
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        printf '\r\033[2K%s\n' "$line"
+    done <<< "$banner"
+
+    if [[ -n "$update_message" ]]; then
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            printf '\r\033[2K%s\n' "$line"
+        done <<< "$update_message"
+    fi
+
+    printf '\r\033[2K\n'
+
+    printf '\r\033[2K%s\n' "$(show_menu_option 1 "Clean        Free up disk space" "$([[ $selected -eq 1 ]] && echo true || echo false)")"
+    printf '\r\033[2K%s\n' "$(show_menu_option 2 "Uninstall    Remove apps completely" "$([[ $selected -eq 2 ]] && echo true || echo false)")"
+    printf '\r\033[2K%s\n' "$(show_menu_option 3 "Optimize     Refresh caches and services" "$([[ $selected -eq 3 ]] && echo true || echo false)")"
+    printf '\r\033[2K%s\n' "$(show_menu_option 4 "Analyze      Explore disk usage" "$([[ $selected -eq 4 ]] && echo true || echo false)")"
+    printf '\r\033[2K%s\n' "$(show_menu_option 5 "Status       Monitor system health" "$([[ $selected -eq 5 ]] && echo true || echo false)")"
+
+    if [[ -t 0 ]]; then
+        printf '\r\033[2K\n'
+        local touchid_state=false
+        is_touchid_configured && touchid_state=true
+        local controls
+        controls=$(_main_menu_controls_line "$touchid_state" "${MAIN_MENU_SHOW_UPDATE:-false}")
+        printf '\r\033[2K%s\n' "$controls"
+        printf '\r\033[2K\n'
+    fi
+
+    printf '\033[J'
+}
+
+interactive_main_menu() {
+    local current_option=1
+    local first_draw=true
+    local brand_banner=""
+    local msg_cache="$HOME/.cache/mole/update_message"
+    local update_message=""
+
+    brand_banner="$(show_brand_banner)"
+    MAIN_MENU_BANNER="$brand_banner"
+
+    update_message="$(read_update_message_cache "$msg_cache")"
+    MAIN_MENU_UPDATE_MESSAGE="$update_message"
+    MAIN_MENU_SHOW_UPDATE="$([[ -n "$update_message" ]] && echo true || echo false)"
+
+    cleanup_and_exit() {
+        show_cursor
+        exit 0
+    }
+
+    launch_menu_command() {
+        show_cursor
+        drain_pending_input 0.1
+        exec "$@"
+    }
+
+    trap cleanup_and_exit INT
+    hide_cursor
+
+    while true; do
+        show_main_menu $current_option "$first_draw"
+        if [[ "$first_draw" == "true" ]]; then
+            first_draw=false
+        fi
+
+        local key
+        if ! key=$(read_key); then
+            continue
+        fi
+
+        case "$key" in
+            "UP") ((current_option > 1)) && ((current_option--)) ;;
+            "DOWN") ((current_option < 5)) && ((current_option++)) ;;
+            "ENTER")
+                case $current_option in
+                    1) launch_menu_command "$SCRIPT_DIR/bin/clean.sh" ;;
+                    2) launch_menu_command "$SCRIPT_DIR/bin/uninstall.sh" ;;
+                    3) launch_menu_command "$SCRIPT_DIR/bin/optimize.sh" ;;
+                    4) launch_menu_command "$SCRIPT_DIR/bin/analyze.sh" ;;
+                    5) launch_menu_command "$SCRIPT_DIR/bin/status.sh" ;;
+                esac
+                ;;
+            "CHAR:1")
+                launch_menu_command "$SCRIPT_DIR/bin/clean.sh"
+                ;;
+            "CHAR:2")
+                launch_menu_command "$SCRIPT_DIR/bin/uninstall.sh"
+                ;;
+            "CHAR:3")
+                launch_menu_command "$SCRIPT_DIR/bin/optimize.sh"
+                ;;
+            "CHAR:4")
+                launch_menu_command "$SCRIPT_DIR/bin/analyze.sh"
+                ;;
+            "CHAR:5")
+                launch_menu_command "$SCRIPT_DIR/bin/status.sh"
+                ;;
+            "MORE")
+                show_cursor
+                clear
+                show_help
+                exit 0
+                ;;
+            "VERSION")
+                show_cursor
+                clear
+                show_version
+                exit 0
+                ;;
+            "TOUCHID")
+                show_cursor
+                exec "$SCRIPT_DIR/bin/touchid.sh"
+                ;;
+            "UPDATE")
+                [[ "${MAIN_MENU_SHOW_UPDATE:-false}" == "true" ]] || continue
+                show_cursor
+                clear
+                update_mole
+                exit 0
+                ;;
+            "QUIT") cleanup_and_exit ;;
+        esac
+
+        drain_pending_input
+    done
+}
+
+# CLI dispatch
+main() {
+    local -a args=()
+    mole_collect_cli_args "$@"
+    [[ "$MOLE_CLI_DEBUG" == "true" ]] && export MO_DEBUG=1
+    if [[ "${#MOLE_CLI_ARGS[@]}" -gt 0 ]]; then
+        args=("${MOLE_CLI_ARGS[@]}")
+    fi
+
+    case "${args[0]:-""}" in
+        "optimize" | "optimise")
+            exec "$SCRIPT_DIR/bin/optimize.sh" "${args[@]:1}"
+            ;;
+        "clean")
+            exec "$SCRIPT_DIR/bin/clean.sh" "${args[@]:1}"
+            ;;
+        "uninstall")
+            exec "$SCRIPT_DIR/bin/uninstall.sh" "${args[@]:1}"
+            ;;
+        "analyze" | "analyse")
+            exec "$SCRIPT_DIR/bin/analyze.sh" "${args[@]:1}"
+            ;;
+        "status")
+            exec "$SCRIPT_DIR/bin/status.sh" "${args[@]:1}"
+            ;;
+        "purge")
+            exec "$SCRIPT_DIR/bin/purge.sh" "${args[@]:1}"
+            ;;
+        "installer")
+            exec "$SCRIPT_DIR/bin/installer.sh" "${args[@]:1}"
+            ;;
+        "touchid")
+            exec "$SCRIPT_DIR/bin/touchid.sh" "${args[@]:1}"
+            ;;
+        "completion")
+            exec "$SCRIPT_DIR/bin/completion.sh" "${args[@]:1}"
+            ;;
+        "update")
+            local force_update=false
+            local nightly_update=false
+            for arg in "${args[@]:1}"; do
+                case "$arg" in
+                    --force | -f) force_update=true ;;
+                    --nightly) nightly_update=true ;;
+                    *)
+                        echo "Unknown update option: $arg"
+                        echo "Use 'mole update [--force] [--nightly]' for supported options."
+                        exit 1
+                        ;;
+                esac
+            done
+            update_mole "$force_update" "$nightly_update"
+            exit 0
+            ;;
+        "remove")
+            local dry_run_remove=false
+            for arg in "${args[@]:1}"; do
+                case "$arg" in
+                    "--dry-run" | "-n") dry_run_remove=true ;;
+                    *)
+                        echo "Unknown remove option: $arg"
+                        echo "Use 'mole remove [--dry-run]' for supported options."
+                        exit 1
+                        ;;
+                esac
+            done
+            remove_mole "$dry_run_remove"
+            ;;
+        "help" | "--help" | "-h")
+            show_help
+            exit 0
+            ;;
+        "version" | "--version" | "-V")
+            show_version
+            exit 0
+            ;;
+        "")
+            check_for_updates
+            interactive_main_menu
+            ;;
+        *)
+            echo "Unknown command: ${args[0]}"
+            echo "Use 'mole --help' for usage information."
+            exit 1
+            ;;
+    esac
+}
+
+if [[ "${MOLE_TEST_MODE:-0}" == "1" && "${MOLE_SKIP_MAIN:-0}" == "1" ]]; then
+    :
+else
+    main "$@"
+fi

@@ -1,0 +1,11 @@
+Upstream:  https://github.com/tw93/Mole
+Version:   v1.48.1
+Commit:    27123a964aa671d2e64222634d29d4bd2dc866ed
+Retrieved: 2026-07-29
+License:   GPL-3.0
+
+用途：作为 Vole 一致性测试的正确性基准。不参与 Vole 的构建，
+也不用于跟踪上游演进——Vole 一次性取走规则知识后独立发展。
+
+本目录内容为 pristine 上游代码。测试专用补丁在 third_party/patches/
+下单独维护并作为独立 commit 应用，以便 `git show` 即可审查补丁 diff。

@@ -214,6 +214,8 @@ Mole 有 `check_tcc_permissions()`（`lib/clean/caches.sh:8`），在清理前�
 
 重点观察三件事：重新编译后是否重新弹窗（直接影响开发迭代效率）、授权能否从终端继承、以及 app spawn 时授权归属于谁。
 
+**Phase 0.5 最小子集**：本机 ad-hoc 签名下读 `~/Library/Containers` 退出码 0，未观测弹窗；不足以代表 Full Disk Access 场景。**Phase 1 仍须跑完整矩阵，并建议尽早申请 Developer ID。**
+
 ### 4.2 提权模型：v1 不提权，但必须响亮地告知
 
 Mole 用的是 `sudo -n`（非交互）：只有当 sudo 凭证已缓存时才清理 root 拥有的路径，否则跳过。需要提权的规则集中在 `lib/clean/system.sh`（35 处 sudo 引用），目标是 `/Library/Caches`、`/Library/Logs/DiagnosticReports`、`/private/var/log`、`/private/var/folders` 等系统级路径。相对 547 条规则（绝大多数在 `$HOME` 下）占比不高。
@@ -303,6 +305,8 @@ crate 版本为 2026-07-29 核实值。
 
 Phase 0.5 的 spike 需要实测一次：开着 Chrome 的情况下，这三条路径分别走到哪一条。
 
+**Phase 0.5 实测（Chrome History，本机 2026-07-29）**：无 `-wal` 文件（仅有 `History-journal`）；`immutable=1` 可读（1764 行）；Chrome 运行中 `mode=ro` 报 `database is locked`。策略应按实际 journal 模式分支，不能假设所有浏览器 DB 都有 WAL。
+
 ### 5.3 并发与取消模型
 
 **不引入 tokio。** 这里没有真正的异步 I/O，全部是 CPU 与 syscall 密集的文件系统遍历，async 只会增加复杂度。
@@ -329,10 +333,12 @@ Phase 0.5 的 spike 需要实测一次：开着 Chrome 的情况下，这三条�
 
 Gatekeeper 拦的是带 `com.apple.quarantine` 扩展属性的可执行文件，主要来自浏览器下载。通过 `curl` 或包管理器落盘的文件通常不带该属性——这也是 Mole 的 `install.sh` 能工作的原因。
 
-**以下两条早期版本写成了结论，实际是待核实项**：
+**以下两条早期版本写成了结论，Phase 0.5 已核实**：
 
-- 「发 Homebrew 必须 Developer ID 签名 + notarization」——Homebrew 的 formula 从源码构建或分发 bottle，两者都不经过浏览器下载路径。CLI 二进制经 `brew install` 落盘是否需要签名，需要查证 Homebrew 现行政策后再断言。
-- 「两份 vole 用同一签名身份才能共享 TCC 授权」——方向上合理，但 TCC 的授权粒度（按 cdhash、按 Team ID、还是按 bundle id）需要实测确认，不能推断。
+- **Homebrew Cask**（预编译二进制）：2026-09-01 起官方 Tap 要求 codesign + notarize；`--no-quarantine` 将移除（[brew#20755](https://github.com/Homebrew/brew/issues/20755)）。
+- **Homebrew Formula**（源码构建 / 本地 bottle）：不受 Cask 审计约束，**无强制公证**。
+- CLI 若走 Formula 分发无需 $99/yr；若走 Cask 分发预编译 `vole` 则必须 Developer ID + 公证。
+- 「两份 vole 用同一签名身份才能共享 TCC 授权」——方向上合理；Phase 0.5 本机 ad-hoc 读 Containers 未弹窗，**Developer ID 下的 cdhash 行为待 Phase 1 完整矩阵**。
 
 **能确定的部分**：SwiftUI app 若要在 Mac 外分发，Developer ID 签名 + notarization 是硬要求；app bundle 内嵌的可执行文件必须随 bundle 一起签名与公证。签名身份与 [4.1](#41-tcc完全磁盘访问) 的 TCC 身份是同一件事的两面，因此仍然建议**尽早**走通签名流程（哪怕先用 ad-hoc），不要留到发布前。
 
@@ -749,7 +755,7 @@ Vole 侧不需要为测试做任何特殊支持——[5.6](#56-前端边界协�
 
 **4b 规则引擎与策略集（1.5 周）** — 实现 6.1 的三层模型与全部策略、guard，落实 6.2 的路径语义；用 C 类 property test 验证保护清单不可越过。
 
-**4c fixture 抽取与规则移植（3–5 周）** — 半自动抽取 172 个 bats 用例成 JSON fixture；547 条规则分批移植，每批过 A 类双跑 diff 与 B 类表驱动测试。这是工期不确定性的主要来源。
+**4c fixture 抽取与规则移植（4–6 周）** — 半自动抽取 172 个 bats 用例成 JSON fixture；**首批移植 Top 100–150 条**（按释放空间排序），每批过 A 类双跑 diff 与 B 类表驱动测试。Phase 0.5 外推全量 547 条约 19.5 周，故 v1 收缩范围；其余在报告中提示继续用 Mole。
 
 **4d plan/apply、交互与报告（1 周）** — 落地 [5.6](#56-前端边界协议与两阶段模型) 的两阶段与完整的 plan 威胁模型；`--dry-run` 等价于只跑 plan；`--whitelist` 交互管理；按 [5.7](#57-废纸篓与释放空间的口径) 的口径呈现 `Report`。
 
@@ -823,11 +829,11 @@ Vole 侧不需要为测试做任何特殊支持——[5.6](#56-前端边界协�
 | Phase 1 地基、协议定型、超时与互斥、平台实测 | 3 周 |
 | Phase 2 `status`（含信号与终端恢复） | 2.5 周 |
 | Phase 3 `analyze` | 3 周 |
-| Phase 4 `clean`（4a 含 2357 行保护层） | 8–10 周 |
-| **净合计（Phase 0–4）** | **18–20 周** |
-| **含 25% buffer 的预期** | **22.5–25 周** |
+| Phase 4 `clean`（4a 含 2357 行保护层；4c 收缩至 Top 100–150 条） | 9–11 周 |
+| **净合计（Phase 0–4）** | **19–21 周** |
+| **含 25% buffer 的预期** | **24–26 周** |
 
-**这张表在 Phase 0.5 结束后必须重估。** spike 的核心产出就是用 20 条规则的实测速率校准 Phase 4c，在那之前不要对外承诺任何日期。
+Phase 0.5 spike 已校准：4c 全量外推不可行，收缩后 4c 回到 4–6 周；净合计上调 1 周反映 4c 工具化与采集脚本成本。
 
 估算的修订轨迹（每一次都是漏算而非范围变化，值得记住这个偏差方向）：
 
@@ -836,6 +842,7 @@ Vole 侧不需要为测试做任何特殊支持——[5.6](#56-前端边界协�
 | 初版 | 10–11 周 | 基于「108 条规则」的错误前提 |
 | 第二版 | 15.5–17.5 周 | 规则实为 547 条；加桌面 app 的协议层 |
 | 当前 | **18–20 周** | 漏算 `app_protection` 2357 行；漏算超时子系统、信号与终端恢复、进程互斥 |
+| Phase 0.5 后 | **19–21 周** | 4c 全量外推 ~19.5 周 → v1 收缩至 Top 100–150 条；plan/apply 保留（TOCTOU 原型 2h） |
 
 为桌面 app 增加的净成本约 **1 周**：Phase 1 加 0.5 周（协议定型与 `docs/protocol.md`）、Phase 4d 加 0.5 周（plan/apply 落地）。编排逻辑的抽取不计入，因为一致性测试本来就需要它。
 
@@ -857,10 +864,7 @@ Phase 0–3（只读的 `status` + `analyze`）净 **10 周**，含 buffer 约 1
 
 以下事项尚未决策，需要在对应阶段前确认。
 
-1. **签名身份**。是否申请 Apple Developer ID（99 美元/年）？SwiftUI app 对外分发是硬要求；对 CLI 则取决于 Homebrew 的实际政策（见下一条）。它同时决定 TCC 授权是否稳定（见 [4.1](#41-tcc完全磁盘访问)）。**Phase 0.5 收集依据，Phase 1 前决定。**
-2. **Homebrew 是否要求签名与公证**。[5.5](#55-分发签名与公证) 已把它从结论降级为待核实。**Phase 0.5 查证。**
-3. **TCC 授权的粒度**。按 cdhash、Team ID 还是 bundle id？决定两份 vole 能否共享授权，也决定重编译是否重弹窗。**Phase 0.5 实测最小子集，Phase 1 跑完整矩阵。**
-4. **`sysinfo` 是否够用**。macOS 磁盘 I/O 速率支持待实测；不够则需自己写 IOKit 绑定，Phase 2 加约 3 天。
+1. **签名身份**。SwiftUI app 对外分发是硬要求；CLI 走 Homebrew **Formula** 无强制公证，**Cask** 需 Developer ID。**Phase 1 前申请 Developer ID（$99/yr）**。macOS 磁盘 I/O 速率支持待实测；不够则需自己写 IOKit 绑定，Phase 2 加约 3 天。
 5. **`defaults` 的 17 次调用**。v1 保留子进程，但若 TCC 或性能实测显示有问题，需提前迁到 `CFPreferences*` API。
 6. **规则数据能否独立于二进制更新**。纯内嵌（`include_str!`）最简单，但 `disabled` 应急开关就必须发版才能生效；允许用户目录覆盖则应急更快，代价是多一条不可信输入路径需要校验。**Phase 4b 前决定**，见 [6.3](#63-规则的过期与复核)。
 7. **规则优先级排序依据**。若触发 Phase 4c 的收缩方案，「Top 100 条」按什么排序？建议按真实机器上实测的释放空间，但需要先有一个采集脚本。

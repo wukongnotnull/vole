@@ -1,0 +1,14 @@
+{
+  "id": "batch12_arc_root_shader_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "arc-root-shader-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Arc/ShaderCache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Arc/ShaderCache/item|Arc root shader cache"
+  ],
+  "expect_not_selected": []
+}

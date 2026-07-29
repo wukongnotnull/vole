@@ -2644,4 +2644,263 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+[[rule]]
+id = "chrome-profile-graphite-dawn-cache"
+category = "app-caches"
+label = "Chrome profile Graphite Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Google/Chrome/*/GraphiteDawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "chrome-on-device-classifier-cache"
+category = "app-caches"
+label = "Chrome on-device classifier cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Google/Chrome/OptGuideOnDeviceClassifierModel/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "chrome-optimization-guide-models"
+category = "app-caches"
+label = "Chrome optimization guide models"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Google/Chrome/optimization_guide_model_store/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "googleupdater-old-files"
+category = "app-caches"
+label = "GoogleUpdater old files"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Google/GoogleUpdater/*.old"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-profile-graphite-dawn-cache"
+category = "app-caches"
+label = "Arc profile Graphite Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/*/GraphiteDawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-root-shader-cache"
+category = "app-caches"
+label = "Arc root shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/ShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-root-gr-shader-cache"
+category = "app-caches"
+label = "Arc root GR shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/GrShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-root-dawn-cache"
+category = "app-caches"
+label = "Arc root Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/GraphiteDawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-root-crash-reports"
+category = "app-caches"
+label = "Arc root crash reports"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/Crashpad/completed/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-user-data-dawn-cache"
+category = "app-caches"
+label = "Arc User Data Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/User Data/*/DawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-user-data-gr-shader-cache"
+category = "app-caches"
+label = "Arc User Data GR shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/User Data/*/GrShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-user-data-graphite-dawn-cache"
+category = "app-caches"
+label = "Arc User Data Graphite Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/User Data/*/GraphiteDawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-extensions-crx-cache"
+category = "app-caches"
+label = "Arc extensions CRX cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/User Data/extensions_crx_cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-user-data-crash-reports"
+category = "app-caches"
+label = "Arc User Data crash reports"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/User Data/Crashpad/completed/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "dia-http-cache"
+category = "app-caches"
+label = "Dia HTTP cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/Dia/User Data/*/Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "dia-code-cache"
+category = "app-caches"
+label = "Dia code cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/Dia/User Data/*/Code Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "dia-graphite-dawn-cache"
+category = "app-caches"
+label = "Dia Graphite Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Dia/User Data/GraphiteDawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "dia-component-crx-cache"
+category = "app-caches"
+label = "Dia component CRX cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Dia/User Data/component_crx_cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "dia-dawn-graphite-cache"
+category = "app-caches"
+label = "Dia Dawn Graphite cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Dia/User Data/*/DawnGraphiteCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "vivaldi-shader-cache"
+category = "app-caches"
+label = "Vivaldi shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Vivaldi/ShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
 

@@ -12,3 +12,5 @@ plist = "1.10"
 rusqlite = { version = "0.37", features = ["bundled"] }
 trash = "5.2"
 sysinfo = "0.39"
+libc = "0.2"
+objc2-io-kit = "0.3"

@@ -13,4 +13,5 @@ pub mod traits;
 pub use vole_proto;
 
 pub use macos::MacOsBackend;
+pub use macos::MacStatusCollector;
 pub use traits::{Fs, Metrics, Plist, Sqlite, SysCommand, Trash};

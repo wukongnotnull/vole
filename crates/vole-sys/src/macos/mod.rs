@@ -2,6 +2,7 @@ mod fs;
 mod metrics;
 mod plist;
 mod sqlite;
+mod status;
 mod syscommand;
 mod trash;
 
@@ -11,6 +12,7 @@ pub use fs::MacFs;
 pub use metrics::MacMetrics;
 pub use plist::MacPlist;
 pub use sqlite::MacSqlite;
+pub use status::MacStatusCollector;
 pub use syscommand::MacSysCommand;
 pub use trash::MacTrash;
 

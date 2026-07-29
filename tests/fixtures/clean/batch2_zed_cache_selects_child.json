@@ -1,0 +1,14 @@
+{
+  "id": "batch2_zed_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "zed-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/Zed/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/Zed/item|Zed cache"
+  ],
+  "expect_not_selected": []
+}

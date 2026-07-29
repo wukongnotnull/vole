@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
-# Dual-run skeleton for clean rule candidates (Phase 4c Task 11).
+# Dual-run / fixture verifier for clean rule candidates (Phase 4c+).
 #
-# VOLE_TEST_ROOT: required for full mole↔vole conformance diff via the
-# `conformance` binary (design doc §7.0). Do not point at your real HOME.
-#
-# This script always runs the in-process fixture verifier (materialize fixture →
-# load data/rules/*.toml → build_plan). When `vole clean --plan` is wired (Task 12),
-# extend the loop below to invoke it per fixture under VOLE_TEST_ROOT.
+# Always runs in-process fixture checks (`verify_clean_fixtures`).
+# Optional mole↔vole dual-run requires disposable VOLE_TEST_ROOT (design §7.0).
+# Do not point VOLE_TEST_ROOT at your real HOME.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../" && pwd)"
@@ -28,22 +25,15 @@ if [[ -z "${VOLE_TEST_ROOT:-}" ]]; then
   exit 0
 fi
 
-if ! cargo build -q -p vole-cli 2>/dev/null; then
-  echo "SKIP: vole-cli build failed — clean CLI not wired yet"
-  echo "verify-clean-candidates: OK (rules + fixture plan checks only)"
-  exit 0
-fi
-
+cargo build -q -p vole-cli
 VOLE_BIN="${VOLE_BIN:-$ROOT/target/debug/vole}"
-if ! "$VOLE_BIN" clean --help >/dev/null 2>&1; then
-  echo "SKIP: clean CLI not wired; rules load OK (see cargo test above)"
-  echo "verify-clean-candidates: OK (rules + fixture plan checks only)"
-  exit 0
-fi
 
-MOLE_BIN="${MOLE_BIN:-$ROOT/third_party/mole-1.48.1/bin/clean.sh}"
+MOLE_BIN="${MOLE_BIN:-$ROOT/third_party/mole-1.48.1/mo}"
 if [[ ! -x "$MOLE_BIN" ]]; then
-  echo "SKIP: mole clean.sh not found at $MOLE_BIN"
+  MOLE_BIN="$ROOT/third_party/mole-1.48.1/mole"
+fi
+if [[ ! -x "$MOLE_BIN" ]]; then
+  echo "SKIP: mole binary not found under third_party/mole-1.48.1"
   echo "verify-clean-candidates: OK (rules + fixture plan checks only)"
   exit 0
 fi

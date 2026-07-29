@@ -26,6 +26,8 @@ v1 子命令：`status`、`analyze`、`clean`、`history`（另有 `completions`
 
 **Phase 4 状态（2026-07-29）**：`vole clean` 可用——`--plan` / `--apply` 两阶段、`--json-stream` NDJSON、`--whitelist` 白名单管理；默认移入废纸篓，`--permanent` 永久删除。报告区分 `trashed_bytes` / `deleted_bytes`。验证：`scripts/verify-clean-candidates.sh`。计划见 `docs/wukong-code/plans/2026-07-29-phase4-clean.md`。
 
+**Phase 4c Batch 2（2026-07-29）**：规则覆盖扩至约 **46** 条（本批净增 40：`data/rules/app-caches.toml` + `user-devtools.toml`）。仍远低于设计 Top 100–150；下一批继续。选批见 `docs/findings/2026-07-phase4c-batch2-selection.md`。计划见 `docs/wukong-code/plans/2026-07-29-phase4c-rules-batch2.md`。
+
 **Phase 5 状态（2026-07-29）**：`vole history`（文本 / `--json` / `--limit`，对齐 mole）；`docs/protocol.md` 已 FROZEN；无参 `vole` 进入轻量菜单；`vole completions <shell>` 生成补全。验证：`scripts/verify-history-mole.sh`、`scripts/check-protocol-doc.sh`。计划见 `docs/wukong-code/plans/2026-07-29-phase5-history-protocol.md`。签名 / Homebrew 仍为占位，见 `docs/findings/2026-07-phase5-signing.md`。
 
 **补全**：

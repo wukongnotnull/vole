@@ -1,0 +1,17 @@
+{
+  "id": "clean_ai_apps_skips_codex_desktop_state_by_default",
+  "source_bats": "third_party/mole-1.48.1/tests/clean_app_caches.bats",
+  "source_test": "clean_ai_apps skips Codex Desktop state by default",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Codex/Cache"
+    },
+    {
+      "mkdir": "~/Library/Logs/com.openai.codex"
+    }
+  ],
+  "expect_not_selected": [
+    "Codex CLI logs",
+    "Codex cache"
+  ]
+}

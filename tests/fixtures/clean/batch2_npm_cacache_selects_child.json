@@ -1,0 +1,14 @@
+{
+  "id": "batch2_npm_cacache_selects_child",
+  "source_bats": "manual",
+  "source_test": "npm-cacache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/.npm/_cacache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/.npm/_cacache/item|npm cache directory"
+  ],
+  "expect_not_selected": []
+}

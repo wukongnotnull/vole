@@ -1,0 +1,23 @@
+{
+  "id": "clean_code_editors_includes_zed_caches",
+  "source_bats": "third_party/mole-1.48.1/tests/clean_app_caches.bats",
+  "source_test": "clean_code_editors includes Zed caches",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Zed/db"
+    },
+    {
+      "mkdir": "~/Library/Application Support/Zed/node/cache/_cacache"
+    },
+    {
+      "mkdir": "~/Library/Application Support/Zed/node/node-v24.11.0-darwin-arm64/bin"
+    },
+    {
+      "mkdir": "~/Library/Application Support/Zed/node/node-v24.11.0-darwin-arm64/cache/_cacache"
+    }
+  ],
+  "expect_not_selected": [
+    "HOME/Library/Application Support/Zed/db",
+    "node-v24.11.0-darwin-arm64/bin"
+  ]
+}

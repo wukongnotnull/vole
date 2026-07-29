@@ -1,0 +1,13 @@
+{
+  "id": "clean_media_players_protects_spotify_offline_cache_when_bnk_has_content",
+  "source_bats": "third_party/mole-1.48.1/tests/clean_app_caches.bats",
+  "source_test": "clean_media_players protects spotify offline cache when bnk has content",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Spotify/PersistentCache/Storage"
+    }
+  ],
+  "expect_not_selected": [
+    "CLEAN:Spotify cache"
+  ]
+}

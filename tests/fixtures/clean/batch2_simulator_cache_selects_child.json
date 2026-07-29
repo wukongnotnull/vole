@@ -1,0 +1,14 @@
+{
+  "id": "batch2_simulator_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "simulator-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Developer/CoreSimulator/Caches/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Developer/CoreSimulator/Caches/item|Simulator cache"
+  ],
+  "expect_not_selected": []
+}

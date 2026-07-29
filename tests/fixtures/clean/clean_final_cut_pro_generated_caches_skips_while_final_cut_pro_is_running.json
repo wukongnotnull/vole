@@ -1,0 +1,13 @@
+{
+  "id": "clean_final_cut_pro_generated_caches_skips_while_final_cut_pro_is_running",
+  "source_bats": "third_party/mole-1.48.1/tests/clean_app_caches.bats",
+  "source_test": "clean_final_cut_pro_generated_caches skips while Final Cut Pro is running",
+  "fixture": [
+    {
+      "mkdir": "~/Movies/Project.fcpbundle/Event/Render Files/High Quality Media"
+    }
+  ],
+  "expect_not_selected": [
+    "unexpected safe_clean"
+  ]
+}

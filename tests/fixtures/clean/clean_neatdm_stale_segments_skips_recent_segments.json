@@ -1,0 +1,13 @@
+{
+  "id": "clean_neatdm_stale_segments_skips_recent_segments",
+  "source_bats": "third_party/mole-1.48.1/tests/clean_app_caches.bats",
+  "source_test": "clean_neatdm_stale_segments skips recent segments",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/com.NeatDownloadManager/67890"
+    }
+  ],
+  "expect_not_selected": [
+    "NeatDM stale downloads"
+  ]
+}

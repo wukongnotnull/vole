@@ -1,0 +1,17 @@
+{
+  "id": "clean_launcher_apps_does_not_touch_raycast_cache",
+  "source_bats": "third_party/mole-1.48.1/tests/clean_app_caches.bats",
+  "source_test": "clean_launcher_apps does not touch Raycast cache",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.raycast.macos/fsCachedData"
+    },
+    {
+      "mkdir": "~/Library/Caches/com.raycast.macos/urlcache"
+    }
+  ],
+  "expect_not_selected": [
+    "Raycast",
+    "raycast"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "batch2_vscode_logs_selects_child",
+  "source_bats": "manual",
+  "source_test": "vs-code-logs selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Code/logs/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Code/logs/item|VS Code logs"
+  ],
+  "expect_not_selected": []
+}

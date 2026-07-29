@@ -1,0 +1,49 @@
+{
+  "id": "clean_jianying_pro_generated_caches_targets_only_whitelisted_regenerable_subdirs",
+  "source_bats": "third_party/mole-1.48.1/tests/clean_app_caches.bats",
+  "source_test": "clean_jianying_pro_generated_caches targets only whitelisted regenerable subdirs",
+  "fixture": [
+    {
+      "mkdir": "$cache_root/AigcMaterailCache"
+    },
+    {
+      "mkdir": "$cache_root/AlgorithmCache"
+    },
+    {
+      "mkdir": "$cache_root/agencycache"
+    },
+    {
+      "mkdir": "$cache_root/audioWave"
+    },
+    {
+      "mkdir": "$cache_root/effect"
+    },
+    {
+      "mkdir": "$cache_root/frameThumbnail"
+    },
+    {
+      "mkdir": "$cache_root/image"
+    },
+    {
+      "mkdir": "$cache_root/importcache3"
+    },
+    {
+      "mkdir": "$cache_root/music"
+    },
+    {
+      "mkdir": "$cache_root/recognize"
+    },
+    {
+      "mkdir": "~/Movies/JianyingPro/User Data/Projects/com.lveditor.draft/my-project"
+    }
+  ],
+  "expect_not_selected": [
+    "AigcMaterailCache",
+    "Cache/effect",
+    "Cache/image",
+    "Cache/music",
+    "Projects",
+    "agencycache",
+    "importcache3"
+  ]
+}

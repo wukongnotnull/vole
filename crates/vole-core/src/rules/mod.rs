@@ -1,14 +1,16 @@
 //! 声明式清理规则与封闭策略集（设计 6.1）。
 
 mod candidate;
+mod custom_handlers;
 mod glob;
 mod load;
 mod schema;
 mod strategy;
 
 pub use candidate::{Candidate, RuleCandidate};
+pub use custom_handlers::select_custom;
 pub use glob::{collect_path_candidates, expand_rule_path, GlobError};
-pub use load::{load_rules_from_file, load_rules_from_str, LoadError};
+pub use load::{load_rules_from_dir, load_rules_from_file, load_rules_from_str, LoadError};
 pub use schema::{
     BrokenSymlinkAction, GuardsConfig, Rule, RulesFile, StrategyConfig, StrategyKind,
 };

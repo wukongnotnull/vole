@@ -1,7 +1,7 @@
 //! 从 TOML 字符串或文件加载规则。
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::rules::schema::{Rule, RulesFile};
 
@@ -15,6 +15,21 @@ pub fn load_rules_from_str(toml: &str) -> Result<Vec<Rule>, LoadError> {
 pub fn load_rules_from_file(path: impl AsRef<Path>) -> Result<Vec<Rule>, LoadError> {
     let content = fs::read_to_string(path.as_ref())?;
     load_rules_from_str(&content)
+}
+
+/// 加载目录下全部 `*.toml` 规则文件（按文件名排序后拼接）。
+pub fn load_rules_from_dir(dir: impl AsRef<Path>) -> Result<Vec<Rule>, LoadError> {
+    let mut paths: Vec<PathBuf> = fs::read_dir(dir.as_ref())?
+        .filter_map(|entry| entry.ok().map(|e| e.path()))
+        .filter(|path| path.extension().is_some_and(|ext| ext == "toml"))
+        .collect();
+    paths.sort();
+
+    let mut rules = Vec::new();
+    for path in paths {
+        rules.extend(load_rules_from_file(path)?);
+    }
+    Ok(rules)
 }
 
 /// 加载错误。
@@ -50,7 +65,11 @@ mod tests {
 
     #[test]
     fn loads_strategy_and_guards() {
-        let rules = load_rules_from_str(EXAMPLE).expect("parse");
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../data/rules/ai-agents.toml"
+        );
+        let rules = load_rules_from_file(path).expect("parse ai-agents");
         let claude = rules
             .iter()
             .find(|r| r.id == "claude-code-old-versions")
@@ -62,5 +81,13 @@ mod tests {
             Some(BrokenSymlinkAction::SkipRule)
         );
         assert_eq!(claude.guards.not_running, vec!["claude"]);
+    }
+
+    #[test]
+    fn loads_all_rules_from_dir() {
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/rules");
+        let rules = load_rules_from_dir(dir).expect("load dir");
+        assert!(rules.iter().any(|r| r.id == "chrome-cache"));
+        assert!(rules.iter().any(|r| r.id == "codex-stale-runtimes"));
     }
 }

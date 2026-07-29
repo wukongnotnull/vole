@@ -1,0 +1,56 @@
+# AI agent cache rules (Phase 4c Task 11).
+
+[[rule]]
+id = "claude-code-old-versions"
+category = "ai-agents"
+label = "Claude Code old version"
+platform = ["macos"]
+paths = ["~/.local/share/claude/versions/*"]
+impact = "保留最新版本，删除旧版本目录"
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "keep_newest_by_mtime"
+keep = 1
+env_override = "MOLE_AI_AGENTS_KEEP"
+
+[rule.guards]
+not_running = ["claude"]
+protect_symlink_target = "~/.local/bin/claude"
+on_broken_symlink = "skip_rule"
+
+[[rule]]
+id = "claude-desktop-bundled-code"
+category = "ai-agents"
+label = "Claude Desktop bundled Claude Code old version"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Claude/claude-code/*"]
+impact = "保留 Claude Desktop 当前 SDK 版本及最近一个旧版本，删除更旧的 bundled 目录"
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "custom"
+handler = "claude_desktop_bundled_versions"
+keep = 1
+env_override = "MOLE_AI_AGENTS_KEEP"
+
+[rule.guards]
+not_running = ["Claude"]
+
+[[rule]]
+id = "claude-desktop-bundled-code-vm"
+category = "ai-agents"
+label = "Claude Desktop bundled Claude Code VM old version"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Claude/claude-code-vm/*"]
+impact = "保留 Claude Desktop 当前 SDK 版本及最近一个旧版本，删除更旧的 bundled VM 目录"
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "custom"
+handler = "claude_desktop_bundled_versions"
+keep = 1
+env_override = "MOLE_AI_AGENTS_KEEP"
+
+[rule.guards]
+not_running = ["Claude"]

@@ -1,0 +1,17 @@
+# Codex CLI runtime cleanup (Phase 4c Task 11).
+
+[[rule]]
+id = "codex-stale-runtimes"
+category = "developer"
+label = "Codex CLI runtimes"
+platform = ["macos"]
+paths = ["~/.cache/codex-runtimes/*"]
+impact = "删除不完整或过期的 Codex CLI runtime 目录，保留完整活跃 runtime"
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "custom"
+handler = "codex_stale_runtimes"
+
+[rule.guards]
+not_running = ["Codex"]

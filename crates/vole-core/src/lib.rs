@@ -5,6 +5,9 @@
 
 pub use vole_sys::vole_proto;
 
+#[cfg(test)]
+mod clean_fixture;
+
 pub mod analyze;
 pub mod cancel;
 pub mod delete;

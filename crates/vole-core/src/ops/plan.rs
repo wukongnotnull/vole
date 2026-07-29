@@ -5,7 +5,10 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
 use crate::protection::AppProtection;
-use crate::rules::{collect_path_candidates, resolve_strategy, PathEntry, Rule, Strategy};
+use crate::rules::{
+    collect_path_candidates, resolve_strategy, select_custom, PathEntry, ResolvedStrategy, Rule,
+    Strategy,
+};
 use crate::safety::{
     capture_plan_entry_identity, validate_path_for_deletion, PlanEntryIdentity, ValidationError,
 };
@@ -113,7 +116,12 @@ impl Orchestrator {
 
             let expanded = collect_path_candidates(rule, &home);
             let path_entries = build_path_entries(&expanded);
-            let selected = strategy.select(&path_entries);
+            let selected = match &strategy {
+                ResolvedStrategy::Custom(custom) => {
+                    select_custom(&custom.handler, &path_entries, &home, rule)
+                }
+                other => other.select(&path_entries),
+            };
 
             for path in selected {
                 self.check_cancel()?;
@@ -197,6 +205,9 @@ impl Orchestrator {
 }
 
 fn home_dir() -> PathBuf {
+    if let Some(home) = std::env::var_os("VOLE_TEST_HOME") {
+        return PathBuf::from(home);
+    }
     std::env::var_os("HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("/"))

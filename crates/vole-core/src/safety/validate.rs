@@ -292,7 +292,8 @@ mod tests {
         use crate::protection::AppProtection;
 
         let p = AppProtection::new();
-        let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/test".into());
+        // Fixed synthetic home — do not read $HOME; parallel plan tests mutate it.
+        let home = "/Users/vole-test-user";
         assert_eq!(
             validate_path_for_deletion(
                 &format!("{home}/Library/Caches/ms-playwright/chromium-123"),

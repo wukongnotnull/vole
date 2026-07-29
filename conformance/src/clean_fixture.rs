@@ -73,9 +73,8 @@ mod tests {
         );
 
         for path in entries {
-            let fx = CleanFixture::load(&path).unwrap_or_else(|e| {
-                panic!("{} is not a valid CleanFixture: {e}", path.display())
-            });
+            let fx = CleanFixture::load(&path)
+                .unwrap_or_else(|e| panic!("{} is not a valid CleanFixture: {e}", path.display()));
             assert!(!fx.id.is_empty(), "{}", path.display());
             assert!(
                 !fx.fixture.is_empty(),

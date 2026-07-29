@@ -11,7 +11,8 @@ use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
+use clap_complete::{generate, Shell};
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
@@ -105,6 +106,32 @@ enum Command {
         #[arg(long, default_value_t = 20)]
         limit: u32,
     },
+    /// 生成 shell 补全脚本（stdout）。
+    Completions {
+        /// 目标 shell：bash / zsh / fish / elvish / powershell
+        shell: CompletionShell,
+    },
+}
+
+#[derive(Clone, ValueEnum)]
+enum CompletionShell {
+    Bash,
+    Zsh,
+    Fish,
+    Elvish,
+    Powershell,
+}
+
+impl From<CompletionShell> for Shell {
+    fn from(value: CompletionShell) -> Self {
+        match value {
+            CompletionShell::Bash => Shell::Bash,
+            CompletionShell::Zsh => Shell::Zsh,
+            CompletionShell::Fish => Shell::Fish,
+            CompletionShell::Elvish => Shell::Elvish,
+            CompletionShell::Powershell => Shell::PowerShell,
+        }
+    }
 }
 
 fn main() {
@@ -150,6 +177,10 @@ fn main() {
         }
         Command::History { json, limit } => {
             std::process::exit(history_cmd::run(json, limit));
+        }
+        Command::Completions { shell } => {
+            let mut cmd = Cli::command();
+            generate(Shell::from(shell), &mut cmd, "vole", &mut io::stdout());
         }
     }
 }

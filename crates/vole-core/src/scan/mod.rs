@@ -1,10 +1,12 @@
 //! 目录扫描（对齐 mole `scan` / `walkDir`）。
 
+mod du;
 mod fold;
 mod size;
 
 use std::collections::{BinaryHeap, HashSet};
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -14,7 +16,8 @@ use jwalk::WalkDir;
 
 use crate::cancel::CancelToken;
 
-pub use fold::{should_fold_name, should_skip_root_child};
+pub use du::du_directory_size;
+pub use fold::{should_fold_name, should_skip_dir, should_skip_root_child};
 pub use size::{actual_file_size, countable_file_size, last_access_time, skip_large_file};
 
 const MAX_ENTRIES: usize = 30;
@@ -46,10 +49,10 @@ pub struct ScanResult {
 }
 
 /// 扫描单层目录：子项按体积降序，大文件榜跨整棵树。
-pub fn scan_directory(root: &Path, cancel: &CancelToken) -> std::io::Result<ScanResult> {
+pub fn scan_directory(root: &Path, cancel: &CancelToken) -> io::Result<ScanResult> {
     if !root.is_dir() {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
             format!("not a directory: {}", root.display()),
         ));
     }
@@ -62,22 +65,46 @@ pub fn scan_directory(root: &Path, cancel: &CancelToken) -> std::io::Result<Scan
     let mut total_size = 0u64;
 
     for entry in fs::read_dir(root)? {
-        if cancel.is_cancelled() {
-            break;
-        }
+        cancel.check_scan()?;
         let entry = entry?;
         let name = entry.file_name().to_string_lossy().into_owned();
         if should_skip_root_child(root, &name) {
             continue;
         }
         let path = entry.path();
-        let meta = match fs::metadata(&path) {
+        let meta = match fs::symlink_metadata(&path) {
             Ok(m) => m,
             Err(_) => continue,
         };
 
+        if meta.file_type().is_symlink() {
+            let size = {
+                let mut guard = seen.lock().unwrap();
+                countable_file_size(&meta, &mut guard)
+            };
+            files_scanned.fetch_add(1, Ordering::Relaxed);
+            total_size += size;
+            let is_dir = fs::metadata(&path).map(|m| m.is_dir()).unwrap_or(false);
+            let display_name = format!("{name} →");
+            child_entries.push((
+                DirEntry {
+                    name: display_name,
+                    path,
+                    size,
+                    is_dir,
+                    last_access: last_access_time(&meta),
+                },
+                size,
+            ));
+            continue;
+        }
+
         if meta.is_dir() {
-            let (size, files) = walk_subtree(&path, &seen, &large_heap, cancel)?;
+            let (size, files) = if should_fold_name(&name) {
+                (du_directory_size(&path)?, 0)
+            } else {
+                walk_subtree(&path, &seen, &large_heap, cancel)?
+            };
             files_scanned.fetch_add(files, Ordering::Relaxed);
             let last_access = fs::metadata(&path).ok().and_then(|m| last_access_time(&m));
             child_entries.push((
@@ -111,6 +138,8 @@ pub fn scan_directory(root: &Path, cancel: &CancelToken) -> std::io::Result<Scan
         }
     }
 
+    cancel.check_scan()?;
+
     child_entries.sort_by_key(|b| std::cmp::Reverse(b.1));
     let entries: Vec<DirEntry> = child_entries
         .into_iter()
@@ -137,24 +166,35 @@ fn walk_subtree(
     seen: &Arc<Mutex<HashSet<(u64, u64)>>>,
     large_heap: &Arc<Mutex<LargeFileHeap>>,
     cancel: &CancelToken,
-) -> std::io::Result<(u64, u64)> {
-    if should_fold_name(root.file_name().and_then(|n| n.to_str()).unwrap_or("")) {
-        return Ok((0, 0));
+) -> io::Result<(u64, u64)> {
+    if should_fold_name(
+        root
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(""),
+    ) {
+        return Ok((du_directory_size(root)?, 0));
     }
 
     let mut local_size = 0u64;
     let mut local_files = 0u64;
+    let fold_extra = Arc::new(AtomicU64::new(0));
 
+    let fold_extra_cb = fold_extra.clone();
     let walker = WalkDir::new(root)
         .follow_links(false)
         .skip_hidden(false)
-        .process_read_dir(|_depth, _path, _parent, children| {
+        .process_read_dir(move |_depth, _path, _parent, children| {
             children.iter_mut().for_each(|each_result| {
                 if let Ok(entry) = each_result {
                     if entry.file_type.is_dir() {
                         let name = entry.file_name.to_string_lossy();
                         if should_fold_name(name.as_ref()) {
                             entry.read_children_path = None;
+                            let path = entry.path();
+                            if let Ok(sz) = du_directory_size(&path) {
+                                fold_extra_cb.fetch_add(sz, Ordering::Relaxed);
+                            }
                         }
                     }
                 }
@@ -162,9 +202,7 @@ fn walk_subtree(
         });
 
     for entry in walker {
-        if cancel.is_cancelled() {
-            break;
-        }
+        cancel.check_scan()?;
         let entry = match entry {
             Ok(e) => e,
             Err(_) => continue,
@@ -184,6 +222,8 @@ fn walk_subtree(
         maybe_push_large(large_heap, &path, size);
     }
 
+    local_size += fold_extra.load(Ordering::Relaxed);
+    cancel.check_scan()?;
     Ok((local_size, local_files))
 }
 
@@ -265,11 +305,27 @@ impl LargeFileHeap {
     }
 }
 
+trait ScanCancel {
+    fn check_scan(&self) -> io::Result<()>;
+}
+
+impl ScanCancel for CancelToken {
+    fn check_scan(&self) -> io::Result<()> {
+        if self.is_cancelled() {
+            Err(io::Error::new(io::ErrorKind::Interrupted, "scan cancelled"))
+        } else {
+            Ok(())
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::fs::File;
     use std::io::Write;
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink;
 
     use crate::cancel::CancelToken;
 
@@ -293,7 +349,7 @@ mod tests {
     }
 
     #[test]
-    fn fold_skips_node_modules() {
+    fn fold_dir_uses_du_size() {
         let dir = std::env::temp_dir().join(format!("vole-fold-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
@@ -304,7 +360,65 @@ mod tests {
 
         let cancel = CancelToken::new();
         let result = scan_directory(&dir, &cancel).unwrap();
-        assert_eq!(result.total_size, 0);
+        assert!(
+            result.total_size >= 4096,
+            "folded node_modules should count via du, got {}",
+            result.total_size
+        );
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn skips_orbstack_child() {
+        let dir = std::env::temp_dir().join(format!("vole-skip-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let orb = dir.join("OrbStack");
+        fs::create_dir(&orb).unwrap();
+        let mut f = File::create(orb.join("disk.img")).unwrap();
+        f.write_all(&vec![0u8; 4096]).unwrap();
+
+        let cancel = CancelToken::new();
+        let result = scan_directory(&dir, &cancel).unwrap();
+        assert_eq!(result.total_size, 0);
+        assert!(result.entries.is_empty());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn cancel_returns_interrupted() {
+        let dir = std::env::temp_dir().join(format!("vole-cancel-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+
+        let cancel = CancelToken::new();
+        cancel.cancel();
+        let err = scan_directory(&dir, &cancel).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::Interrupted);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlink_not_followed() {
+        let base = std::env::temp_dir().join(format!("vole-symlink-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&base);
+        let dir = base.join("scan");
+        let outside = base.join("outside");
+        fs::create_dir_all(&dir).unwrap();
+        fs::create_dir_all(&outside).unwrap();
+        let mut f = File::create(outside.join("heavy.bin")).unwrap();
+        f.write_all(&vec![0u8; 64 * 1024]).unwrap();
+        symlink(&outside, dir.join("link")).unwrap();
+
+        let cancel = CancelToken::new();
+        let result = scan_directory(&dir, &cancel).unwrap();
+        assert!(
+            result.total_size < 64 * 1024,
+            "symlink target must not be walked, total={}",
+            result.total_size
+        );
+        assert_eq!(result.total_files, 1);
+        let _ = fs::remove_dir_all(&base);
     }
 }

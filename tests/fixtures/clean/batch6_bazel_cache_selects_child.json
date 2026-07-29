@@ -1,0 +1,14 @@
+{
+  "id": "batch6_bazel_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "bazel-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/.cache/bazel/item"
+    }
+  ],
+  "expect_selected": [
+    "~/.cache/bazel/item|Bazel cache"
+  ],
+  "expect_not_selected": []
+}

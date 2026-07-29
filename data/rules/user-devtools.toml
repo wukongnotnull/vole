@@ -799,3 +799,264 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+# Batch 6 wave: DB clients, build/CI caches
+
+[[rule]]
+id = "sequel-ace-cache"
+category = "user-devtools"
+label = "Sequel Ace cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.sequel-ace.sequel-ace/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "sequel-pro-cache"
+category = "user-devtools"
+label = "Sequel Pro cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.eggerapps.Sequel-Pro/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "redis-desktop-manager-cache"
+category = "user-devtools"
+label = "Redis Desktop Manager cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/redis-desktop-manager/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "sbt-boot-cache"
+category = "user-devtools"
+label = "SBT boot cache"
+platform = ["macos"]
+paths = ["~/.sbt/boot/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "sbt-launcher-cache"
+category = "user-devtools"
+label = "SBT launcher cache"
+platform = ["macos"]
+paths = ["~/.sbt/launchers/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "ivy-cache"
+category = "user-devtools"
+label = "Ivy cache"
+platform = ["macos"]
+paths = ["~/.ivy2/cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "bazel-cache"
+category = "user-devtools"
+label = "Bazel cache"
+platform = ["macos"]
+paths = ["~/.cache/bazel/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "zig-cache"
+category = "user-devtools"
+label = "Zig cache"
+platform = ["macos"]
+paths = ["~/.cache/zig/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "grafana-cache"
+category = "user-devtools"
+label = "Grafana cache"
+platform = ["macos"]
+paths = ["~/.grafana/cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "nuget-packages-cache"
+category = "user-devtools"
+label = "NuGet packages cache"
+platform = ["macos"]
+paths = ["~/.nuget/packages/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "jetbrains-ide-logs"
+category = "user-devtools"
+label = "JetBrains IDE logs"
+platform = ["macos"]
+paths = ["~/Library/Logs/JetBrains/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "container-storage-temp"
+category = "user-devtools"
+label = "Container storage temp"
+platform = ["macos"]
+paths = ["~/.local/share/containers/storage/tmp/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "gitlab-runner-cache"
+category = "user-devtools"
+label = "GitLab Runner cache"
+platform = ["macos"]
+paths = ["~/.cache/gitlab-runner/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "github-actions-cache"
+category = "user-devtools"
+label = "GitHub Actions cache"
+platform = ["macos"]
+paths = ["~/.github/cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "circleci-cache"
+category = "user-devtools"
+label = "CircleCI cache"
+platform = ["macos"]
+paths = ["~/.circleci/cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "sonarqube-cache"
+category = "user-devtools"
+label = "SonarQube cache"
+platform = ["macos"]
+paths = ["~/.sonar/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "prometheus-wal-cache"
+category = "user-devtools"
+label = "Prometheus WAL cache"
+platform = ["macos"]
+paths = ["~/.prometheus/data/wal/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "jenkins-workspace-cache"
+category = "user-devtools"
+label = "Jenkins workspace cache"
+platform = ["macos"]
+paths = ["~/.jenkins/workspace/*/target/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "postman-cache"
+category = "user-devtools"
+label = "Postman cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.postmanlabs.mac/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "tableplus-cache"
+category = "user-devtools"
+label = "TablePlus cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.tinyapp.TablePlus/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"

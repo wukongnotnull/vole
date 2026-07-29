@@ -1,0 +1,14 @@
+{
+  "id": "batch7_insomnia_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "insomnia-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.konghq.insomnia/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.konghq.insomnia/item|Insomnia cache"
+  ],
+  "expect_not_selected": []
+}

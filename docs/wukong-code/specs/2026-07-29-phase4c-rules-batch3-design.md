@@ -1,7 +1,7 @@
 # Phase 4c 续：Clean 规则扩展（Batch 3）设计
 
 - 日期：2026-07-29
-- 状态：待确认
+- 状态：已确认（2026-07-29）；实施计划见 `docs/wukong-code/plans/2026-07-29-phase4c-rules-batch3.md`
 - 父设计：`docs/wukong-code/specs/2026-07-29-rust-rewrite-design.md` §6、§7、§8 Phase 4c
 - 前置：Batch 2 已合入（`main` @ 2026-07-29）；约 **46** 条启用规则；库存脚本与 fixture 门禁就绪
 - 参照上游：Mole v1.48.1（`third_party/mole-1.48.1`）

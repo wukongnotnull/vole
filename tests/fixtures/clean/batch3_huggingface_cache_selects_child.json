@@ -1,0 +1,14 @@
+{
+  "id": "batch3_huggingface_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "huggingface-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/.cache/huggingface/hub"
+    }
+  ],
+  "expect_selected": [
+    "~/.cache/huggingface/hub|Hugging Face cache"
+  ],
+  "expect_not_selected": []
+}

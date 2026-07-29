@@ -1,0 +1,14 @@
+{
+  "id": "batch3_teams_legacy_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "teams-legacy-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Microsoft/Teams/Cache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Microsoft/Teams/Cache/item|Microsoft Teams legacy cache"
+  ],
+  "expect_not_selected": []
+}

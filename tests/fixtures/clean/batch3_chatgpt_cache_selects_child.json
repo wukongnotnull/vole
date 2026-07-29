@@ -1,0 +1,14 @@
+{
+  "id": "batch3_chatgpt_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "chatgpt-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.openai.chat/data"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.openai.chat/data|ChatGPT cache"
+  ],
+  "expect_not_selected": []
+}

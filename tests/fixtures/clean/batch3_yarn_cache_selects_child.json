@@ -1,0 +1,14 @@
+{
+  "id": "batch3_yarn_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "yarn-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/.yarn/cache/v6"
+    }
+  ],
+  "expect_selected": [
+    "~/.yarn/cache/v6|Yarn cache"
+  ],
+  "expect_not_selected": []
+}

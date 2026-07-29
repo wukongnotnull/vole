@@ -1,0 +1,14 @@
+{
+  "id": "batch3_whatsapp_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "whatsapp-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/net.whatsapp.WhatsApp/session"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/net.whatsapp.WhatsApp/session|WhatsApp cache"
+  ],
+  "expect_not_selected": []
+}

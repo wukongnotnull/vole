@@ -1,0 +1,14 @@
+{
+  "id": "batch13_lima_download_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "lima-download-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/lima/download/by-url-sha256/abc123"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/lima/download/by-url-sha256/abc123|Lima download cache"
+  ],
+  "expect_not_selected": []
+}

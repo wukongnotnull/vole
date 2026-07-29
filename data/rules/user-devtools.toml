@@ -2618,4 +2618,263 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+[[rule]]
+id = "utm-temporary-files"
+category = "user-devtools"
+label = "UTM temporary files"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.utmapp.UTM/Data/tmp/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "vmware-fusion-cache"
+category = "user-devtools"
+label = "VMware Fusion cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.vmware.fusion"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "parallels-cache"
+category = "user-devtools"
+label = "Parallels cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.parallels.*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "virtualbox-cache"
+category = "user-devtools"
+label = "VirtualBox cache"
+platform = ["macos"]
+paths = ["~/VirtualBox VMs/.cache"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "lima-download-cache"
+category = "user-devtools"
+label = "Lima download cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/lima/download/by-url-sha256/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "vagrant-temporary-files"
+category = "user-devtools"
+label = "Vagrant temporary files"
+platform = ["macos"]
+paths = ["~/.vagrant.d/tmp/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "rosetta-2-user-cache"
+category = "user-devtools"
+label = "Rosetta 2 user cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.rosetta.update"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-profile-code-cache"
+category = "user-devtools"
+label = "Arc profile code cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/*/Code Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-profile-gpu-cache"
+category = "user-devtools"
+label = "Arc profile GPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/*/GPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-user-data-root-shader-cache"
+category = "user-devtools"
+label = "Arc User Data root shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/User Data/ShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-user-data-root-gr-shader-cache"
+category = "user-devtools"
+label = "Arc User Data root GR shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/User Data/GrShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-user-data-root-graphite-dawn-cache"
+category = "user-devtools"
+label = "Arc User Data root Graphite Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/User Data/GraphiteDawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "messages-sticker-cache"
+category = "user-devtools"
+label = "Messages sticker cache"
+platform = ["macos"]
+paths = ["~/Library/Messages/StickerCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "saved-application-states"
+category = "user-devtools"
+label = "Saved application states"
+platform = ["macos"]
+paths = ["~/Library/Saved Application State/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "user-app-cache"
+category = "user-devtools"
+label = "User app cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "user-app-logs"
+category = "user-devtools"
+label = "User app logs"
+platform = ["macos"]
+paths = ["~/Library/Logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "helium-shader-cache-root"
+category = "user-devtools"
+label = "Helium root shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/net.imput.helium/ShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "google-chrome-library-cache"
+category = "user-devtools"
+label = "Google Chrome library cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/Google/Chrome/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "brave-library-cache"
+category = "user-devtools"
+label = "Brave library cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/BraveSoftware/Brave-Browser/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "chrome-profile-app-cache"
+category = "user-devtools"
+label = "Chrome profile app cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Google/Chrome/*/Application Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
 

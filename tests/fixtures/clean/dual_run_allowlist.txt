@@ -1,6 +1,6 @@
 # Default dual-run allowlist (5 fixtures, ~5 min in CI).
+batch13_microsoft_word_cache_selects_child.json
+batch13_lima_download_cache_selects_child.json
+batch13_vmware_fusion_cache_selects_child.json
 batch12_dia_http_cache_selects_child.json
-batch12_helium_cache_selects_child.json
-batch12_vivaldi_shader_cache_selects_child.json
 batch11_safari_cache_selects_child.json
-batch10_notion_cache_selects_child.json

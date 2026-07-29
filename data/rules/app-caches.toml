@@ -2903,4 +2903,263 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+[[rule]]
+id = "microsoft-word-cache"
+category = "app-caches"
+label = "Microsoft Word cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.microsoft.Word"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "microsoft-word-container-cache"
+category = "app-caches"
+label = "Microsoft Word container cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.microsoft.Word/Data/Library/Caches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "microsoft-word-temp-files"
+category = "app-caches"
+label = "Microsoft Word temp files"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.microsoft.Word/Data/tmp/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "microsoft-word-container-logs"
+category = "app-caches"
+label = "Microsoft Word container logs"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.microsoft.Word/Data/Library/Logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "microsoft-excel-cache"
+category = "app-caches"
+label = "Microsoft Excel cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.microsoft.Excel"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "microsoft-excel-container-cache"
+category = "app-caches"
+label = "Microsoft Excel container cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.microsoft.Excel/Data/Library/Caches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "microsoft-excel-temp-files"
+category = "app-caches"
+label = "Microsoft Excel temp files"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.microsoft.Excel/Data/tmp/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "microsoft-excel-container-logs"
+category = "app-caches"
+label = "Microsoft Excel container logs"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.microsoft.Excel/Data/Library/Logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "microsoft-powerpoint-cache"
+category = "app-caches"
+label = "Microsoft PowerPoint cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.microsoft.Powerpoint"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "microsoft-outlook-cache"
+category = "app-caches"
+label = "Microsoft Outlook cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.microsoft.Outlook/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "apple-iwork-cache"
+category = "app-caches"
+label = "Apple iWork cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.iWork.*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "wps-office-cache"
+category = "app-caches"
+label = "WPS Office cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.kingsoft.wpsoffice.mac"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "thunderbird-cache"
+category = "app-caches"
+label = "Thunderbird cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/org.mozilla.thunderbird/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "dia-gpu-persistent-cache"
+category = "app-caches"
+label = "Dia GPU persistent cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Dia/User Data/GPUPersistentCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "dia-extensions-crx-cache"
+category = "app-caches"
+label = "Dia extensions CRX cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Dia/User Data/extensions_crx_cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "dia-dawn-webgpu-cache"
+category = "app-caches"
+label = "Dia Dawn WebGPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Dia/User Data/*/DawnWebGPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "dia-profile-gpu-cache"
+category = "app-caches"
+label = "Dia profile GPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Dia/User Data/*/GPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "helium-extensions-cache"
+category = "app-caches"
+label = "Helium extensions cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/net.imput.helium/extensions_crx_cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "helium-dawn-cache"
+category = "app-caches"
+label = "Helium Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/net.imput.helium/GraphiteDawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "vivaldi-dawn-cache"
+category = "app-caches"
+label = "Vivaldi Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Vivaldi/GraphiteDawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
 

@@ -1,0 +1,14 @@
+{
+  "id": "batch13_vmware_fusion_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "vmware-fusion-cache selects cache dir",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.vmware.fusion"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.vmware.fusion|VMware Fusion cache"
+  ],
+  "expect_not_selected": []
+}

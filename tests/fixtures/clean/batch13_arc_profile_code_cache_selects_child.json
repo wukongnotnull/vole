@@ -1,0 +1,14 @@
+{
+  "id": "batch13_arc_profile_code_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "arc-profile-code-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Arc/Default/Code Cache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Arc/Default/Code Cache/item|Arc profile code cache"
+  ],
+  "expect_not_selected": []
+}

@@ -7,6 +7,7 @@ pub use vole_sys::vole_proto;
 
 pub mod analyze;
 pub mod cancel;
+pub mod delete;
 pub mod mutex;
 pub mod oplog;
 pub mod ops;

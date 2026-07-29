@@ -25,7 +25,7 @@
 - [x] Task 1: `validate_path_for_deletion` + `is_critical_deletion_path` + 测试（`core_safe_functions.bats` 子集）
 - [x] Task 2: `is_endpoint_security_cache_path` + 前缀数据
 - [x] Task 3: `should_protect_path` 数据化（TOML）+ 判定引擎
-- [ ] Task 4: `mole_delete` / 废纸篓后端 + `safe_remove` 包装
+- [x] Task 4: `mole_delete` / 废纸篓后端 + `safe_remove` 包装
 - [ ] Task 5: 合并 `spike_toctou` → `safety::verify_plan_entry` + plan 威胁模型测试
 - [ ] Task 6: property test（随机路径 ∩ 保护清单 = ∅）
 

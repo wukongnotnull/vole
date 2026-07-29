@@ -162,7 +162,7 @@ impl MacStatusCollector {
             swap_used: self.sys.used_swap(),
             swap_total: self.sys.total_swap(),
             cached: 0,
-            pressure: "normal".into(),
+            pressure: get_memory_pressure(),
         }
     }
 
@@ -395,9 +395,94 @@ fn format_uptime(secs: u64) -> String {
     }
 }
 
+fn get_memory_pressure() -> String {
+    let cmd = MacSysCommand;
+    let Ok(out) = cmd.run(&["memory_pressure"], Duration::from_millis(500)) else {
+        return String::new();
+    };
+    parse_memory_pressure(&String::from_utf8_lossy(&out.stdout))
+}
+
+/// 解析 `memory_pressure` 输出（对齐 mole `getMemoryPressure`）。
+pub(crate) fn parse_memory_pressure(output: &str) -> String {
+    let lower = output.to_lowercase();
+    if lower.contains("critical") {
+        return "critical".into();
+    }
+    if lower.contains("warn") {
+        return "warn".into();
+    }
+    if lower.contains("normal") {
+        return "normal".into();
+    }
+    String::new()
+}
+
 fn format_rfc3339(time: SystemTime) -> String {
     let dur = time.duration_since(UNIX_EPOCH).unwrap_or_default();
-    // 简化 ISO8601，与 mole JSON 足够接近
     let secs = dur.as_secs();
-    format!("{}Z", secs)
+    let nanos = dur.subsec_nanos();
+
+    let days = secs / 86400;
+    let time_of_day = secs % 86400;
+    let hour = time_of_day / 3600;
+    let minute = (time_of_day % 3600) / 60;
+    let second = time_of_day % 60;
+
+    let mut y = 1970i64;
+    let mut remaining_days = days as i64;
+    loop {
+        let leap = y % 4 == 0 && (y % 100 != 0 || y % 400 == 0);
+        let year_days = if leap { 366 } else { 365 };
+        if remaining_days < year_days {
+            break;
+        }
+        remaining_days -= year_days;
+        y += 1;
+    }
+    let leap = y % 4 == 0 && (y % 100 != 0 || y % 400 == 0);
+    let month_days = if leap {
+        [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    } else {
+        [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    };
+    let mut m = 0;
+    while m < 12 && remaining_days >= month_days[m] as i64 {
+        remaining_days -= month_days[m] as i64;
+        m += 1;
+    }
+    let day = remaining_days + 1;
+
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:09}Z",
+        y,
+        m + 1,
+        day,
+        hour,
+        minute,
+        second,
+        nanos
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{Duration, UNIX_EPOCH};
+
+    #[test]
+    fn parse_memory_pressure_levels() {
+        assert_eq!(parse_memory_pressure("system-wide memory pressure: normal"), "normal");
+        assert_eq!(parse_memory_pressure("WARN level"), "warn");
+        assert_eq!(parse_memory_pressure("CRITICAL"), "critical");
+        assert_eq!(parse_memory_pressure("unknown"), "");
+    }
+
+    #[test]
+    fn format_rfc3339_is_iso_datetime() {
+        let t = UNIX_EPOCH + Duration::from_secs(1_704_067_200); // 2024-01-01 00:00:00 UTC
+        let s = format_rfc3339(t);
+        assert!(s.starts_with("2024-01-01T00:00:00."));
+        assert!(s.ends_with('Z'));
+    }
 }

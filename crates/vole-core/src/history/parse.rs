@@ -32,7 +32,10 @@ pub fn parse_operations(content: &str) -> Vec<HistorySession> {
         }
         if let Some(end) = parse_session_end(line) {
             if active.is_none() {
-                active = Some(ActiveSession::start(end.command.clone(), end.ended_at.clone()));
+                active = Some(ActiveSession::start(
+                    end.command.clone(),
+                    end.ended_at.clone(),
+                ));
             }
             if let Some(mut sess) = active.take() {
                 sess.apply_end(end);
@@ -80,12 +83,12 @@ pub fn parse_deletions(content: &str) -> Vec<HistoryDeletion> {
         if timestamp.is_empty() || mode.is_empty() || status.is_empty() {
             continue;
         }
-        let size_kb =
-            if !size_kb_raw.is_empty() && size_kb_raw.chars().all(|c| c.is_ascii_digit()) {
-                size_kb_raw.parse::<u64>().ok()
-            } else {
-                None
-            };
+        let size_kb = if !size_kb_raw.is_empty() && size_kb_raw.chars().all(|c| c.is_ascii_digit())
+        {
+            size_kb_raw.parse::<u64>().ok()
+        } else {
+            None
+        };
         out.push(HistoryDeletion {
             timestamp: timestamp.to_string(),
             mode: mode.to_string(),
@@ -248,15 +251,17 @@ mod parse_unit_tests {
 
     #[test]
     fn parse_start_and_end_markers() {
-        let (cmd, started) =
-            parse_session_start("# ========== clean session started at 2026-05-24 10:00:00 ==========")
-                .unwrap();
+        let (cmd, started) = parse_session_start(
+            "# ========== clean session started at 2026-05-24 10:00:00 ==========",
+        )
+        .unwrap();
         assert_eq!(cmd, "clean");
         assert_eq!(started, "2026-05-24 10:00:00");
 
-        let end =
-            parse_session_end("# ========== clean session ended at 2026-05-24 10:00:05, 2 items, 6KB ==========")
-                .unwrap();
+        let end = parse_session_end(
+            "# ========== clean session ended at 2026-05-24 10:00:05, 2 items, 6KB ==========",
+        )
+        .unwrap();
         assert_eq!(end.command, "clean");
         assert_eq!(end.ended_at, "2026-05-24 10:00:05");
         assert_eq!(end.items, Some(2));

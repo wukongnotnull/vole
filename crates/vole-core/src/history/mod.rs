@@ -5,8 +5,8 @@ mod parse;
 mod session;
 
 pub use json::{
-    HistoryActions, HistoryDeletion, HistoryJson, HistoryLogs, HistoryReport, HistorySession,
-    DEFAULT_LIMIT, MAX_LIMIT, normalize_limit,
+    normalize_limit, HistoryActions, HistoryDeletion, HistoryJson, HistoryLogs, HistoryReport,
+    HistorySession, DEFAULT_LIMIT, MAX_LIMIT,
 };
 
 use std::path::PathBuf;
@@ -106,11 +106,7 @@ mod tests {
         let dir = tempfile::tempdir().expect("tempdir");
         let ops = dir.path().join("operations.log");
         let dels = dir.path().join("deletions.log");
-        fs::write(
-            &ops,
-            "[2026-05-24 10:00:01] [clean] TRASHED /tmp/x (1KB)\n",
-        )
-        .expect("write ops");
+        fs::write(&ops, "[2026-05-24 10:00:01] [clean] TRASHED /tmp/x (1KB)\n").expect("write ops");
 
         let report = HistoryReport::load(&ops, &dels);
         let json = report.to_json(20);

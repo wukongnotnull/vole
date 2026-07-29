@@ -1,2 +1,4 @@
 /target
 .DS_Store
+crates/vole-core/Library/
+scripts/__pycache__/

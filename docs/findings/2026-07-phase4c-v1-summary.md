@@ -35,7 +35,7 @@
 
 - `scripts/inventory-mole-rules.py` — mole `safe_clean` 库存 vs TOML 差集
 - `scripts/extract-clean-fixtures.py` — bats → JSON fixture 半自动抽取
-- `scripts/verify-clean-candidates.sh` — fixture 计划校验 + 可选 `VOLE_TEST_ROOT` 双跑
+- `scripts/verify-clean-candidates.sh` — fixture 计划校验 + `VOLE_TEST_ROOT` 双跑（allowlist）
 - `tests/fixtures/clean/` + `verify_clean_fixtures` — 表驱动断言
 
 ---
@@ -95,7 +95,7 @@ cargo clippy -p vole-core -- -D warnings
 ```
 
 - CI：`check` + `conformance-plan-only` 全绿（Batch 2–5 PR）
-- `VOLE_TEST_ROOT` mole↔vole 双跑：开发机未设；脚本在无 env 时 **SKIP**（可接受，见 Batch 2 计划）
+- `VOLE_TEST_ROOT` mole↔vole 双跑：**已实现**（`conformance` + `dual_run_allowlist.txt` 默认 5 条；CI `conformance-plan-only` 在 disposable root 下跑；完整 25 条见 `dual_run_allowlist.full.txt`）
 
 ---
 
@@ -141,8 +141,15 @@ cargo clippy -p vole-core -- -D warnings
 
 ### C. 产品化 clean 报告
 
-- plan 输出中对未覆盖 mole 类别给出「继续用 Mole」提示（**已实现**：`Plan.coverage_note` / `done.report.coverage_note`；人类 plan  footer 见 stderr）
-- 可选：`VOLE_TEST_ROOT` 双跑纳入 CI disposable job（非阻塞）
+- plan 输出中对未覆盖 mole 类别给出「继续用 Mole」提示（**已实现**：`Plan.coverage_note` / `done.report.coverage_note`；人类 plan footer 见 stderr）
+- `VOLE_TEST_ROOT` 双跑：**已实现**（PR 待合；CI `conformance-plan-only` + 默认 5 条 allowlist）
+
+### E. 首版发布（Phase 5，无 Developer ID）
+
+- **v0.0.1** GitHub Release（ad-hoc 二进制 + `data/rules`  tarball）
+- `scripts/package-release.sh` + `.github/workflows/release.yml`（tag `v*` 触发）
+- `install.sh` 安装 rules 到 `$PREFIX/share/vole/rules`
+- Developer ID / notarization 就绪后替换为签名产物（见 `docs/findings/2026-07-phase5-signing.md`）
 
 ### D. 其他 Phase
 
@@ -163,4 +170,4 @@ cargo clippy -p vole-core -- -D warnings
 
 ---
 
-**Phase 4c v1 Done.** 下一建议动作：**Homebrew Formula / 签名**（Phase 5 发布线）或 **clean 报告未覆盖提示**（小增量产品化）。
+**Phase 4c v1 Done.** 下一建议动作：**打 tag `v0.0.1` 发 GitHub Release**（ad-hoc）；Developer ID 就绪后接签名与 Homebrew stable。

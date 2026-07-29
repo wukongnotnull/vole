@@ -1,17 +1,28 @@
-# Homebrew formula draft for vole (not yet publishable).
-# Fill url/sha256 after the first GitHub Release.
+# Homebrew formula for vole (source / HEAD install until stable sha256 is pinned).
+#
+#   brew install --HEAD ./HomebrewFormula/vole.rb
+#
+# After GitHub Release v0.0.1, add stable block:
+#   url "https://github.com/wukongnotnull/vole/archive/refs/tags/v0.0.1.tar.gz"
+#   sha256 "<from: curl -L url | shasum -a 256>"
 class Vole < Formula
   desc "macOS cleanup and monitoring CLI (Mole-derived, GPL-3.0)"
   homepage "https://github.com/wukongnotnull/vole"
-  # url "https://github.com/wukongnotnull/vole/releases/download/v0.1.0/vole-0.1.0-macos-arm64.tar.gz"
-  # sha256 "REPLACE_ME"
   license "GPL-3.0-only"
-  version "0.0.1"
+  head "https://github.com/wukongnotnull/vole.git", branch: "main"
 
+  depends_on "rust" => :build
   depends_on :macos
 
   def install
-    odie "Release url/sha256 not set yet — see docs/findings/2026-07-phase5-signing.md"
+    system "cargo", "install", *std_cargo_install_args(path: "crates/vole-cli")
+    (share/"vole").install "data/rules"
+  end
+
+  def caveats
+    <<~EOS
+      export VOLE_RULES_DIR="#{share}/vole/rules"
+    EOS
   end
 
   test do

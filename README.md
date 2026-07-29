@@ -30,6 +30,34 @@ v1 子命令：`status`、`analyze`、`clean`、`history`（另有 `completions`
 
 **Phase 5 状态（2026-07-29）**：`vole history`（文本 / `--json` / `--limit`，对齐 mole）；`docs/protocol.md` 已 FROZEN；无参 `vole` 进入轻量菜单；`vole completions <shell>` 生成补全。验证：`scripts/verify-history-mole.sh`、`scripts/check-protocol-doc.sh`。计划见 `docs/wukong-code/plans/2026-07-29-phase5-history-protocol.md`。签名 / Homebrew 仍为占位，见 `docs/findings/2026-07-phase5-signing.md`。
 
+## 安装
+
+**macOS 12+**（Apple Silicon / Intel）。
+
+```bash
+# 源码（需 Rust 1.97+）
+git clone https://github.com/wukongnotnull/vole.git
+cd vole
+./install.sh
+export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"  # install.sh 会写入 rules
+```
+
+**预编译包**（GitHub Release `v0.0.1`，ad-hoc 未公证）：
+
+```bash
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v0.0.1/vole-0.0.1-aarch64-apple-darwin.tar.gz
+tar xzf vole-0.0.1-aarch64-apple-darwin.tar.gz
+install -m 755 vole-0.0.1-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+mkdir -p ~/.local/share/vole && cp -R vole-0.0.1-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"
+```
+
+Intel：`aarch64-apple-darwin` → `x86_64-apple-darwin`。Gatekeeper 拦截时：`xattr -cr ~/.local/bin/vole`。
+
+**Homebrew（草稿）**：`brew install --HEAD ./HomebrewFormula/vole.rb`
+
+**本地全量验收**：`bash scripts/verify-local.sh`
+
 **补全**：
 
 ```bash

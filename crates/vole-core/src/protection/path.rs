@@ -103,20 +103,47 @@ pub fn should_protect_path(path: &str, catalog: &ProtectionCatalog) -> bool {
     }
 
     // 6. Full-path pattern lists
-    if !container_cache && catalog.matches_cleanup_pattern(path) {
-        return true;
+    if !container_cache && !is_explicit_clean_cache_path(path) {
+        if catalog.matches_cleanup_pattern(path) {
+            return true;
+        }
     }
 
-    // 7. Filename fallback
+    // 7. Filename fallback — skip for explicit cache/log targets (align mole safe_clean).
     if !container_cache {
         if let Some(name) = Path::new(path).file_name().and_then(|n| n.to_str()) {
-            if should_protect_data(name, catalog) {
+            if !is_explicit_clean_cache_path(path) && should_protect_data(name, catalog) {
                 return true;
             }
         }
     }
 
     false
+}
+
+/// Paths that explicit clean rules may target: user caches/logs and Electron cache dirs.
+/// Broad bundle guards (protection.toml) still apply to Application Support data.
+fn is_explicit_clean_cache_path(path: &str) -> bool {
+    if path.contains("/.cache/") {
+        return true;
+    }
+    // User home Library/Caches & Logs (not system /Library/...).
+    if (path.contains("/Library/Caches/") && !path.starts_with("/Library/Caches/"))
+        || (path.contains("/Library/Logs/") && !path.starts_with("/Library/Logs/"))
+    {
+        return true;
+    }
+    const CACHE_SEGMENTS: &[&str] = &[
+        "/Cache/",
+        "/Code Cache/",
+        "/GPUCache/",
+        "/CachedData/",
+        "/CachedExtensionVSIXs/",
+        "/sentry/",
+        "/DawnGraphiteCache/",
+        "/DawnWebGPUCache/",
+    ];
+    CACHE_SEGMENTS.iter().any(|seg| path.contains(seg))
 }
 
 fn matches_critical_user_paths(path: &str) -> bool {
@@ -212,6 +239,24 @@ mod tests {
 
     fn cat() -> ProtectionCatalog {
         ProtectionCatalog::embedded()
+    }
+
+    #[test]
+    fn explicit_cache_allows_protected_bundle_cache_dirs() {
+        let c = cat();
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/test".into());
+        assert!(!should_protect_path(
+            &format!("{home}/Library/Caches/com.navicat.premium"),
+            &c
+        ));
+        assert!(!should_protect_path(
+            &format!("{home}/Library/Caches/com.dbeaver.DBeaver"),
+            &c
+        ));
+        assert!(!should_protect_path(
+            &format!("{home}/Library/Caches/com.postmanlabs.mac/item"),
+            &c
+        ));
     }
 
     #[test]

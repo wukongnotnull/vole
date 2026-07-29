@@ -1,0 +1,14 @@
+{
+  "id": "batch8_qoder_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "qoder-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Qoder/Cache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Qoder/Cache/item|Qoder cache"
+  ],
+  "expect_not_selected": []
+}

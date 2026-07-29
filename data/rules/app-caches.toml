@@ -1606,3 +1606,264 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+# Batch 8 wave
+
+[[rule]]
+id = "steam-web-cache"
+category = "app-caches"
+label = "Steam web cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Steam/htmlcache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "steam-app-cache"
+category = "app-caches"
+label = "Steam app cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Steam/appcache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "steam-depot-cache"
+category = "app-caches"
+label = "Steam depot cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Steam/depotcache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "steam-shader-cache"
+category = "app-caches"
+label = "Steam shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Steam/steamapps/shadercache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "steam-logs"
+category = "app-caches"
+label = "Steam logs"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Steam/logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "minecraft-logs"
+category = "app-caches"
+label = "Minecraft logs"
+platform = ["macos"]
+paths = ["~/Library/Application Support/minecraft/logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "minecraft-crash-reports"
+category = "app-caches"
+label = "Minecraft crash reports"
+platform = ["macos"]
+paths = ["~/Library/Application Support/minecraft/crash-reports/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "lunar-client-game-cache"
+category = "app-caches"
+label = "Lunar Client game cache"
+platform = ["macos"]
+paths = ["~/.lunarclient/game-cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "lunar-client-launcher-cache"
+category = "app-caches"
+label = "Lunar Client launcher cache"
+platform = ["macos"]
+paths = ["~/.lunarclient/launcher-cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "lunar-client-logs"
+category = "app-caches"
+label = "Lunar Client logs"
+platform = ["macos"]
+paths = ["~/.lunarclient/logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "battle-net-app-cache"
+category = "app-caches"
+label = "Battle.net app cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Battle.net/Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "obsidian-cache"
+category = "app-caches"
+label = "Obsidian cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/md.obsidian/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "pcsx2-cache"
+category = "app-caches"
+label = "PCSX2 cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/net.pcsx2.PCSX2/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "pcsx2-shader-cache"
+category = "app-caches"
+label = "PCSX2 shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/PCSX2/cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "pcsx2-logs"
+category = "app-caches"
+label = "PCSX2 logs"
+platform = ["macos"]
+paths = ["~/Library/Logs/PCSX2/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "rpcs3-cache"
+category = "app-caches"
+label = "RPCS3 cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/net.rpcs3.rpcs3/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "rpcs3-logs"
+category = "app-caches"
+label = "RPCS3 logs"
+platform = ["macos"]
+paths = ["~/Library/Application Support/rpcs3/logs/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "podcasts-streamed-media"
+category = "app-caches"
+label = "Podcasts streamed media"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.podcasts/Data/tmp/StreamedMedia"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "podcasts-download-temp"
+category = "app-caches"
+label = "Podcasts download temp"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.apple.podcasts/Data/tmp/*CFNetworkDownload*.tmp"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "klee-desktop-cache"
+category = "app-caches"
+label = "Klee desktop cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/klee_desktop/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"

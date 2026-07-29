@@ -1,0 +1,14 @@
+{
+  "id": "batch8_steam_web_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "steam-web-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Steam/htmlcache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Steam/htmlcache/item|Steam web cache"
+  ],
+  "expect_not_selected": []
+}

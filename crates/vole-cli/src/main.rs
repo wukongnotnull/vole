@@ -136,21 +136,27 @@ fn resolve_analyze_path(path: Option<PathBuf>) -> PathBuf {
 
 fn cmd_analyze(path: Option<PathBuf>, force_json: bool) -> io::Result<()> {
     let root = resolve_analyze_path(path);
+    let cancel = CancelToken::new();
+    signals::spawn_signal_cancel(cancel.clone());
     if should_use_json(force_json) {
-        let cancel = CancelToken::new();
-        let out = analyze_directory(&root, &cancel)?;
+        let out = analyze_directory(&root, &cancel).map_err(map_scan_cancel)?;
         let json = serde_json::to_string(&out).map_err(io::Error::other)?;
         println!("{}", json);
         return Ok(());
     }
-    cmd_analyze_tui(&root)
+    cmd_analyze_tui(&root, cancel)
 }
 
-fn cmd_analyze_tui(initial: &Path) -> io::Result<()> {
+fn map_scan_cancel(err: io::Error) -> io::Error {
+    if err.kind() == io::ErrorKind::Interrupted {
+        std::process::exit(130);
+    }
+    err
+}
+
+fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
     terminal::install_panic_hook();
     let mut guard = terminal::TerminalGuard::enter()?;
-    let cancel = CancelToken::new();
-    signals::spawn_signal_cancel(cancel.clone());
 
     let backend = CrosstermBackend::new(io::stdout());
     let mut term = Terminal::new(backend)?;
@@ -160,25 +166,40 @@ fn cmd_analyze_tui(initial: &Path) -> io::Result<()> {
     let mut selected = 0usize;
     let mut out = AnalyzeOutput::default();
     let mut scanning = true;
+    let mut scan_rx: Option<std::sync::mpsc::Receiver<io::Result<AnalyzeOutput>>> = None;
 
     let poll = Duration::from_millis(33);
 
     loop {
-        if scanning {
+        if scanning && scan_rx.is_none() {
             let path = stack.last().cloned().unwrap();
-            term.draw(|f| {
-                out.path = path.to_string_lossy().into_owned();
-                tui::render_analyze(f, &out, selected, true, &theme);
-            })?;
-            out = analyze_directory(&path, &cancel)?;
-            selected = 0;
-            scanning = false;
-            if cancel.is_cancelled() {
-                break;
-            }
+            out.path = path.to_string_lossy().into_owned();
+            let cancel_scan = cancel.clone();
+            let (tx, rx) = std::sync::mpsc::channel();
+            std::thread::spawn(move || {
+                let _ = tx.send(analyze_directory(&path, &cancel_scan));
+            });
+            scan_rx = Some(rx);
         }
 
-        term.draw(|f| tui::render_analyze(f, &out, selected, false, &theme))?;
+        term.draw(|f| tui::render_analyze(f, &out, selected, scanning, &theme))?;
+
+        if let Some(rx) = &scan_rx {
+            if let Ok(result) = rx.try_recv() {
+                scan_rx = None;
+                match result {
+                    Ok(snapshot) => {
+                        out = snapshot;
+                        selected = 0;
+                        scanning = false;
+                    }
+                    Err(e) if e.kind() == io::ErrorKind::Interrupted => {
+                        break;
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
+        }
 
         if event::poll(poll)? {
             if let Event::Key(key) = event::read()? {
@@ -190,6 +211,7 @@ fn cmd_analyze_tui(initial: &Path) -> io::Result<()> {
                     KeyCode::Esc if stack.len() > 1 => {
                         stack.pop();
                         scanning = true;
+                        scan_rx = None;
                     }
                     KeyCode::Up => {
                         selected = selected.saturating_sub(1);
@@ -204,6 +226,7 @@ fn cmd_analyze_tui(initial: &Path) -> io::Result<()> {
                             if entry.is_dir {
                                 stack.push(PathBuf::from(&entry.path));
                                 scanning = true;
+                                scan_rx = None;
                             }
                         }
                     }

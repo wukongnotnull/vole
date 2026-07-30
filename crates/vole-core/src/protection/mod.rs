@@ -3,11 +3,18 @@
 mod bundle;
 mod data;
 mod glob_match;
+mod leftovers;
 mod path;
+mod uninstall;
 
 pub use bundle::should_protect_data;
-pub use data::ProtectionCatalog;
-pub use path::should_protect_path;
+pub use data::{OfficialUninstallerRule, ProtectionCatalog};
+pub use leftovers::{
+    find_app_leftovers, find_bundle_siblings, is_rejected_generic_name, is_reverse_dns_bundle_id,
+    naming_variants, read_bundle_id, read_display_name, AppIdentity, LeftoverHit, SiblingPresence,
+};
+pub use path::{should_protect_path, ProtectionMode};
+pub use uninstall::{official_uninstaller_vendor, should_protect_from_uninstall};
 
 use crate::safety::PathProtection;
 
@@ -33,10 +40,33 @@ impl AppProtection {
     pub fn catalog(&self) -> &ProtectionCatalog {
         &self.catalog
     }
+
+    pub fn protects_path_mode(&self, path: &str, mode: ProtectionMode) -> bool {
+        should_protect_path(path, &self.catalog, mode)
+    }
 }
 
 impl PathProtection for AppProtection {
     fn should_protect(&self, policy_path: &str) -> bool {
-        should_protect_path(policy_path, &self.catalog)
+        should_protect_path(policy_path, &self.catalog, ProtectionMode::Cleanup)
+    }
+}
+
+/// Uninstall 模式的 `PathProtection` 适配器（供 apply 注入）。
+#[derive(Debug, Clone, Copy)]
+pub struct UninstallPathProtection<'a> {
+    inner: &'a AppProtection,
+}
+
+impl<'a> UninstallPathProtection<'a> {
+    pub fn new(inner: &'a AppProtection) -> Self {
+        Self { inner }
+    }
+}
+
+impl PathProtection for UninstallPathProtection<'_> {
+    fn should_protect(&self, policy_path: &str) -> bool {
+        self.inner
+            .protects_path_mode(policy_path, ProtectionMode::Uninstall)
     }
 }

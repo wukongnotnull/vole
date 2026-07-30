@@ -1,0 +1,4 @@
+{
+  "name": "system_critical_skipped",
+  "note": "com.apple.Safari must not enter uninstall plan (unit-tested in uninstall_plan.rs)"
+}

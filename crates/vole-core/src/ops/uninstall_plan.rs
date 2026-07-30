@@ -1,0 +1,250 @@
+//! `uninstall` plan：扫描 Applications → 保护策略 → leftovers → ProtoPlan。
+
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use crate::protection::{
+    find_app_leftovers, find_bundle_siblings, official_uninstaller_vendor, read_bundle_id,
+    read_display_name, should_protect_from_uninstall, AppIdentity, AppProtection,
+    ProtectionCatalog, UninstallPathProtection,
+};
+use crate::safety::{capture_plan_entry_identity, validate_path_for_deletion};
+use crate::vole_proto::{Plan as ProtoPlan, PlanEntry as ProtoPlanEntry, SCHEMA_VERSION};
+
+use super::plan::DEFAULT_PLAN_TTL;
+use super::OpsError;
+
+pub struct UninstallPlanOptions<'a> {
+    pub applications_dirs: &'a [PathBuf],
+    pub home: &'a Path,
+    pub target_bundle_or_name: Option<&'a str>,
+    pub ttl_secs: u64,
+}
+
+pub fn default_applications_dirs(home: &Path) -> Vec<PathBuf> {
+    vec![PathBuf::from("/Applications"), home.join("Applications")]
+}
+
+pub fn scan_applications(dirs: &[PathBuf]) -> Result<Vec<AppIdentity>, OpsError> {
+    let mut apps = Vec::new();
+    for dir in dirs {
+        let Ok(entries) = fs::read_dir(dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("app") {
+                continue;
+            }
+            let Some(bundle_id) = read_bundle_id(&path) else {
+                continue;
+            };
+            let display_name = read_display_name(&path).unwrap_or_else(|| {
+                path.file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("app")
+                    .to_string()
+            });
+            apps.push(AppIdentity {
+                app_path: path,
+                bundle_id,
+                display_name,
+            });
+        }
+    }
+    apps.sort_by(|a, b| a.display_name.cmp(&b.display_name));
+    Ok(apps)
+}
+
+pub fn build_uninstall_plan(
+    catalog: &ProtectionCatalog,
+    protection: &AppProtection,
+    opts: &UninstallPlanOptions<'_>,
+) -> Result<ProtoPlan, OpsError> {
+    let apps = scan_applications(opts.applications_dirs)?;
+    let target = opts
+        .target_bundle_or_name
+        .map(|s| s.trim().to_ascii_lowercase())
+        .filter(|s| !s.is_empty());
+
+    let mut entries = Vec::new();
+    let mut skipped_protected = 0u64;
+    let mut skipped_official = 0u64;
+    let mut skipped_filter = 0u64;
+    let mut sibling_notes = 0u64;
+
+    let uninstall_protect = UninstallPathProtection::new(protection);
+    let search_roots = opts.applications_dirs.to_vec();
+
+    for app in apps {
+        if let Some(ref t) = target {
+            let name_l = app.display_name.to_ascii_lowercase();
+            let bundle_l = app.bundle_id.to_ascii_lowercase();
+            let stem = app
+                .app_path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("")
+                .to_ascii_lowercase();
+            if !bundle_l.contains(t.as_str())
+                && !name_l.contains(t.as_str())
+                && !stem.contains(t.as_str())
+            {
+                skipped_filter += 1;
+                continue;
+            }
+        }
+
+        if should_protect_from_uninstall(&app.bundle_id, catalog) {
+            skipped_protected += 1;
+            continue;
+        }
+        if official_uninstaller_vendor(
+            &app.bundle_id,
+            &app.display_name,
+            &app.app_path.display().to_string(),
+            catalog,
+        )
+        .is_some()
+        {
+            skipped_official += 1;
+            continue;
+        }
+
+        let siblings = find_bundle_siblings(&app.bundle_id, &app.app_path, &search_roots);
+        if siblings.has_siblings() {
+            sibling_notes += 1;
+        }
+
+        let leftovers = find_app_leftovers(&app, opts.home, &siblings);
+        let rule_app = format!("uninstall:{}", app.bundle_id);
+
+        if let Some(entry) = try_plan_entry(
+            &app.app_path,
+            &app.display_name,
+            &rule_app,
+            &uninstall_protect,
+        ) {
+            entries.push(entry);
+        }
+
+        for hit in leftovers {
+            let rule = format!("uninstall:leftover:{}", app.bundle_id);
+            if let Some(entry) = try_plan_entry(&hit.path, &hit.label, &rule, &uninstall_protect) {
+                entries.push(entry);
+            }
+        }
+    }
+
+    let coverage_note = Some(format!(
+        "vole uninstall M1: skipped protected={skipped_protected}, official_uninstaller={skipped_official}, filter_miss={skipped_filter}, sibling_leftovers_suppressed={sibling_notes}. \
+Long-tail not covered (use Mole): brew cask zap, login items, system LaunchDaemons, /Library sudo paths."
+    ));
+
+    Ok(ProtoPlan {
+        schema_version: SCHEMA_VERSION,
+        created_at: SystemTime::now(),
+        ttl_secs: if opts.ttl_secs == 0 {
+            DEFAULT_PLAN_TTL.as_secs()
+        } else {
+            opts.ttl_secs
+        },
+        entries,
+        coverage_note,
+    })
+}
+
+fn try_plan_entry(
+    path: &Path,
+    label: &str,
+    rule_id: &str,
+    protection: &UninstallPathProtection<'_>,
+) -> Option<ProtoPlanEntry> {
+    let path_str = path.display().to_string();
+    validate_path_for_deletion(&path_str, protection).ok()?;
+    let identity = capture_plan_entry_identity(path).ok()?;
+    let size = path_size(path);
+    Some(ProtoPlanEntry {
+        id: format!("{rule_id}:{}", path.display()),
+        path: path.to_path_buf(),
+        label: label.to_string(),
+        size,
+        rule_id: rule_id.to_string(),
+        skip_reason: None,
+        dev: identity.dev,
+        ino: identity.ino,
+        mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+    })
+}
+
+fn path_size(path: &Path) -> u64 {
+    let Ok(meta) = fs::symlink_metadata(path) else {
+        return 0;
+    };
+    if meta.is_file() {
+        return meta.len();
+    }
+    // 目录：浅层合计（足够 plan 预览；与 mole 全量 du 有差距但可接受于 M1）
+    let mut total = 0u64;
+    let walker = jwalk::WalkDir::new(path).skip_hidden(false);
+    for entry in walker.into_iter().flatten() {
+        if let Ok(m) = entry.metadata() {
+            if m.is_file() {
+                total = total.saturating_add(m.len());
+            }
+        }
+    }
+    total
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn build_plan_includes_app_and_leftover_skips_safari() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path();
+        let apps = home.join("Applications");
+        fs::create_dir_all(&apps).unwrap();
+        write_app(&apps.join("Foo.app"), "com.example.foo", "Foo");
+        write_app(&apps.join("Safari.app"), "com.apple.Safari", "Safari");
+        fs::create_dir_all(home.join("Library/Caches/com.example.foo")).unwrap();
+
+        let catalog = ProtectionCatalog::embedded();
+        let protection = AppProtection::new();
+        let opts = UninstallPlanOptions {
+            applications_dirs: &[apps],
+            home,
+            target_bundle_or_name: None,
+            ttl_secs: 900,
+        };
+        let plan = build_uninstall_plan(&catalog, &protection, &opts).unwrap();
+        assert!(plan
+            .entries
+            .iter()
+            .any(|e| e.path.ends_with("Foo.app") && e.rule_id.starts_with("uninstall:")));
+        assert!(plan
+            .entries
+            .iter()
+            .any(|e| e.path.ends_with("Library/Caches/com.example.foo")));
+        assert!(!plan.entries.iter().any(|e| e.path.ends_with("Safari.app")));
+        assert!(plan.coverage_note.as_ref().unwrap().contains("protected"));
+    }
+
+    fn write_app(app: &Path, bundle_id: &str, name: &str) {
+        let contents = app.join("Contents");
+        fs::create_dir_all(&contents).unwrap();
+        let plist = format!(
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>{bundle_id}</string>
+<key>CFBundleName</key><string>{name}</string>
+</dict></plist>"#
+        );
+        fs::write(contents.join("Info.plist"), plist).unwrap();
+    }
+}

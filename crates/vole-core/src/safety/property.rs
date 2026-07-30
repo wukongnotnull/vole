@@ -2,7 +2,7 @@
 
 use proptest::prelude::*;
 
-use crate::protection::{should_protect_path, AppProtection, ProtectionCatalog};
+use crate::protection::{should_protect_path, AppProtection, ProtectionCatalog, ProtectionMode};
 use crate::safety::{validate_path_for_deletion, NoPathProtection, ValidationError};
 
 const DANGEROUS_CORPUS: &str = include_str!(concat!(
@@ -21,7 +21,7 @@ fn corpus_paths() -> Vec<&'static str> {
 /// 不变量：`should_protect_path` ⇒ `validate_path_for_deletion` 失败。
 fn protected_implies_validate_rejects(path: &str) {
     let catalog = ProtectionCatalog::embedded();
-    if !should_protect_path(path, &catalog) {
+    if !should_protect_path(path, &catalog, ProtectionMode::Cleanup) {
         return;
     }
     let protection = AppProtection::new();
@@ -40,7 +40,7 @@ fn allowed_implies_not_protected(path: &str) {
     }
     let catalog = ProtectionCatalog::embedded();
     assert!(
-        !should_protect_path(path, &catalog),
+        !should_protect_path(path, &catalog, ProtectionMode::Cleanup),
         "allowed deletion target must not be protected: {path:?}"
     );
 }
@@ -101,7 +101,11 @@ fn known_safe_tmp_child_allowed_and_unprotected() {
     let path = "/private/tmp/vole-prop-ordinary-cache-item";
     let protection = AppProtection::new();
     assert!(validate_path_for_deletion(path, &protection).is_ok());
-    assert!(!should_protect_path(path, &ProtectionCatalog::embedded()));
+    assert!(!should_protect_path(
+        path,
+        &ProtectionCatalog::embedded(),
+        ProtectionMode::Cleanup
+    ));
     let _ = NoPathProtection;
     let _ = ValidationError::Empty;
 }

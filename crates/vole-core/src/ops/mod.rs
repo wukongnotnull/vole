@@ -4,6 +4,8 @@ mod apply_plan;
 mod coverage;
 mod plan;
 mod proto_plan;
+mod uninstall_apply;
+mod uninstall_plan;
 
 use crate::vole_proto::StreamEvent;
 use crossbeam_channel::Sender;
@@ -19,6 +21,13 @@ pub use apply_plan::{
 pub use coverage::{coverage_note, enabled_rule_count, MOLE_INVENTORY_TOTAL};
 pub use plan::{Plan, PlanBuilder, PlanEntry, DEFAULT_PLAN_TTL};
 pub use proto_plan::{plan_to_proto, ProtoPlanError};
+pub use uninstall_apply::{
+    apply_uninstall_plan, apply_uninstall_proto_plan, UninstallApplyContext, UninstallApplyError,
+    UninstallApplyOptions,
+};
+pub use uninstall_plan::{
+    build_uninstall_plan, default_applications_dirs, scan_applications, UninstallPlanOptions,
+};
 
 #[derive(Debug, Error)]
 pub enum OpsError {

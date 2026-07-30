@@ -29,6 +29,8 @@ JSON 对象：`schema_version`, `created_at`, `ttl_secs`（默认 900）, `entri
 可选 `coverage_note`（字符串）：plan 阶段规则覆盖说明（未移植 mole 类别提示）。
 每条 entry：`id`, `path`, `label`, `size`, `rule_id`, `skip_reason`, `dev`, `ino`, `mtime`（Unix 秒）。
 
+`vole uninstall` 复用同一 Plan / Report / 事件形状；`rule_id` 使用前缀 `uninstall:`（应用本体）或 `uninstall:leftover:`（用户域残留）。勿用 `vole clean --apply` 执行 uninstall plan（apply 路径独立）。
+
 ## Report
 
 `succeeded`, `skipped`, `failed`, `skipped_by_reason[]`, `trashed_bytes`, `deleted_bytes`。

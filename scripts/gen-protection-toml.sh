@@ -35,13 +35,15 @@ def extract_array(name: str) -> list[str]:
 
 system = extract_array("SYSTEM_CRITICAL_BUNDLES")
 data = extract_array("DATA_PROTECTED_BUNDLES")
+apple = extract_array("APPLE_UNINSTALLABLE_APPS")
+official = extract_array("OFFICIAL_UNINSTALLER_RULES")
 
 out.parent.mkdir(parents=True, exist_ok=True)
 
 def toml_array(key: str, values: list[str]) -> str:
     lines = [f"{key} = ["]
     for v in values:
-        lines.append(f'  {v!r},')
+        lines.append(f"  {v!r},")
     lines.append("]")
     return "\n".join(lines)
 
@@ -51,8 +53,15 @@ body = (
     + toml_array("system_critical_bundles", system)
     + "\n\n"
     + toml_array("data_protected_bundles", data)
+    + "\n\n"
+    + toml_array("apple_uninstallable_apps", apple)
+    + "\n\n"
+    + toml_array("official_uninstaller_rules", official)
     + "\n"
 )
 out.write_text(body)
-print(f"wrote {out} ({len(system)} system + {len(data)} data patterns)")
+print(
+    f"wrote {out} ({len(system)} system + {len(data)} data + "
+    f"{len(apple)} apple_uninstallable + {len(official)} official_uninstaller)"
+)
 PY

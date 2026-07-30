@@ -91,6 +91,8 @@ vole analyze --json ~/Library
 vole clean --plan
 vole clean --apply <plan.json>
 vole clean --whitelist
+vole uninstall --plan
+vole uninstall --apply <plan.json>
 vole history
 vole history --json
 
@@ -116,6 +118,7 @@ VERIFY_LOCAL_SKIP_CROSS=1 bash scripts/verify-local.sh
 | `vole status` | 实时健康面板；`--json` / `--json-stream` |
 | `vole analyze [path]` | 目录磁盘下钻（默认 `$HOME`）；`--json` |
 | `vole clean` | `--plan` / `--apply`、`--json-stream`、`--whitelist`；默认废纸篓，`--permanent` 永久删除 |
+| `vole uninstall` | 卸载应用 + 用户域残留；`--plan` / `--apply` / `--json`；默认废纸篓 |
 | `vole history` | 操作历史；`--json` / `--limit` |
 | `vole completions` | 生成 shell 补全 |
 
@@ -123,7 +126,7 @@ VERIFY_LOCAL_SKIP_CROSS=1 bash scripts/verify-local.sh
 
 ## 当前范围与状态
 
-**v1 CLI 产品目标已完成**（设计 §1）：`status` / `analyze` / `clean` / `history` + 冻结协议 + Developer ID 分发。`uninstall` / `optimize` / `purge` / `installer` 等仍不在范围内——需要时请用 Mole；可选规则长尾见 [`docs/findings/2026-07-v1-closeout.md`](docs/findings/2026-07-v1-closeout.md)。
+**v1 CLI** 已完成。**产品 v2（进行中）**：`vole uninstall` 已交付（包目标 **1.1.0**）；`optimize` 为下一里程碑。`purge` / `installer` / 真 sudo / SwiftUI 仍不在范围内——见 [`docs/wukong-code/specs/2026-07-30-1900-v2-product-goals-design.md`](docs/wukong-code/specs/2026-07-30-1900-v2-product-goals-design.md)。
 
 | 阶段 | 状态 |
 |---|---|

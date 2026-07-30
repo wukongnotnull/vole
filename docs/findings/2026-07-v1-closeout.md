@@ -39,4 +39,10 @@
 | B2 | Codex Desktop stale staging（无 lsof） | ✅ |
 | B3 | plan 同路径去重 | ✅ |
 | B4 | orphaned apps | 延后（≥1w + 安全评审） |
-| C | SwiftUI 桌面 | 另仓 |
+| C | SwiftUI 桌面 | 另仓（**产品 v2 CLI 成熟后**再开；见下节） |
+
+## 下一轨：产品 v2
+
+**设计**：[`docs/wukong-code/specs/2026-07-30-1900-v2-product-goals-design.md`](../wukong-code/specs/2026-07-30-1900-v2-product-goals-design.md)
+
+窄 v2：顺序里程碑 `uninstall`（包 **1.1.0**）→ `optimize`（包 **1.2.0**）；SwiftUI 延后；不做 purge / installer / touchid / update / 真 sudo / Linux。

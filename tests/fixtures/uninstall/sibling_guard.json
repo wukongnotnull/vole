@@ -1,0 +1,4 @@
+{
+  "name": "sibling_guard",
+  "note": "same bundle id siblings suppress leftovers (unit-tested in leftovers.rs)"
+}

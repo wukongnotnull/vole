@@ -63,16 +63,14 @@ mkdir -p ~/.local/share/vole && cp -R vole-1.2.0-aarch64-apple-darwin/share/vole
 
 Intel 将 `aarch64-apple-darwin` 换为 `x86_64-apple-darwin`。保持 `bin` + `share/vole/rules` 相对布局即可；自定义规则目录时再设 `VOLE_RULES_DIR`。
 
-**Homebrew（stable v1.2.0）**（[Homebrew Core PR #296168](https://github.com/Homebrew/homebrew-core/pull/296168) 合并前需先 tap）：
+**Homebrew（stable v1.2.0）**（暂未进 Homebrew Core：知名度未达标；用自建 tap）：
 
 ```bash
 brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
 brew install vole
 ```
 
-规则随 formula 装到 `$(brew --prefix vole)/share/vole/rules`，一般无需设置 `VOLE_RULES_DIR`。合并进 Homebrew Core 后可直接：`brew install vole`。
-
-本地仓库开发：`brew tap wukongnotnull/vole "$(pwd)" && brew install wukongnotnull/vole/vole`
+规则随 formula 装到 `$(brew --prefix vole)/share/vole/rules`，一般无需设置 `VOLE_RULES_DIR`。本地仓库开发：`brew tap wukongnotnull/vole "$(pwd)" && brew install wukongnotnull/vole/vole`
 
 源码 HEAD：`brew install --HEAD wukongnotnull/vole/vole`
 

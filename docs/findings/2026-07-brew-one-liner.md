@@ -111,3 +111,11 @@ Self-submitted GitHub repository not notable enough
 2. 达标后再推 Core：需达到 forks≥90 **或** watchers≥90 **或** stars≥225（满足其一即可，以 audit 文案为准）。
 3. 不要为此改 formula「绕过」audit；无公开 exception 路径。
 
+## Maintainer review（关闭）
+
+[botantony requested changes](https://github.com/Homebrew/homebrew-core/pull/296168#discussion_r3684464100)：
+1. **notability** — 明确不符合 [Acceptable Formulae](https://docs.brew.sh/Acceptable-Formulae#niche-or-self-submitted-stuff)；建议自建 tap。
+2. **test** — `--help` 不够；应测基本功能。候选 formula 已改为 `vole clean --plan` 断言 `schema_version`。
+
+PR 已关闭。达标后带着强化过的 `test` 再提。
+

@@ -15,7 +15,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
     format!(
         "本版本启用 {enabled_rules} 条清理规则（Mole v1.48.1 库存约 {MOLE_INVENTORY_TOTAL} 条）。\
          广域系统缓存、sudo 与部分 custom 类尚未移植；\
-         not_running（精确名 + cmdline）与 Final Cut Pro generated 已落地。\
+         not_running（精确名 + cmdline）、FCP / 剪映 generated 已落地。\
          如需完整清理，请继续使用 Mole：https://github.com/tw93/Mole"
     )
 }

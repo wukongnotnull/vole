@@ -1,0 +1,26 @@
+{
+  "id": "recent_items_list_selects_sfl_files",
+  "source_bats": "manual",
+  "source_test": "recent-items-list selects fixed sfl/sfl2 paths",
+  "fixture": [
+    {
+      "write": "~/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.RecentApplications.sfl2",
+      "content": "sfl2"
+    },
+    {
+      "write": "~/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.RecentDocuments.sfl",
+      "content": "sfl"
+    },
+    {
+      "write": "~/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.FavoriteVolumes.sfl2",
+      "content": "keep"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.RecentApplications.sfl2|Recent items list",
+    "~/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.RecentDocuments.sfl|Recent items list"
+  ],
+  "expect_not_selected": [
+    "~/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.FavoriteVolumes.sfl2"
+  ]
+}

@@ -4,46 +4,52 @@
   "source_test": "clean_jianying_pro_generated_caches targets only whitelisted regenerable subdirs",
   "fixture": [
     {
-      "mkdir": "$cache_root/AigcMaterailCache"
+      "mkdir": "~/Movies/JianyingPro/User Data/Cache/AigcMaterailCache"
     },
     {
-      "mkdir": "$cache_root/AlgorithmCache"
+      "mkdir": "~/Movies/JianyingPro/User Data/Cache/AlgorithmCache"
     },
     {
-      "mkdir": "$cache_root/agencycache"
+      "mkdir": "~/Movies/JianyingPro/User Data/Cache/agencycache"
     },
     {
-      "mkdir": "$cache_root/audioWave"
+      "mkdir": "~/Movies/JianyingPro/User Data/Cache/audioWave"
     },
     {
-      "mkdir": "$cache_root/effect"
+      "mkdir": "~/Movies/JianyingPro/User Data/Cache/effect"
     },
     {
-      "mkdir": "$cache_root/frameThumbnail"
+      "mkdir": "~/Movies/JianyingPro/User Data/Cache/frameThumbnail"
     },
     {
-      "mkdir": "$cache_root/image"
+      "mkdir": "~/Movies/JianyingPro/User Data/Cache/image"
     },
     {
-      "mkdir": "$cache_root/importcache3"
+      "mkdir": "~/Movies/JianyingPro/User Data/Cache/importcache3"
     },
     {
-      "mkdir": "$cache_root/music"
+      "mkdir": "~/Movies/JianyingPro/User Data/Cache/music"
     },
     {
-      "mkdir": "$cache_root/recognize"
+      "mkdir": "~/Movies/JianyingPro/User Data/Cache/recognize"
     },
     {
       "mkdir": "~/Movies/JianyingPro/User Data/Projects/com.lveditor.draft/my-project"
     }
   ],
+  "expect_selected": [
+    "~/Movies/JianyingPro/User Data/Cache/AlgorithmCache|JianyingPro generated cache",
+    "~/Movies/JianyingPro/User Data/Cache/audioWave|JianyingPro generated cache",
+    "~/Movies/JianyingPro/User Data/Cache/frameThumbnail|JianyingPro generated cache",
+    "~/Movies/JianyingPro/User Data/Cache/recognize|JianyingPro generated cache"
+  ],
   "expect_not_selected": [
-    "AigcMaterailCache",
-    "Cache/effect",
-    "Cache/image",
-    "Cache/music",
-    "Projects",
-    "agencycache",
-    "importcache3"
+    "~/Movies/JianyingPro/User Data/Cache/AigcMaterailCache",
+    "~/Movies/JianyingPro/User Data/Cache/agencycache",
+    "~/Movies/JianyingPro/User Data/Cache/effect",
+    "~/Movies/JianyingPro/User Data/Cache/image",
+    "~/Movies/JianyingPro/User Data/Cache/importcache3",
+    "~/Movies/JianyingPro/User Data/Cache/music",
+    "~/Movies/JianyingPro/User Data/Projects/com.lveditor.draft/my-project"
   ]
 }

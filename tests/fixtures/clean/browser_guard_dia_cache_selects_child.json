@@ -1,0 +1,14 @@
+{
+  "id": "browser_guard_dia_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "dia-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/company.thebrowser.dia/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/company.thebrowser.dia/item|Dia cache"
+  ],
+  "expect_not_selected": []
+}

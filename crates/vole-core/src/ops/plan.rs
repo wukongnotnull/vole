@@ -482,4 +482,125 @@ mod tests {
         assert_eq!(plan.entries.len(), 1);
         let _ = fs::remove_dir_all(&dir);
     }
+
+    fn jianying_generated_rule(cache_root: &Path) -> Rule {
+        Rule {
+            id: "jianyingpro-generated-cache".into(),
+            category: Some("app-caches".into()),
+            label: "JianyingPro generated cache".into(),
+            platform: vec![],
+            paths: vec![cache_root.to_string_lossy().into_owned()],
+            impact: None,
+            disabled: false,
+            last_verified: None,
+            strategy: StrategyConfig {
+                kind: crate::rules::StrategyKind::Custom,
+                keep: None,
+                env_override: None,
+                days: None,
+                names: None,
+                handler: Some("jianyingpro_generated_caches".into()),
+            },
+            guards: crate::rules::GuardsConfig {
+                not_running: vec!["VideoFusion-macOS".into()],
+                not_running_cmdline: vec![
+                    "/VideoFusion-macOS.app/Contents/MacOS/VideoFusion-macOS".into(),
+                ],
+                ..Default::default()
+            },
+        }
+    }
+
+    #[test]
+    fn plan_skips_jianying_when_editor_running() {
+        let _guard = test_env::lock();
+        let home = scratch("jianying-running");
+        let cache = home.join("Movies/JianyingPro/User Data/Cache");
+        fs::create_dir_all(cache.join("recognize")).unwrap();
+        std::env::set_var("VOLE_TEST_HOME", &home);
+
+        let rule = jianying_generated_rule(&cache);
+        let probe = Arc::new(FakeProcessProbe {
+            running: HashSet::from(["VideoFusion-macOS".into()]),
+            ..Default::default()
+        });
+        let (tx, rx) = unbounded();
+        let orch =
+            Orchestrator::with_process_probe(crate::cancel::CancelToken::new(), Some(tx), probe);
+        let plan = orch
+            .build_plan(&[rule], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert!(plan.entries.is_empty());
+        let ev = rx.try_recv().unwrap();
+        assert!(matches!(
+            ev,
+            StreamEvent::Skipped {
+                reason: SkipReason::AppRunning,
+                ..
+            }
+        ));
+        std::env::remove_var("VOLE_TEST_HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn plan_skips_jianying_when_cmdline_running() {
+        let _guard = test_env::lock();
+        let home = scratch("jianying-cmdline");
+        let cache = home.join("Movies/JianyingPro/User Data/Cache");
+        fs::create_dir_all(cache.join("recognize")).unwrap();
+        std::env::set_var("VOLE_TEST_HOME", &home);
+
+        let rule = jianying_generated_rule(&cache);
+        let probe = Arc::new(FakeProcessProbe {
+            cmdline_running: HashSet::from([
+                "/VideoFusion-macOS.app/Contents/MacOS/VideoFusion-macOS".into(),
+            ]),
+            ..Default::default()
+        });
+        let (tx, rx) = unbounded();
+        let orch =
+            Orchestrator::with_process_probe(crate::cancel::CancelToken::new(), Some(tx), probe);
+        let plan = orch
+            .build_plan(&[rule], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert!(plan.entries.is_empty());
+        assert!(matches!(
+            rx.try_recv().unwrap(),
+            StreamEvent::Skipped {
+                reason: SkipReason::AppRunning,
+                ..
+            }
+        ));
+        std::env::remove_var("VOLE_TEST_HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn plan_selects_jianying_regenerable_when_idle() {
+        let _guard = test_env::lock();
+        let home = scratch("jianying-idle");
+        let cache = home.join("Movies/JianyingPro/User Data/Cache");
+        fs::create_dir_all(cache.join("recognize")).unwrap();
+        fs::create_dir_all(cache.join("effect")).unwrap();
+        std::env::set_var("VOLE_TEST_HOME", &home);
+
+        let rule = jianying_generated_rule(&cache);
+        let probe = Arc::new(FakeProcessProbe::default());
+        let orch = Orchestrator::with_process_probe(crate::cancel::CancelToken::new(), None, probe);
+        let plan = orch
+            .build_plan(&[rule], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert_eq!(plan.entries.len(), 1);
+        assert!(plan.entries[0].path.ends_with("recognize"));
+        assert!(!plan
+            .entries
+            .iter()
+            .any(|e| e.path.to_string_lossy().contains("effect")));
+        std::env::remove_var("VOLE_TEST_HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
 }

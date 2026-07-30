@@ -1,0 +1,14 @@
+{
+  "id": "browser_guard_brave_app_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "brave-app-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/BraveSoftware/Brave-Browser/Default/Application Cache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/BraveSoftware/Brave-Browser/Default/Application Cache/item|Brave app cache"
+  ],
+  "expect_not_selected": []
+}

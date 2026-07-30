@@ -134,6 +134,11 @@ fn is_explicit_clean_cache_path(path: &str) -> bool {
     {
         return true;
     }
+    // mole user.sh `_clean_recent_items`: fixed Recent*.sfl(2) + recentitems.plist.
+    // Filename is `com.apple.*`, so step-7 bundle guards would otherwise block them.
+    if is_explicit_recent_items_path(path) {
+        return true;
+    }
     const CACHE_SEGMENTS: &[&str] = &[
         "/Cache/",
         "/Code Cache/",
@@ -145,6 +150,25 @@ fn is_explicit_clean_cache_path(path: &str) -> bool {
         "/DawnWebGPUCache/",
     ];
     CACHE_SEGMENTS.iter().any(|seg| path.contains(seg))
+}
+
+fn is_explicit_recent_items_path(path: &str) -> bool {
+    if path.ends_with("/Library/Preferences/com.apple.recentitems.plist") {
+        return true;
+    }
+    let Some(name) = Path::new(path).file_name().and_then(|n| n.to_str()) else {
+        return false;
+    };
+    if !(name.ends_with(".sfl") || name.ends_with(".sfl2")) {
+        return false;
+    }
+    if !path.contains("/Library/Application Support/com.apple.sharedfilelist/") {
+        return false;
+    }
+    name.starts_with("com.apple.LSSharedFileList.RecentApplications.")
+        || name.starts_with("com.apple.LSSharedFileList.RecentDocuments.")
+        || name.starts_with("com.apple.LSSharedFileList.RecentServers.")
+        || name.starts_with("com.apple.LSSharedFileList.RecentHosts.")
 }
 
 fn matches_critical_user_paths(path: &str) -> bool {
@@ -256,6 +280,29 @@ mod tests {
         ));
         assert!(!should_protect_path(
             &format!("{home}/Library/Caches/com.postmanlabs.mac/item"),
+            &c
+        ));
+    }
+
+    #[test]
+    fn explicit_recent_items_lists_are_allowed_but_settings_lists_stay_protected() {
+        let c = cat();
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/test".into());
+        let shared = format!("{home}/Library/Application Support/com.apple.sharedfilelist");
+        assert!(!should_protect_path(
+            &format!("{shared}/com.apple.LSSharedFileList.RecentApplications.sfl2"),
+            &c
+        ));
+        assert!(!should_protect_path(
+            &format!("{home}/Library/Preferences/com.apple.recentitems.plist"),
+            &c
+        ));
+        assert!(should_protect_path(
+            &format!("{shared}/com.apple.LSSharedFileList.FavoriteVolumes.sfl2"),
+            &c
+        ));
+        assert!(should_protect_path(
+            &format!("{shared}/com.apple.settings.sfl2"),
             &c
         ));
     }

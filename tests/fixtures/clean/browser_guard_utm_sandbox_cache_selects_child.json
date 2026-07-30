@@ -1,0 +1,14 @@
+{
+  "id": "browser_guard_utm_sandbox_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "utm-sandbox-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Containers/com.utmapp.UTM/Data/Library/Caches/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Containers/com.utmapp.UTM/Data/Library/Caches/item|UTM sandbox cache"
+  ],
+  "expect_not_selected": []
+}

@@ -1,0 +1,14 @@
+{
+  "id": "browser_guard_vivaldi_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "vivaldi-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.vivaldi.Vivaldi/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.vivaldi.Vivaldi/item|Vivaldi cache"
+  ],
+  "expect_not_selected": []
+}

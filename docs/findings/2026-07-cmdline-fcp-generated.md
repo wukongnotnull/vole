@@ -20,4 +20,4 @@
 
 ## 非目标（仍未做）
 
-剪映 generated、Simulator/XCTest、Chrome 批量 cmdline 回填
+~~剪映 generated~~（见 `2026-07-jianyingpro-generated.md`）、Simulator/XCTest、Chrome 批量 cmdline 回填

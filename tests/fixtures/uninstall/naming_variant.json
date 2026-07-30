@@ -1,0 +1,4 @@
+{
+  "name": "naming_variant_hyphen",
+  "note": "Library/Application Support/maestro-studio should match Maestro Studio leftovers (unit-tested in leftovers.rs)"
+}

@@ -97,9 +97,7 @@ pub fn is_rejected_generic_name(name: &str) -> bool {
     if trimmed.len() < 2 {
         return true;
     }
-    COMMON_WORDS
-        .iter()
-        .any(|w| w.eq_ignore_ascii_case(trimmed))
+    COMMON_WORDS.iter().any(|w| w.eq_ignore_ascii_case(trimmed))
 }
 
 pub fn naming_variants(bundle_id: &str, display_name: &str) -> Vec<String> {

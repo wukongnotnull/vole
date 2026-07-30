@@ -69,7 +69,10 @@ mod tests {
         let cat = ProtectionCatalog::embedded();
         assert!(should_protect_from_uninstall("com.apple.Safari", &cat));
         assert!(!should_protect_from_uninstall("com.apple.dt.Xcode", &cat));
-        assert!(!should_protect_from_uninstall("com.example.ThirdParty", &cat));
+        assert!(!should_protect_from_uninstall(
+            "com.example.ThirdParty",
+            &cat
+        ));
     }
 
     #[test]

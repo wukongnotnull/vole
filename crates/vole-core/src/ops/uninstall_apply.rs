@@ -10,7 +10,9 @@ use crate::delete::{
 };
 use crate::oplog::OperationLogger;
 use crate::protection::{AppProtection, UninstallPathProtection};
-use crate::safety::{verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity, ValidationError};
+use crate::safety::{
+    verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity, ValidationError,
+};
 use crate::vole_proto::{
     Plan as ProtoPlan, PlanEntry as ProtoPlanEntry, Report, SkipReason, SkipSummary, StreamEvent,
     SCHEMA_VERSION,
@@ -271,10 +273,8 @@ mod tests {
     use vole_sys::macos::MacTrash;
 
     fn scratch(tag: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!(
-            "vole-uninstall-apply-{tag}-{}",
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("vole-uninstall-apply-{tag}-{}", std::process::id()));
         fs::remove_dir_all(&dir).ok();
         fs::create_dir_all(&dir).unwrap();
         dir

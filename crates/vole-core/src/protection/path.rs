@@ -43,11 +43,7 @@ fn is_container_cache_or_tmp(path: &str) -> bool {
 
 /// 路径保护。`Cleanup` 对齐现网；`Uninstall` 对齐 mole `MOLE_UNINSTALL_MODE=1`
 ///（不因 data-protected 拦截；仍拦 system-critical / EDR / 关键路径）。
-pub fn should_protect_path(
-    path: &str,
-    catalog: &ProtectionCatalog,
-    mode: ProtectionMode,
-) -> bool {
+pub fn should_protect_path(path: &str, catalog: &ProtectionCatalog, mode: ProtectionMode) -> bool {
     if path.is_empty() {
         return false;
     }
@@ -301,15 +297,18 @@ mod tests {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/test".into());
         assert!(!should_protect_path(
             &format!("{home}/Library/Caches/com.navicat.premium"),
-            &c, ProtectionMode::Cleanup
+            &c,
+            ProtectionMode::Cleanup
         ));
         assert!(!should_protect_path(
             &format!("{home}/Library/Caches/com.dbeaver.DBeaver"),
-            &c, ProtectionMode::Cleanup
+            &c,
+            ProtectionMode::Cleanup
         ));
         assert!(!should_protect_path(
             &format!("{home}/Library/Caches/com.postmanlabs.mac/item"),
-            &c, ProtectionMode::Cleanup
+            &c,
+            ProtectionMode::Cleanup
         ));
     }
 
@@ -320,19 +319,23 @@ mod tests {
         let shared = format!("{home}/Library/Application Support/com.apple.sharedfilelist");
         assert!(!should_protect_path(
             &format!("{shared}/com.apple.LSSharedFileList.RecentApplications.sfl2"),
-            &c, ProtectionMode::Cleanup
+            &c,
+            ProtectionMode::Cleanup
         ));
         assert!(!should_protect_path(
             &format!("{home}/Library/Preferences/com.apple.recentitems.plist"),
-            &c, ProtectionMode::Cleanup
+            &c,
+            ProtectionMode::Cleanup
         ));
         assert!(should_protect_path(
             &format!("{shared}/com.apple.LSSharedFileList.FavoriteVolumes.sfl2"),
-            &c, ProtectionMode::Cleanup
+            &c,
+            ProtectionMode::Cleanup
         ));
         assert!(should_protect_path(
             &format!("{shared}/com.apple.settings.sfl2"),
-            &c, ProtectionMode::Cleanup
+            &c,
+            ProtectionMode::Cleanup
         ));
     }
 
@@ -342,31 +345,38 @@ mod tests {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/test".into());
         assert!(should_protect_path(
             &format!("{home}/Library/Caches/ms-playwright/chromium-123"),
-            &c, ProtectionMode::Cleanup
+            &c,
+            ProtectionMode::Cleanup
         ));
         assert!(should_protect_path(
             &format!("{home}/Library/Caches/com.apple.homed/state"),
-            &c, ProtectionMode::Cleanup
+            &c,
+            ProtectionMode::Cleanup
         ));
         assert!(should_protect_path(
             &format!("{home}/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite"),
-            &c, ProtectionMode::Cleanup
+            &c,
+            ProtectionMode::Cleanup
         ));
         assert!(should_protect_path(
             &format!("{home}/Library/Preferences/com.paceap.eden.iLokLicenseManager.plist"),
-            &c, ProtectionMode::Cleanup
+            &c,
+            ProtectionMode::Cleanup
         ));
         assert!(should_protect_path(
             "/private/var/folders/aa/bb/C/com.native-instruments.NativeAccess/license",
-            &c, ProtectionMode::Cleanup
+            &c,
+            ProtectionMode::Cleanup
         ));
         assert!(should_protect_path(
             "/Library/Audio/Plug-Ins/VST3/Example.vst3",
-            &c, ProtectionMode::Cleanup
+            &c,
+            ProtectionMode::Cleanup
         ));
         assert!(!should_protect_path(
             &format!("{home}/Library/Application Support/Example/Cache/item"),
-            &c, ProtectionMode::Cleanup
+            &c,
+            ProtectionMode::Cleanup
         ));
     }
 
@@ -375,7 +385,8 @@ mod tests {
         let c = cat();
         assert!(should_protect_path(
             "/private/var/folders/9d/abc123/C/com.crowdstrike.falcon.App/com.apple.metalfe",
-            &c, ProtectionMode::Cleanup
+            &c,
+            ProtectionMode::Cleanup
         ));
     }
 
@@ -385,11 +396,13 @@ mod tests {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/test".into());
         assert!(should_protect_path(
             &format!("{home}/Library/Group Containers/HUAQ24HBR6.dev.orbstack/data/data.img.raw"),
-            &c, ProtectionMode::Cleanup
+            &c,
+            ProtectionMode::Cleanup
         ));
         assert!(should_protect_path(
             &format!("{home}/.orbstack/state.db"),
-            &c, ProtectionMode::Cleanup
+            &c,
+            ProtectionMode::Cleanup
         ));
     }
 

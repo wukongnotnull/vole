@@ -101,7 +101,11 @@ fn known_safe_tmp_child_allowed_and_unprotected() {
     let path = "/private/tmp/vole-prop-ordinary-cache-item";
     let protection = AppProtection::new();
     assert!(validate_path_for_deletion(path, &protection).is_ok());
-    assert!(!should_protect_path(path, &ProtectionCatalog::embedded(), ProtectionMode::Cleanup));
+    assert!(!should_protect_path(
+        path,
+        &ProtectionCatalog::embedded(),
+        ProtectionMode::Cleanup
+    ));
     let _ = NoPathProtection;
     let _ = ValidationError::Empty;
 }

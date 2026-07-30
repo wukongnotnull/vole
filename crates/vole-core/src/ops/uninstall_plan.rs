@@ -6,8 +6,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::protection::{
     find_app_leftovers, find_bundle_siblings, official_uninstaller_vendor, read_bundle_id,
-    read_display_name, should_protect_from_uninstall, AppIdentity, AppProtection, ProtectionCatalog,
-    UninstallPathProtection,
+    read_display_name, should_protect_from_uninstall, AppIdentity, AppProtection,
+    ProtectionCatalog, UninstallPathProtection,
 };
 use crate::safety::{capture_plan_entry_identity, validate_path_for_deletion};
 use crate::vole_proto::{Plan as ProtoPlan, PlanEntry as ProtoPlanEntry, SCHEMA_VERSION};
@@ -23,10 +23,7 @@ pub struct UninstallPlanOptions<'a> {
 }
 
 pub fn default_applications_dirs(home: &Path) -> Vec<PathBuf> {
-    vec![
-        PathBuf::from("/Applications"),
-        home.join("Applications"),
-    ]
+    vec![PathBuf::from("/Applications"), home.join("Applications")]
 }
 
 pub fn scan_applications(dirs: &[PathBuf]) -> Result<Vec<AppIdentity>, OpsError> {
@@ -90,7 +87,9 @@ pub fn build_uninstall_plan(
                 .and_then(|s| s.to_str())
                 .unwrap_or("")
                 .to_ascii_lowercase();
-            if !bundle_l.contains(t.as_str()) && !name_l.contains(t.as_str()) && !stem.contains(t.as_str())
+            if !bundle_l.contains(t.as_str())
+                && !name_l.contains(t.as_str())
+                && !stem.contains(t.as_str())
             {
                 skipped_filter += 1;
                 continue;
@@ -121,17 +120,18 @@ pub fn build_uninstall_plan(
         let leftovers = find_app_leftovers(&app, opts.home, &siblings);
         let rule_app = format!("uninstall:{}", app.bundle_id);
 
-        if let Some(entry) =
-            try_plan_entry(&app.app_path, &app.display_name, &rule_app, &uninstall_protect)
-        {
+        if let Some(entry) = try_plan_entry(
+            &app.app_path,
+            &app.display_name,
+            &rule_app,
+            &uninstall_protect,
+        ) {
             entries.push(entry);
         }
 
         for hit in leftovers {
             let rule = format!("uninstall:leftover:{}", app.bundle_id);
-            if let Some(entry) =
-                try_plan_entry(&hit.path, &hit.label, &rule, &uninstall_protect)
-            {
+            if let Some(entry) = try_plan_entry(&hit.path, &hit.label, &rule, &uninstall_protect) {
                 entries.push(entry);
             }
         }

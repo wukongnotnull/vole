@@ -106,7 +106,7 @@ bash scripts/verify-local.sh
 VERIFY_LOCAL_SKIP_CROSS=1 bash scripts/verify-local.sh
 ```
 
-签名 / Homebrew 发布见 [`docs/findings/2026-07-phase5-signing.md`](docs/findings/2026-07-phase5-signing.md)。
+签名 / Homebrew 发布见 [`docs/findings/2026-07-phase5-signing.md`](docs/findings/2026-07-phase5-signing.md)（Developer ID: Kong Wu / WCYC8XY4V2）。
 
 ## 命令一览
 

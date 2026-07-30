@@ -6,6 +6,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# Optional local signing config (copy from scripts/signing.env.example).
+# shellcheck source=/dev/null
+[[ -f "$ROOT/scripts/signing.env" ]] && source "$ROOT/scripts/signing.env"
+
 VERSION="${1:-$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')}"
 OUT_DIR="${OUT_DIR:-$ROOT/dist}"
 RULES_SRC="$ROOT/data/rules"

@@ -3,3 +3,6 @@
 .DS_Store
 crates/vole-core/Library/
 scripts/__pycache__/
+scripts/signing.env
+*.p12
+*.cer

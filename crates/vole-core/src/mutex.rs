@@ -59,6 +59,10 @@ pub fn try_lock_uninstall() -> Result<ConfigLock, MutexError> {
     try_lock_config("uninstall")
 }
 
+pub fn try_lock_optimize() -> Result<ConfigLock, MutexError> {
+    try_lock_config("optimize")
+}
+
 pub fn try_lock_config(name: &str) -> Result<ConfigLock, MutexError> {
     let path = cache_dir().join(format!("{}.lock", name));
     let file = try_lock_path(&path)?;

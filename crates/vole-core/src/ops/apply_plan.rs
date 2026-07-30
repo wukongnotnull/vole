@@ -46,6 +46,7 @@ pub struct ApplyPlanContext<'a> {
 }
 
 impl<'a> ApplyPlanContext<'a> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         protection: &'a AppProtection,
         whitelist_patterns: &'a [String],
@@ -362,6 +363,7 @@ mod tests {
         ApplyPlanOptions { permanent }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn run_apply(
         plan: &ProtoPlan,
         protection: &AppProtection,
@@ -627,12 +629,10 @@ mod tests {
         assert_eq!(report.skipped, 1);
         assert!(file.exists());
         assert!(fake_trash.calls.lock().unwrap().is_empty());
-        assert!(
-            report
-                .skipped_by_reason
-                .iter()
-                .any(|s| s.reason == SkipReason::AppRunning)
-        );
+        assert!(report
+            .skipped_by_reason
+            .iter()
+            .any(|s| s.reason == SkipReason::AppRunning));
 
         fs::remove_dir_all(&root).ok();
     }

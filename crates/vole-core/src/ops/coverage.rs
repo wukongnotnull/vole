@@ -14,7 +14,8 @@ pub fn enabled_rule_count(rules: &[Rule]) -> usize {
 pub fn coverage_note(enabled_rules: usize) -> String {
     format!(
         "本版本启用 {enabled_rules} 条清理规则（Mole v1.48.1 库存约 {MOLE_INVENTORY_TOTAL} 条）。\
-         广域系统缓存、需进程检测的 guard 规则、sudo/custom 类等尚未移植。\
+         广域系统缓存、generated/cmdline 类 guard、sudo/custom 类等尚未移植；\
+         精确进程名 not_running 子集已落地。\
          如需完整清理，请继续使用 Mole：https://github.com/tw93/Mole"
     )
 }

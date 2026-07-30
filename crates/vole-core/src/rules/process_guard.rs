@@ -90,10 +90,7 @@ mod tests {
     #[test]
     fn idle_when_none_running() {
         let probe = FakeProcessProbe::default();
-        assert!(!should_skip_for_not_running(
-            &probe,
-            &["Firefox".into()]
-        ));
+        assert!(!should_skip_for_not_running(&probe, &["Firefox".into()]));
     }
 
     #[test]
@@ -120,7 +117,10 @@ mod tests {
 
     #[test]
     fn state_from_pgrep_status_other_exit_is_unknown() {
-        assert_eq!(state_from_pgrep_status(Some(2), false), ProcessState::Unknown);
+        assert_eq!(
+            state_from_pgrep_status(Some(2), false),
+            ProcessState::Unknown
+        );
         assert_eq!(state_from_pgrep_status(None, false), ProcessState::Unknown);
     }
 

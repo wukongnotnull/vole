@@ -109,10 +109,7 @@ impl Orchestrator {
                 continue;
             }
 
-            if should_skip_for_not_running(
-                self.process_probe.as_ref(),
-                &rule.guards.not_running,
-            ) {
+            if should_skip_for_not_running(self.process_probe.as_ref(), &rule.guards.not_running) {
                 self.emit(StreamEvent::Skipped {
                     rule_id: rule.id.clone(),
                     reason: SkipReason::AppRunning,
@@ -447,11 +444,8 @@ mod tests {
             unknown: HashSet::new(),
         });
         let (tx, rx) = unbounded();
-        let orch = Orchestrator::with_process_probe(
-            crate::cancel::CancelToken::new(),
-            Some(tx),
-            probe,
-        );
+        let orch =
+            Orchestrator::with_process_probe(crate::cancel::CancelToken::new(), Some(tx), probe);
         let plan = orch
             .build_plan(&[rule], &AppProtection::new(), &[])
             .unwrap();
@@ -480,11 +474,7 @@ mod tests {
         rule.guards.not_running = vec!["claude".into()];
 
         let probe = Arc::new(FakeProcessProbe::default());
-        let orch = Orchestrator::with_process_probe(
-            crate::cancel::CancelToken::new(),
-            None,
-            probe,
-        );
+        let orch = Orchestrator::with_process_probe(crate::cancel::CancelToken::new(), None, probe);
         let plan = orch
             .build_plan(&[rule], &AppProtection::new(), &[])
             .unwrap();

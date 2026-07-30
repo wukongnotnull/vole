@@ -5,6 +5,7 @@ Usage:
   python3 scripts/inventory-mole-rules.py
   python3 scripts/inventory-mole-rules.py --json /tmp/mole-rules.json
   python3 scripts/inventory-mole-rules.py --csv /tmp/mole-rules.csv
+  python3 scripts/inventory-mole-rules.py --self-test
 """
 
 from __future__ import annotations
@@ -24,6 +25,12 @@ SAFE_CLEAN_RE = re.compile(
 
 ID_RE = re.compile(r'(?m)^\s*id\s*=\s*"([^"]+)"\s*$')
 LABEL_RE = re.compile(r'(?m)^\s*label\s*=\s*"([^"]+)"\s*$')
+QUOTED_PATH_RE = re.compile(r'"((?:\\.|[^"\\])*)"')
+
+# mole proposed_id → vole rule id when labels differ but coverage is known.
+ID_ALIASES: dict[str, str] = {
+    "homebrew-cache": "homebrew-downloads-cache",
+}
 
 
 def repo_root() -> Path:
@@ -73,16 +80,29 @@ def guess_complexity(line: str, path_expr: str, context: str) -> str:
     return "all"
 
 
-def load_ported(rules_dir: Path) -> tuple[set[str], set[str]]:
+def normalize_path_expr(path: str) -> str:
+    """Normalize path expressions for equality checks (slug noise reduction)."""
+    s = unescape_bash_path(path).strip()
+    s = s.replace("\\ ", " ")
+    s = re.sub(r" {2,}", " ", s)
+    return s
+
+
+def load_ported(rules_dir: Path) -> tuple[set[str], set[str], set[str]]:
     ids: set[str] = set()
     labels: set[str] = set()
+    paths: set[str] = set()
     if not rules_dir.is_dir():
-        return ids, labels
+        return ids, labels, paths
     for path in sorted(rules_dir.glob("*.toml")):
         text = path.read_text(encoding="utf-8")
         ids.update(ID_RE.findall(text))
         labels.update(LABEL_RE.findall(text))
-    return ids, labels
+        for block in re.split(r"(?m)^\[\[rule\]\]\s*$", text)[1:]:
+            for m in re.finditer(r"(?ms)^\s*paths\s*=\s*\[(.*?)\]", block):
+                for qm in QUOTED_PATH_RE.finditer(m.group(1)):
+                    paths.add(normalize_path_expr(qm.group(1)))
+    return ids, labels, paths
 
 
 def slugify_label(label: str) -> str:
@@ -91,8 +111,32 @@ def slugify_label(label: str) -> str:
     return s.strip("-")[:64]
 
 
+def match_ported(
+    *,
+    proposed: str,
+    label: str,
+    path_expr: str,
+    ported_ids: set[str],
+    ported_labels: set[str],
+    ported_paths: set[str],
+) -> tuple[bool, str]:
+    """Return (ported, match_reason)."""
+    if proposed in ported_ids:
+        return True, "id"
+    alias = ID_ALIASES.get(proposed)
+    if alias is not None and alias in ported_ids:
+        return True, "id_alias"
+    if any(proposed == pid or proposed.startswith(pid) for pid in ported_ids):
+        return True, "id_prefix"
+    if label in ported_labels:
+        return True, "label"
+    if normalize_path_expr(path_expr) in ported_paths:
+        return True, "path"
+    return False, "none"
+
+
 def inventory(clean_dir: Path, rules_dir: Path) -> list[dict]:
-    ported_ids, ported_labels = load_ported(rules_dir)
+    ported_ids, ported_labels, ported_paths = load_ported(rules_dir)
     rows: list[dict] = []
     for sh in sorted(clean_dir.glob("*.sh")):
         text = sh.read_text(encoding="utf-8", errors="replace")
@@ -109,10 +153,13 @@ def inventory(clean_dir: Path, rules_dir: Path) -> list[dict]:
                 label = m.group("label")
                 complexity = guess_complexity(line, path_expr, context)
                 proposed = slugify_label(label)
-                ported = (
-                    proposed in ported_ids
-                    or label in ported_labels
-                    or any(proposed == pid or proposed.startswith(pid) for pid in ported_ids)
+                ported, reason = match_ported(
+                    proposed=proposed,
+                    label=label,
+                    path_expr=path_expr,
+                    ported_ids=ported_ids,
+                    ported_labels=ported_labels,
+                    ported_paths=ported_paths,
                 )
                 rows.append(
                     {
@@ -124,9 +171,50 @@ def inventory(clean_dir: Path, rules_dir: Path) -> list[dict]:
                         "complexity_guess": complexity,
                         "proposed_id": proposed,
                         "ported": bool(ported),
+                        "match_reason": reason,
                     }
                 )
     return rows
+
+
+def self_test() -> int:
+    assert normalize_path_expr(r"~/Library/Application\ Support/Arc/ShaderCache/*") == (
+        "~/Library/Application Support/Arc/ShaderCache/*"
+    )
+    ported_ids = {"homebrew-downloads-cache"}
+    ported_paths = {
+        normalize_path_expr("~/Library/Caches/Homebrew/downloads/*"),
+        normalize_path_expr("~/Library/Application Support/Arc/ShaderCache/*"),
+    }
+    ok, reason = match_ported(
+        proposed="homebrew-cache",
+        label="Homebrew cache",
+        path_expr="~/Library/Caches/Homebrew/downloads/*",
+        ported_ids=ported_ids,
+        ported_labels=set(),
+        ported_paths=ported_paths,
+    )
+    assert ok and reason in {"path", "id_alias"}, (ok, reason)
+    ok, reason = match_ported(
+        proposed="arc-shader-cache",
+        label="Arc shader cache",
+        path_expr="~/Library/Application Support/Arc/ShaderCache/*",
+        ported_ids=ported_ids,
+        ported_labels=set(),
+        ported_paths=ported_paths,
+    )
+    assert ok and reason == "path", (ok, reason)
+    ok, reason = match_ported(
+        proposed="missing-thing",
+        label="Missing",
+        path_expr="~/Library/Caches/nope/*",
+        ported_ids=ported_ids,
+        ported_labels=set(),
+        ported_paths=ported_paths,
+    )
+    assert not ok and reason == "none", (ok, reason)
+    print("self-test ok", file=sys.stderr)
+    return 0
 
 
 def main() -> int:
@@ -139,7 +227,15 @@ def main() -> int:
     )
     parser.add_argument("--json", type=Path, default=None, help="Write JSON array to PATH")
     parser.add_argument("--csv", type=Path, default=None, help="Write CSV to PATH")
+    parser.add_argument(
+        "--self-test",
+        action="store_true",
+        help="Run normalize/match unit checks and exit",
+    )
     args = parser.parse_args()
+
+    if args.self_test:
+        return self_test()
 
     root = args.repo_root or repo_root()
     clean_dir = root / "third_party" / "mole-1.48.1" / "lib" / "clean"
@@ -160,6 +256,8 @@ def main() -> int:
         "unported_all": sum(
             1 for r in rows if r["complexity_guess"] == "all" and not r["ported"]
         ),
+        "ported_by_path": sum(1 for r in rows if r.get("match_reason") == "path"),
+        "ported_by_id_alias": sum(1 for r in rows if r.get("match_reason") == "id_alias"),
     }
     print(json.dumps(summary, indent=2))
 
@@ -175,6 +273,7 @@ def main() -> int:
             "complexity_guess",
             "proposed_id",
             "ported",
+            "match_reason",
         ]
         with args.csv.open("w", encoding="utf-8", newline="") as f:
             w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
@@ -194,7 +293,9 @@ def main() -> int:
         ][:12]
         print("--- preview unported all @ app_caches.sh ---")
         for r in preview:
-            print(f"{r['line']}: {r['proposed_id']} | {r['path_expr']} | {r['label']}")
+            print(
+                f"{r['line']}: {r['proposed_id']} | {r['path_expr']} | {r['label']} | {r['match_reason']}"
+            )
 
     return 0
 

@@ -99,10 +99,11 @@ bash scripts/verify-clean-candidates.sh   # VOLE_TEST_ROOT 双跑
 
 ## 7. 建议后续
 
-1. **guard 子集**（Final Cut / Adobe / Docker daemon）— 需 `not_running` 策略 + fixture
-2. **inventory slug 对齐** — 减少 proposed_id 伪差集噪音
-3. **Developer ID + notarization** — Phase 5 签名（见 `docs/findings/2026-07-phase5-signing.md`）
-4. **Homebrew Formula** 正式发布
+1. ~~**guard 子集**~~ — 已落地（见 `2026-07-guard-not-running.md`）
+2. ~~**inventory slug 对齐**~~ — 已落地（见 `2026-07-inventory-slug-alignment.md`；`unported_all` 22→2）
+3. **Developer ID 下 TCC 完整矩阵** — 证书已有，补测并写回设计 4.1
+4. （可选）cmdline/`pgrep -f`、FCP generated 等重 guard
+5. （可选）SwiftUI 桌面 app（协议已冻结）
 
 ---
 

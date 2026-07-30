@@ -9,22 +9,22 @@
 #   brew install wukongnotnull/vole/vole
 #
 # Refresh stable url/sha256 after each release:
-#   bash scripts/update-homebrew-formula.sh 0.0.7
+#   bash scripts/update-homebrew-formula.sh 0.0.9
 class Vole < Formula
   desc "macOS cleanup and monitoring CLI (Mole-derived, GPL-3.0)"
   homepage "https://github.com/wukongnotnull/vole"
   license "GPL-3.0-only"
-  version "0.0.8"
+  version "0.0.9"
   depends_on :macos
 
   on_macos do
     on_arm do
-      url "https://github.com/wukongnotnull/vole/releases/download/v0.0.8/vole-0.0.8-aarch64-apple-darwin.tar.gz"
-      sha256 "f62dce65d1b81f2066fd61f6b61702ec004cbacf1be7132f23ec5865e7ab2076"
+      url "https://github.com/wukongnotnull/vole/releases/download/v0.0.9/vole-0.0.9-aarch64-apple-darwin.tar.gz"
+      sha256 "27e970862e94627be28b17f377f1398e0837dd82bcf1f010922f1e6de9f2dc25"
     end
     on_intel do
-      url "https://github.com/wukongnotnull/vole/releases/download/v0.0.8/vole-0.0.8-x86_64-apple-darwin.tar.gz"
-      sha256 "bc3c1b04eabb6f27248157698cb674bfe024cf4ce2e506b489c3fc8e270f9cfb"
+      url "https://github.com/wukongnotnull/vole/releases/download/v0.0.9/vole-0.0.9-x86_64-apple-darwin.tar.gz"
+      sha256 "9ee057dd4a827b96969befbe46ca2c201083acdc7c680269a1ebc1044fcdfb24"
     end
   end
 
@@ -50,7 +50,8 @@ class Vole < Formula
       Add to your shell rc:
         export VOLE_RULES_DIR="#{share}/vole/rules"
 
-      Stable bottles are Developer ID signed (not notarized). If Gatekeeper blocks:
+      Stable bottles are Developer ID signed and notarized (CLI has no staple;
+      Gatekeeper may need a network check on first run). If Gatekeeper blocks:
         xattr -cr #{bin}/vole
     EOS
   end

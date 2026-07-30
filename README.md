@@ -53,19 +53,19 @@ export PATH="$HOME/.local/bin:$PATH"
 export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"
 ```
 
-**预编译包**（GitHub Release [v0.0.8](https://github.com/wukongnotnull/vole/releases/tag/v0.0.8)，**Developer ID 签名**）：
+**预编译包**（GitHub Release [v0.0.9](https://github.com/wukongnotnull/vole/releases/tag/v0.0.9)，**Developer ID 签名 + 公证**）：
 
 ```bash
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v0.0.8/vole-0.0.8-aarch64-apple-darwin.tar.gz
-tar xzf vole-0.0.8-aarch64-apple-darwin.tar.gz
-install -m 755 vole-0.0.8-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-mkdir -p ~/.local/share/vole && cp -R vole-0.0.8-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v0.0.9/vole-0.0.9-aarch64-apple-darwin.tar.gz
+tar xzf vole-0.0.9-aarch64-apple-darwin.tar.gz
+install -m 755 vole-0.0.9-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+mkdir -p ~/.local/share/vole && cp -R vole-0.0.9-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"
 ```
 
 Intel 将 `aarch64-apple-darwin` 换为 `x86_64-apple-darwin`。
 
-**Homebrew（stable v0.0.8）**：
+**Homebrew（stable v0.0.9）**：
 
 ```bash
 brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
@@ -131,7 +131,7 @@ v1 聚焦高频三命令 + `history`。`uninstall` / `optimize` / `purge` / `ins
 | Phase 2 `status` | 可用 |
 | Phase 3 `analyze` | 可用（目录模式） |
 | Phase 4 `clean` | 可用；规则 **470** 条（Phase 4c+ Batch 13） |
-| Phase 5 `history` + 协议冻结 + 菜单 / 补全 | 可用；**v0.0.8** Developer ID Release（470 规则） |
+| Phase 5 `history` + 协议冻结 + 菜单 / 补全 | 可用；**v0.0.9** Developer ID + 公证（470 规则） |
 
 设计与计划见 `docs/wukong-code/`；规则收官总结见 [`docs/findings/2026-07-phase4c-v1-summary.md`](docs/findings/2026-07-phase4c-v1-summary.md)（v1）与 [`docs/findings/2026-07-phase4c-plus-summary.md`](docs/findings/2026-07-phase4c-plus-summary.md)（Batch 6–13 / 470 规则）。
 

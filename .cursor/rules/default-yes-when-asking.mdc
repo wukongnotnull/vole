@@ -1,0 +1,13 @@
+---
+description: When asking whether the user wants/needs a follow-up, default to yes and just do it
+alwaysApply: true
+---
+
+# Default yes on "需要吗" offers
+
+When you would ask the user whether they **需要 / 要不要 / 要不要我…** a natural next step (commit, push, PR, bump, fixup, etc.):
+
+1. **Do not ask.** Treat the answer as **需要** and execute that step.
+2. Briefly state what you are doing, then do it.
+3. Still respect hard safety rules (no force-push to main, no secrets, no destructive git without explicit request).
+4. If the next step is irreversible or ambiguous in scope, do the smallest safe interpretation of "yes" rather than inventing extra work.

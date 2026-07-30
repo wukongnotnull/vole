@@ -54,7 +54,7 @@
 
 ## 7. 验收（实施计划完成时）
 
-- [ ] 本策略文档合入 main
-- [ ] README 或 `docs/` 有一处简短「版本策略」指针（链到本 spec 或 findings 摘要）
-- [ ] 发版清单含：bump workspace version → tag → assets → Formula → README
-- [ ] 下一公开发版为 **`v1.0.0`**（或实施时若已有更新，不得再发 `0.0.12`）
+- [x] 本策略文档合入 main
+- [x] README 或 `docs/` 有一处简短「版本策略」指针（链到本 spec 或 findings 摘要）
+- [x] 发版清单含：bump workspace version → tag → assets → Formula → README
+- [x] 下一公开发版为 **`v1.0.0`**（或实施时若已有更新，不得再发 `0.0.12`）

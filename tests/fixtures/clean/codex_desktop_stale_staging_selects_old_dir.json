@@ -1,0 +1,21 @@
+{
+  "id": "codex_desktop_stale_staging_selects_old_dir",
+  "source_bats": "manual",
+  "source_test": "codex-desktop-stale-update-staging selects Installation child older than 30 days",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.openai.codex/org.sparkle-project.Sparkle/Installation/old-build",
+      "mtime": "2026-05-01T12:00"
+    },
+    {
+      "mkdir": "~/Library/Caches/com.openai.codex/org.sparkle-project.Sparkle/Installation/fresh-build",
+      "mtime": "2026-07-29T12:00"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.openai.codex/org.sparkle-project.Sparkle/Installation/old-build|Codex Desktop stale update staging"
+  ],
+  "expect_not_selected": [
+    "~/Library/Caches/com.openai.codex/org.sparkle-project.Sparkle/Installation/fresh-build"
+  ]
+}

@@ -15,3 +15,24 @@ handler = "codex_stale_runtimes"
 
 [rule.guards]
 not_running = ["Codex"]
+
+[[rule]]
+id = "codex-desktop-stale-update-staging"
+category = "developer"
+label = "Codex Desktop stale update staging"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.openai.codex/org.sparkle-project.Sparkle/Installation/*"]
+impact = "删除超过 30 天的 Sparkle 安装暂存目录；Codex/Updater 在跑时跳过（不对齐 mole lsof）"
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "older_than_days"
+days = 30
+
+[rule.guards]
+not_running = ["Codex"]
+not_running_cmdline = [
+  "/Codex.app/",
+  "org.sparkle-project.Sparkle",
+  "Sparkle.framework/",
+]

@@ -1,5 +1,6 @@
 //! plan 生成管线：规则 → glob → 策略 → 安全闸口 → 身份快照。
 
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
@@ -99,6 +100,7 @@ impl Orchestrator {
     ) -> Result<Plan, OpsError> {
         let home = home_dir();
         let mut entries = Vec::new();
+        let mut seen_paths: HashSet<PathBuf> = HashSet::new();
         let mut scanned: u64 = 0;
         let mut next_id: u64 = 0;
 
@@ -142,6 +144,12 @@ impl Orchestrator {
                     });
                 }
 
+                // First matching rule wins when multiple rules select the same path
+                // (e.g. named cache + broad `~/Library/Caches/*`).
+                if seen_paths.contains(&path) {
+                    continue;
+                }
+
                 let path_str = path.display().to_string();
 
                 if let Err(err) = validate_path_for_deletion(&path_str, protection) {
@@ -180,6 +188,7 @@ impl Orchestrator {
                     rule_id: rule.id.clone(),
                 });
 
+                seen_paths.insert(path.clone());
                 entries.push(PlanEntry {
                     id,
                     path,
@@ -284,6 +293,92 @@ mod tests {
             strategy: StrategyConfig::default(),
             guards: Default::default(),
         }
+    }
+
+    #[test]
+    fn plan_selects_codex_desktop_stale_staging_by_age() {
+        let _guard = test_env::lock();
+        let home = scratch("codex-staging");
+        let staging =
+            home.join("Library/Caches/com.openai.codex/org.sparkle-project.Sparkle/Installation");
+        let old = staging.join("old-build");
+        let fresh = staging.join("fresh-build");
+        fs::create_dir_all(&old).unwrap();
+        fs::create_dir_all(&fresh).unwrap();
+        let old_mtime = SystemTime::UNIX_EPOCH + Duration::from_secs(1_700_000_000); // ~2023
+        let fresh_mtime = SystemTime::now();
+        filetime::set_file_mtime(&old, filetime::FileTime::from_system_time(old_mtime)).unwrap();
+        filetime::set_file_mtime(&fresh, filetime::FileTime::from_system_time(fresh_mtime))
+            .unwrap();
+        std::env::set_var("VOLE_TEST_HOME", &home);
+
+        let rule = Rule {
+            id: "codex-desktop-stale-update-staging".into(),
+            category: Some("developer".into()),
+            label: "Codex Desktop stale update staging".into(),
+            platform: vec![],
+            paths: vec![
+                "~/Library/Caches/com.openai.codex/org.sparkle-project.Sparkle/Installation/*"
+                    .into(),
+            ],
+            impact: None,
+            disabled: false,
+            last_verified: None,
+            strategy: StrategyConfig {
+                kind: crate::rules::StrategyKind::OlderThanDays,
+                keep: None,
+                env_override: None,
+                days: Some(30),
+                names: None,
+                handler: None,
+            },
+            guards: Default::default(),
+        };
+
+        let orch = Orchestrator::with_process_probe(
+            crate::cancel::CancelToken::new(),
+            None,
+            Arc::new(FakeProcessProbe::default()),
+        );
+        let plan = orch
+            .build_plan(&[rule], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert_eq!(
+            plan.entries.len(),
+            1,
+            "entries: {:?}",
+            plan.entries
+                .iter()
+                .map(|e| e.path.display().to_string())
+                .collect::<Vec<_>>()
+        );
+        assert!(plan.entries[0].path.ends_with("old-build"));
+        std::env::remove_var("VOLE_TEST_HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn plan_dedupes_same_path_keeping_first_rule() {
+        let _guard = test_env::lock();
+        let dir = scratch("dedupe");
+        let file = dir.join("Library/Caches/com.example.app");
+        touch(&file);
+        let pattern = file.to_string_lossy().into_owned();
+
+        let mut specific = all_rule("specific-cache", vec![pattern.clone()], false);
+        specific.label = "Specific cache".into();
+        let mut broad = all_rule("user-app-cache", vec![pattern], false);
+        broad.label = "User app cache".into();
+
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), None);
+        let plan = orch
+            .build_plan(&[specific, broad], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert_eq!(plan.entries.len(), 1);
+        assert_eq!(plan.entries[0].rule_id, "specific-cache");
+        assert_eq!(plan.entries[0].label, "Specific cache");
     }
 
     #[test]

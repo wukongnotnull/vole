@@ -1,0 +1,26 @@
+{
+  "id": "jetbrains_toolbox_old_versions_selects_stale",
+  "source_bats": "manual",
+  "source_test": "jetbrains-toolbox-old-ide-version keeps newest by mtime (keep=1)",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/JetBrains/Toolbox/apps/IntelliJIdea/ch-0/2023.1",
+      "mtime": "2026-01-01T12:00"
+    },
+    {
+      "mkdir": "~/Library/Application Support/JetBrains/Toolbox/apps/IntelliJIdea/ch-0/2024.1",
+      "mtime": "2026-03-01T12:00"
+    },
+    {
+      "mkdir": "~/Library/Application Support/JetBrains/Toolbox/apps/IntelliJIdea/ch-0/2025.1",
+      "mtime": "2026-06-01T12:00"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/JetBrains/Toolbox/apps/IntelliJIdea/ch-0/2023.1|JetBrains Toolbox old IDE version",
+    "~/Library/Application Support/JetBrains/Toolbox/apps/IntelliJIdea/ch-0/2024.1|JetBrains Toolbox old IDE version"
+  ],
+  "expect_not_selected": [
+    "~/Library/Application Support/JetBrains/Toolbox/apps/IntelliJIdea/ch-0/2025.1"
+  ]
+}

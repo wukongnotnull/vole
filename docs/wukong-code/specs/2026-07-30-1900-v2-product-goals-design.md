@@ -95,3 +95,5 @@ SwiftUI 桌面 app **不在本代际并行主路径**：等产品 v2 CLI 成熟�
 **M2/M3 实施计划**：[`../plans/2026-07-30-2012-v2-m2-m3-optimize.md`](../plans/2026-07-30-2012-v2-m2-m3-optimize.md)（`optimize` spike + 实现 → 包 `1.2.0`）。
 
 **M2 spike findings**：[`../../findings/2026-07-v2-m2-optimize-spike.md`](../../findings/2026-07-v2-m2-optimize-spike.md)。
+
+**M3 findings**：[`../../findings/2026-07-v2-m3-optimize.md`](../../findings/2026-07-v2-m3-optimize.md)。

@@ -44,11 +44,7 @@ fn sqlite3_available() -> bool {
 }
 
 fn sqlite_count(db: &Path, sql: &str) -> Option<u64> {
-    let output = Command::new("sqlite3")
-        .arg(db)
-        .arg(sql)
-        .output()
-        .ok()?;
+    let output = Command::new("sqlite3").arg(db).arg(sql).output().ok()?;
     if !output.status.success() {
         return None;
     }
@@ -131,7 +127,11 @@ pub fn plan_sqlite_vacuum(home: &Path, catalog: &ProtectionCatalog) -> Vec<Optim
     if !app_running("Mail") {
         let mail = home.join("Library/Mail");
         if mail.is_dir() {
-            for entry in jwalk::WalkDir::new(&mail).skip_hidden(false).into_iter().flatten() {
+            for entry in jwalk::WalkDir::new(&mail)
+                .skip_hidden(false)
+                .into_iter()
+                .flatten()
+            {
                 let path = entry.path();
                 let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
                 if !name.starts_with("Envelope Index") || !entry.file_type().is_file() {
@@ -175,10 +175,7 @@ fn defaults_read(domain: &str, key: &str) -> Option<String> {
 }
 
 fn defaults_is_truthy(value: &str) -> bool {
-    matches!(
-        value.to_ascii_lowercase().as_str(),
-        "1" | "true" | "yes"
-    )
+    matches!(value.to_ascii_lowercase().as_str(), "1" | "true" | "yes")
 }
 
 pub fn plan_prevent_network_dsstore(home: &Path) -> Option<OptimizeCandidate> {
@@ -216,8 +213,7 @@ pub fn plan_legacy_overrides_audit(home: &Path) -> Vec<OptimizeCandidate> {
         if let Some(v) = defaults_read("com.apple.frameworks.diskimages", key) {
             if defaults_is_truthy(&v) {
                 out.push(OptimizeCandidate {
-                    path: home
-                        .join("Library/Preferences/com.apple.frameworks.diskimages.plist"),
+                    path: home.join("Library/Preferences/com.apple.frameworks.diskimages.plist"),
                     label: format!("Remove diskimages override ({key})"),
                     size: 0,
                     task_id: "legacy_overrides_audit",
@@ -277,7 +273,10 @@ pub fn plan_notification_cleanup(
     })
 }
 
-pub fn plan_coreduet_cleanup(home: &Path, catalog: &ProtectionCatalog) -> Option<OptimizeCandidate> {
+pub fn plan_coreduet_cleanup(
+    home: &Path,
+    catalog: &ProtectionCatalog,
+) -> Option<OptimizeCandidate> {
     if !sqlite3_available() {
         return None;
     }
@@ -313,7 +312,11 @@ pub fn plan_dock_refresh(home: &Path) -> OptimizeCandidate {
 }
 
 pub fn plan_launch_services_rebuild(home: &Path) -> OptimizeCandidate {
-    action_sentinel(home, "launch_services_rebuild", "Rebuild LaunchServices database")
+    action_sentinel(
+        home,
+        "launch_services_rebuild",
+        "Rebuild LaunchServices database",
+    )
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -477,14 +480,7 @@ fn apply_launch_services() -> Result<(), OptimizeActionError> {
     let _ = Command::new(&ls).arg("-gc").status();
     let status = Command::new(&ls)
         .args([
-            "-r",
-            "-f",
-            "-domain",
-            "local",
-            "-domain",
-            "user",
-            "-domain",
-            "system",
+            "-r", "-f", "-domain", "local", "-domain", "user", "-domain", "system",
         ])
         .status()
         .map_err(|_| OptimizeActionError::Failed)?;

@@ -161,7 +161,11 @@ fn collect_plists_shallow(dir: &Path) -> Vec<PathBuf> {
 
 fn collect_plists_recursive(dir: &Path) -> Vec<PathBuf> {
     let mut out = Vec::new();
-    for entry in jwalk::WalkDir::new(dir).skip_hidden(false).into_iter().flatten() {
+    for entry in jwalk::WalkDir::new(dir)
+        .skip_hidden(false)
+        .into_iter()
+        .flatten()
+    {
         let path = entry.path();
         if path.extension().and_then(|e| e.to_str()) != Some("plist") {
             continue;
@@ -183,7 +187,7 @@ pub fn discover_fix_broken_configs(
     let mut out = Vec::new();
 
     let scans: [(&Path, bool, bool); 2] = [
-        (prefs.as_path(), true, true),  // shallow, protect loginwindow
+        (prefs.as_path(), true, true),     // shallow, protect loginwindow
         (by_host.as_path(), false, false), // recursive, don't protect loginwindow
     ];
 

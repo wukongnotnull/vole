@@ -15,7 +15,7 @@
 | apply_optimize_proto_plan | ✅ |
 | `vole optimize` CLI | ✅ |
 | 菜单 / protocol / README | ✅ |
-| 包 bump 1.2.0 + release notes | （Task 9） |
+| 包 bump 1.2.0 + release notes | ✅ |
 | tag / Formula | 合并后另做 |
 
 ## 主路径交付（12）

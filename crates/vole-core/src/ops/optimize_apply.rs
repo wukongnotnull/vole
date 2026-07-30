@@ -9,7 +9,9 @@ use crate::delete::{
     mole_delete_verified, DeleteMode, DeletionLogger, MoleDeleteError, MoleDeleteOptions,
 };
 use crate::oplog::OperationLogger;
-use crate::optimize::{apply_optimize_action, parse_optimize_rule_id, OptimizeActionError, OptimizeTaskKind};
+use crate::optimize::{
+    apply_optimize_action, parse_optimize_rule_id, OptimizeActionError, OptimizeTaskKind,
+};
 use crate::protection::AppProtection;
 use crate::safety::{
     verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity, ValidationError,

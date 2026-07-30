@@ -18,6 +18,7 @@ pub fn select_custom(
         "claude_desktop_bundled_versions" => claude_desktop_bundled_versions(entries, home, rule),
         "codex_stale_runtimes" => codex_stale_runtimes(entries),
         "final_cut_pro_generated_caches" => final_cut_pro_generated_caches(entries),
+        "jianyingpro_generated_caches" => jianyingpro_generated_caches(entries),
         _ => Vec::new(),
     }
 }
@@ -111,6 +112,68 @@ fn is_safe_fcp_generated_target(library: &Path, target: &Path) -> bool {
         }
     }
     false
+}
+
+/// Mole `clean_jianying_pro_generated_caches` regenerable whitelist.
+const JIANYINGPRO_REGENERABLE_SUBDIRS: &[&str] = &[
+    "recognize",
+    "frameThumbnail",
+    "audioWave",
+    "AlgorithmCache",
+    "ILASDKDB",
+    "RemuxCache",
+    "prerender",
+    "segmentPrerenderCache",
+    "MotionBlurCache",
+    "ttsTemp",
+    "tmp",
+];
+
+fn jianyingpro_generated_caches(entries: &[PathEntry]) -> Vec<PathBuf> {
+    let mut selected = Vec::new();
+    for entry in entries {
+        let cache_root = &entry.path;
+        if !is_jianyingpro_cache_root(cache_root) {
+            continue;
+        }
+        for name in JIANYINGPRO_REGENERABLE_SUBDIRS {
+            let sub = cache_root.join(name);
+            let Ok(meta) = fs::symlink_metadata(&sub) else {
+                continue;
+            };
+            if meta.is_dir() && !meta.file_type().is_symlink() {
+                selected.push(sub);
+            }
+        }
+    }
+    selected
+}
+
+fn is_jianyingpro_cache_root(cache_root: &Path) -> bool {
+    // Expect …/Movies/JianyingPro/User Data/Cache (align mole default root).
+    let components: Vec<_> = cache_root
+        .components()
+        .filter_map(|c| c.as_os_str().to_str())
+        .collect();
+    let Some(cache_idx) = components.iter().rposition(|c| *c == "Cache") else {
+        return false;
+    };
+    if cache_idx < 3 {
+        return false;
+    }
+    if components[cache_idx - 1] != "User Data"
+        || components[cache_idx - 2] != "JianyingPro"
+        || components[cache_idx - 3] != "Movies"
+    {
+        return false;
+    }
+    if cache_idx + 1 != components.len() {
+        return false;
+    }
+    let Ok(meta) = fs::symlink_metadata(cache_root) else {
+        return false;
+    };
+    meta.is_dir() && !meta.file_type().is_symlink()
 }
 
 fn claude_desktop_bundled_versions(
@@ -320,6 +383,66 @@ mod tests {
         // Documents libraries are rejected (must live under Movies/).
         let docs_only = final_cut_pro_generated_caches(&[entry(&docs.to_string_lossy(), 1)]);
         assert!(docs_only.is_empty());
+    }
+
+    #[test]
+    fn jianyingpro_generated_selects_only_whitelisted_subdirs() {
+        let home = tempfile::tempdir().unwrap();
+        let cache = home
+            .path()
+            .join("Movies/JianyingPro/User Data/Cache");
+        for name in [
+            "recognize",
+            "frameThumbnail",
+            "audioWave",
+            "AlgorithmCache",
+            "effect",
+            "music",
+            "image",
+            "importcache3",
+            "AigcMaterailCache",
+            "agencycache",
+        ] {
+            fs::create_dir_all(cache.join(name)).unwrap();
+        }
+        fs::create_dir_all(
+            home.path()
+                .join("Movies/JianyingPro/User Data/Projects/com.lveditor.draft/my-project"),
+        )
+        .unwrap();
+
+        let selected =
+            jianyingpro_generated_caches(&[entry(&cache.to_string_lossy(), 1)]);
+        assert_eq!(selected.len(), 4);
+        for name in ["recognize", "frameThumbnail", "audioWave", "AlgorithmCache"] {
+            assert!(
+                selected.iter().any(|p| p.ends_with(name)),
+                "missing regenerable subdir {name}: {selected:?}"
+            );
+        }
+        for name in [
+            "effect",
+            "music",
+            "image",
+            "importcache3",
+            "AigcMaterailCache",
+            "agencycache",
+            "Projects",
+        ] {
+            assert!(
+                !selected
+                    .iter()
+                    .any(|p| p.to_string_lossy().contains(name)),
+                "must not select protected path containing {name}: {selected:?}"
+            );
+        }
+
+        // Non-Movies / non-Cache roots are rejected.
+        let elsewhere = home.path().join("Documents/JianyingPro/User Data/Cache");
+        fs::create_dir_all(elsewhere.join("recognize")).unwrap();
+        let rejected =
+            jianyingpro_generated_caches(&[entry(&elsewhere.to_string_lossy(), 1)]);
+        assert!(rejected.is_empty());
     }
 
     #[test]

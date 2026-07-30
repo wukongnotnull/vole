@@ -50,7 +50,6 @@ git clone https://github.com/wukongnotnull/vole.git
 cd vole
 ./install.sh
 export PATH="$HOME/.local/bin:$PATH"
-export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"
 ```
 
 **预编译包**（GitHub Release [v1.2.0](https://github.com/wukongnotnull/vole/releases/tag/v1.2.0)，**Developer ID 签名 + 公证**）：
@@ -60,18 +59,18 @@ curl -LO https://github.com/wukongnotnull/vole/releases/download/v1.2.0/vole-1.2
 tar xzf vole-1.2.0-aarch64-apple-darwin.tar.gz
 install -m 755 vole-1.2.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
 mkdir -p ~/.local/share/vole && cp -R vole-1.2.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
-export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"
 ```
 
-Intel 将 `aarch64-apple-darwin` 换为 `x86_64-apple-darwin`。
+Intel 将 `aarch64-apple-darwin` 换为 `x86_64-apple-darwin`。保持 `bin` + `share/vole/rules` 相对布局即可；自定义规则目录时再设 `VOLE_RULES_DIR`。
 
-**Homebrew（stable v1.2.0）**：
+**Homebrew（stable v1.2.0）**（[Homebrew Core PR #296168](https://github.com/Homebrew/homebrew-core/pull/296168) 合并前需先 tap）：
 
 ```bash
 brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
 brew install vole
-export VOLE_RULES_DIR="$(brew --prefix vole)/share/vole/rules"
 ```
+
+规则随 formula 装到 `$(brew --prefix vole)/share/vole/rules`，一般无需设置 `VOLE_RULES_DIR`。合并进 Homebrew Core 后可直接：`brew install vole`。
 
 本地仓库开发：`brew tap wukongnotnull/vole "$(pwd)" && brew install wukongnotnull/vole/vole`
 

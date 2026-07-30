@@ -35,21 +35,24 @@ class Vole < Formula
 
   def install
     if build.stable?
-      prefix_dir = Dir["vole-#{version}-*"].first
-      odie "unexpected tarball layout (expected vole-#{version}-<arch>)" if prefix_dir.nil?
-      bin.install "#{prefix_dir}/bin/vole"
-      (share/"vole/rules").install Dir["#{prefix_dir}/share/vole/rules/*.toml"]
+      # Homebrew often extracts a single top-level archive dir into buildpath.
+      root = if (buildpath/"bin/vole").exist?
+        buildpath
+      else
+        prefix_dir = Dir["vole-#{version}-*"].first
+        odie "unexpected tarball layout (expected vole-#{version}-<arch>)" if prefix_dir.nil?
+        buildpath/prefix_dir
+      end
+      bin.install root/"bin/vole"
+      (share/"vole/rules").install Dir[root/"share/vole/rules/*.toml"]
     else
-      system "cargo", "install", *std_cargo_install_args(path: "crates/vole-cli")
-      (share/"vole").install "data/rules"
+      system "cargo", "install", *std_cargo_args(path: "crates/vole-cli")
+      pkgshare.install "data/rules"
     end
   end
 
   def caveats
     <<~EOS
-      Add to your shell rc:
-        export VOLE_RULES_DIR="#{share}/vole/rules"
-
       Stable bottles are Developer ID signed and notarized (CLI has no staple;
       Gatekeeper may need a network check on first run). If Gatekeeper blocks:
         xattr -cr #{bin}/vole

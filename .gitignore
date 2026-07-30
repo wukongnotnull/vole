@@ -7,3 +7,6 @@ scripts/signing.env
 *.p12
 *.cer
 *.p8
+
+# Git worktrees (local agent isolation)
+.worktrees/

@@ -157,6 +157,9 @@ fn run_apply(opts: &CleanOptions, plan_path: &PathBuf) -> io::Result<()> {
             Some(&on_event),
         )
         .map_err(map_apply_error)?;
+        // Close the channel so the stream writer exits; without this, join hangs
+        // forever (uninstall/optimize already drop; clean apply was missing it).
+        drop(event_tx);
         writer
             .join()
             .map_err(|_| io::Error::other("stream writer panicked"))??;

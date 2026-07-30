@@ -10,7 +10,7 @@
 |---|---|
 | Apple Developer Program | **Kong Wu / WCYC8XY4V2** |
 | 本机 Keychain | 需在 Mac 上安装 `.cer` + 私钥（`scripts/check-signing.sh` 验证） |
-| GitHub Release | v0.0.1 – v0.0.7（ad-hoc，待重签 v0.0.8+） |
+| GitHub Release | v0.0.1 – v0.0.8（**v0.0.8+ Developer ID 签名**） |
 | 本地配置 | `cp scripts/signing.env.example scripts/signing.env` |
 | CI secrets | 见下表（`VOLE_CODESIGN_IDENTITY` 用完整 identity 字符串） |
 

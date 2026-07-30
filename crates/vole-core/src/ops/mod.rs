@@ -2,6 +2,7 @@
 
 mod apply_plan;
 mod coverage;
+mod optimize_apply;
 mod optimize_plan;
 mod plan;
 mod proto_plan;
@@ -20,6 +21,10 @@ pub use apply_plan::{
     apply_plan, apply_proto_plan, ApplyPlanContext, ApplyPlanError, ApplyPlanOptions,
 };
 pub use coverage::{coverage_note, enabled_rule_count, MOLE_INVENTORY_TOTAL};
+pub use optimize_apply::{
+    apply_optimize_plan, apply_optimize_proto_plan, OptimizeApplyContext, OptimizeApplyError,
+    OptimizeApplyOptions,
+};
 pub use optimize_plan::{build_optimize_plan, OptimizePlanError, OptimizePlanOptions};
 pub use plan::{Plan, PlanBuilder, PlanEntry, DEFAULT_PLAN_TTL};
 pub use proto_plan::{plan_to_proto, ProtoPlanError};

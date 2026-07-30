@@ -316,6 +316,192 @@ pub fn plan_launch_services_rebuild(home: &Path) -> OptimizeCandidate {
     action_sentinel(home, "launch_services_rebuild", "Rebuild LaunchServices database")
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OptimizeActionError {
+    Failed,
+    Skipped,
+}
+
+/// Apply a single `optimize:action:*` entry.
+pub fn apply_optimize_action(task_id: &str, path: &Path) -> Result<(), OptimizeActionError> {
+    match task_id {
+        "quarantine_cleanup" => apply_quarantine(path),
+        "sqlite_vacuum" => apply_vacuum(path),
+        "prevent_network_dsstore" => apply_prevent_dsstore(),
+        "legacy_overrides_audit" => apply_legacy_override(path),
+        "notification_cleanup" => apply_notification(path),
+        "coreduet_cleanup" => apply_coreduet(path),
+        "dock_refresh" => apply_dock(),
+        "launch_services_rebuild" => apply_launch_services(),
+        _ => Err(OptimizeActionError::Failed),
+    }
+}
+
+fn apply_quarantine(db: &Path) -> Result<(), OptimizeActionError> {
+    let status = Command::new("sqlite3")
+        .arg(db)
+        .arg("DELETE FROM LSQuarantineEvent; VACUUM;")
+        .status()
+        .map_err(|_| OptimizeActionError::Failed)?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(OptimizeActionError::Failed)
+    }
+}
+
+fn apply_vacuum(db: &Path) -> Result<(), OptimizeActionError> {
+    let integrity = Command::new("sqlite3")
+        .arg(db)
+        .arg("PRAGMA integrity_check;")
+        .output()
+        .map_err(|_| OptimizeActionError::Failed)?;
+    if !integrity.status.success() {
+        return Err(OptimizeActionError::Skipped);
+    }
+    let text = String::from_utf8_lossy(&integrity.stdout);
+    if !text.trim().eq_ignore_ascii_case("ok") {
+        return Err(OptimizeActionError::Skipped);
+    }
+    let status = Command::new("sqlite3")
+        .arg(db)
+        .arg("VACUUM;")
+        .status()
+        .map_err(|_| OptimizeActionError::Failed)?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(OptimizeActionError::Failed)
+    }
+}
+
+fn apply_prevent_dsstore() -> Result<(), OptimizeActionError> {
+    let domain = "com.apple.desktopservices";
+    for key in ["DSDontWriteNetworkStores", "DSDontWriteUSBStores"] {
+        let status = Command::new("defaults")
+            .args(["write", domain, key, "-bool", "true"])
+            .status()
+            .map_err(|_| OptimizeActionError::Failed)?;
+        if !status.success() {
+            return Err(OptimizeActionError::Failed);
+        }
+    }
+    Ok(())
+}
+
+fn apply_legacy_override(path: &Path) -> Result<(), OptimizeActionError> {
+    let path_str = path.display().to_string();
+    if path_str.ends_with(".GlobalPreferences.plist") {
+        let status = Command::new("defaults")
+            .args(["delete", "-g", "NSAppSleepDisabled"])
+            .status()
+            .map_err(|_| OptimizeActionError::Failed)?;
+        return if status.success() {
+            Ok(())
+        } else {
+            Err(OptimizeActionError::Skipped)
+        };
+    }
+    if path_str.contains("com.apple.frameworks.diskimages") {
+        for key in ["skip-verify", "skip-verify-locked", "skip-verify-remote"] {
+            let _ = Command::new("defaults")
+                .args(["delete", "com.apple.frameworks.diskimages", key])
+                .status();
+        }
+        return Ok(());
+    }
+    Err(OptimizeActionError::Skipped)
+}
+
+fn apply_notification(db: &Path) -> Result<(), OptimizeActionError> {
+    let status = Command::new("sqlite3")
+        .arg(db)
+        .arg("DELETE FROM record WHERE delivered_date < strftime('%s','now','-30 days'); VACUUM;")
+        .status()
+        .map_err(|_| OptimizeActionError::Failed)?;
+    if status.success() {
+        let _ = Command::new("killall").arg("NotificationCenter").status();
+        Ok(())
+    } else {
+        Err(OptimizeActionError::Skipped)
+    }
+}
+
+fn apply_coreduet(db: &Path) -> Result<(), OptimizeActionError> {
+    for suffix in ["-wal", "-shm"] {
+        let p = PathBuf::from(format!("{}{suffix}", db.display()));
+        let _ = fs::remove_file(p);
+    }
+    let status = Command::new("sqlite3")
+        .arg(db)
+        .arg(
+            "DELETE FROM ZOBJECT WHERE ZCREATIONDATE < (strftime('%s','now','-90 days') - strftime('%s','2001-01-01')); VACUUM;",
+        )
+        .status()
+        .map_err(|_| OptimizeActionError::Failed)?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(OptimizeActionError::Skipped)
+    }
+}
+
+fn apply_dock() -> Result<(), OptimizeActionError> {
+    let status = Command::new("killall")
+        .arg("Dock")
+        .status()
+        .map_err(|_| OptimizeActionError::Failed)?;
+    if status.success() {
+        Ok(())
+    } else {
+        // Dock may already be restarting
+        Ok(())
+    }
+}
+
+fn lsregister_path() -> Option<PathBuf> {
+    let candidates = [
+        "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister",
+        "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister",
+    ];
+    candidates
+        .into_iter()
+        .map(PathBuf::from)
+        .find(|p| p.is_file())
+}
+
+fn apply_launch_services() -> Result<(), OptimizeActionError> {
+    let Some(ls) = lsregister_path() else {
+        return Err(OptimizeActionError::Skipped);
+    };
+    let _ = Command::new(&ls).arg("-gc").status();
+    let status = Command::new(&ls)
+        .args([
+            "-r",
+            "-f",
+            "-domain",
+            "local",
+            "-domain",
+            "user",
+            "-domain",
+            "system",
+        ])
+        .status()
+        .map_err(|_| OptimizeActionError::Failed)?;
+    if status.success() {
+        return Ok(());
+    }
+    let status = Command::new(&ls)
+        .args(["-r", "-f", "-domain", "local", "-domain", "user"])
+        .status()
+        .map_err(|_| OptimizeActionError::Failed)?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(OptimizeActionError::Failed)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -342,6 +528,10 @@ mod tests {
         let hit = plan_quarantine_cleanup(home, &catalog).expect("planned");
         assert_eq!(hit.task_id, "quarantine_cleanup");
         assert_eq!(hit.kind, OptimizeTaskKind::Action);
+
+        apply_optimize_action("quarantine_cleanup", &db).unwrap();
+        let count = sqlite_count(&db, "SELECT COUNT(*) FROM LSQuarantineEvent;").unwrap();
+        assert_eq!(count, 0);
     }
 
     #[test]

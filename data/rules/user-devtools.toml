@@ -2771,6 +2771,10 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["UTM"]
+
+
 [[rule]]
 id = "vmware-fusion-cache"
 category = "user-devtools"
@@ -3392,3 +3396,35 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+
+[[rule]]
+id = "utm-app-cache"
+category = "user-devtools"
+label = "UTM app cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.utmapp.UTM/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["UTM"]
+
+[[rule]]
+id = "utm-sandbox-cache"
+category = "user-devtools"
+label = "UTM sandbox cache"
+platform = ["macos"]
+paths = ["~/Library/Containers/com.utmapp.UTM/Data/Library/Caches/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["UTM"]

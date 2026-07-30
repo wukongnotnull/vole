@@ -1,0 +1,14 @@
+{
+  "id": "browser_guard_chrome_gpu_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "chrome-gpu-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Google/Chrome/Default/GPUCache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Google/Chrome/Default/GPUCache/item|Chrome GPU cache"
+  ],
+  "expect_not_selected": []
+}

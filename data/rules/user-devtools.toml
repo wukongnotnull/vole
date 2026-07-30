@@ -2113,6 +2113,10 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["Google Chrome", "Google Chrome Helper"]
+not_running_cmdline = ["/Google Chrome.app/"]
+
 [[rule]]
 id = "chrome-shader-cache"
 category = "user-devtools"
@@ -2125,6 +2129,10 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+
+[rule.guards]
+not_running = ["Google Chrome", "Google Chrome Helper"]
+not_running_cmdline = ["/Google Chrome.app/"]
 
 [[rule]]
 id = "chrome-gr-shader-cache"
@@ -2139,6 +2147,10 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["Google Chrome", "Google Chrome Helper"]
+not_running_cmdline = ["/Google Chrome.app/"]
+
 [[rule]]
 id = "chrome-profile-gr-shader-cache"
 category = "user-devtools"
@@ -2151,6 +2163,10 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+
+[rule.guards]
+not_running = ["Google Chrome", "Google Chrome Helper"]
+not_running_cmdline = ["/Google Chrome.app/"]
 
 [[rule]]
 id = "chrome-dawn-cache"
@@ -2165,6 +2181,10 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["Google Chrome", "Google Chrome Helper"]
+not_running_cmdline = ["/Google Chrome.app/"]
+
 [[rule]]
 id = "chrome-crash-reports"
 category = "user-devtools"
@@ -2178,6 +2198,10 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["Google Chrome", "Google Chrome Helper"]
+not_running_cmdline = ["/Google Chrome.app/"]
+
 [[rule]]
 id = "chrome-on-device-model-cache"
 category = "user-devtools"
@@ -2190,6 +2214,10 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+
+[rule.guards]
+not_running = ["Google Chrome", "Google Chrome Helper"]
+not_running_cmdline = ["/Google Chrome.app/"]
 
 [[rule]]
 id = "googleupdater-crx-cache"
@@ -2926,3 +2954,58 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["Google Chrome", "Google Chrome Helper"]
+not_running_cmdline = ["/Google Chrome.app/"]
+
+
+[[rule]]
+id = "chrome-code-cache"
+category = "user-devtools"
+label = "Chrome code cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Google/Chrome/*/Code Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["Google Chrome", "Google Chrome Helper"]
+not_running_cmdline = ["/Google Chrome.app/"]
+
+[[rule]]
+id = "chrome-gpu-cache"
+category = "user-devtools"
+label = "Chrome GPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Google/Chrome/*/GPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["Google Chrome", "Google Chrome Helper"]
+not_running_cmdline = ["/Google Chrome.app/"]
+
+[[rule]]
+id = "chrome-profile-dawn-cache"
+category = "user-devtools"
+label = "Chrome profile Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Google/Chrome/*/DawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["Google Chrome", "Google Chrome Helper"]
+not_running_cmdline = ["/Google Chrome.app/"]

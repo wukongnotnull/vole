@@ -155,8 +155,9 @@ mod verify_clean_fixtures {
     use super::*;
     use crate::ops::Orchestrator;
     use crate::protection::AppProtection;
-    use crate::rules::load_rules_from_dir;
+    use crate::rules::{load_rules_from_dir, FakeProcessProbe};
     use crate::test_env;
+    use std::sync::Arc;
 
     fn fixtures_dir() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/clean")
@@ -211,7 +212,13 @@ mod verify_clean_fixtures {
 
         let _home_guard = TestHomeGuard::set(&home);
 
-        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), None);
+        // Hermetic: fixtures assert path selection with idle process probe so
+        // developer machines with Chrome/etc. running do not skip guarded rules.
+        let orch = Orchestrator::with_process_probe(
+            crate::cancel::CancelToken::new(),
+            None,
+            Arc::new(FakeProcessProbe::default()),
+        );
         let plan = orch
             .build_plan(rules, &AppProtection::new(), &[])
             .unwrap_or_else(|e| panic!("{} build_plan: {e}", fx.id));

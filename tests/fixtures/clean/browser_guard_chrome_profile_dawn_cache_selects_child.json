@@ -1,0 +1,14 @@
+{
+  "id": "browser_guard_chrome_profile_dawn_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "chrome-profile-dawn-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Google/Chrome/Default/DawnCache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Google/Chrome/Default/DawnCache/item|Chrome profile Dawn cache"
+  ],
+  "expect_not_selected": []
+}

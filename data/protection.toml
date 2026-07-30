@@ -455,3 +455,26 @@ data_protected_bundles = [
   'com.devmate.*',
   'org.sparkle-project.Sparkle*',
 ]
+
+apple_uninstallable_apps = [
+  'com.apple.dt.*',
+  'com.apple.FinalCut*',
+  'com.apple.Motion',
+  'com.apple.Compressor',
+  'com.apple.logic*',
+  'com.apple.garageband*',
+  'com.apple.iMovie',
+  'com.apple.iWork.*',
+  'com.apple.MainStage*',
+  'com.apple.server.*',
+  'com.apple.Playgrounds',
+]
+
+official_uninstaller_rules = [
+  'ESET|com.eset.|eset management agent,eset remote administrator agent,eset endpoint security,eset endpoint antivirus',
+  'Jamf|com.jamf.,com.jamfsoftware.|jamf connect,jamf protect,jamf self service',
+  'CrowdStrike|com.crowdstrike.|crowdstrike,falcon',
+  'SentinelOne|com.sentinelone.,com.sentinel-labs.|sentinelone,sentinel agent',
+  'GlobalProtect|com.paloaltonetworks.|globalprotect',
+  'Cisco|com.cisco.anyconnect,com.cisco.secureclient|cisco secure client,cisco anyconnect',
+]

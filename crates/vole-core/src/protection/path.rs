@@ -118,8 +118,13 @@ pub fn should_protect_path(
     if !container_cache && !is_explicit_clean_cache_path(path) {
         let matched = match mode {
             ProtectionMode::Cleanup => catalog.matches_cleanup_pattern(path),
-            // Apple uninstallable allowlist 在 Task 3；此处仅 system-critical。
-            ProtectionMode::Uninstall => catalog.matches_system_critical(path),
+            ProtectionMode::Uninstall => {
+                if crate::protection::uninstall::path_matches_apple_uninstallable(path, catalog) {
+                    false
+                } else {
+                    catalog.matches_system_critical(path)
+                }
+            }
         };
         if matched {
             return true;

@@ -4,10 +4,12 @@ mod bundle;
 mod data;
 mod glob_match;
 mod path;
+mod uninstall;
 
 pub use bundle::should_protect_data;
-pub use data::ProtectionCatalog;
+pub use data::{OfficialUninstallerRule, ProtectionCatalog};
 pub use path::{should_protect_path, ProtectionMode};
+pub use uninstall::{official_uninstaller_vendor, should_protect_from_uninstall};
 
 use crate::safety::PathProtection;
 

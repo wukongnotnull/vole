@@ -31,7 +31,13 @@ fn optimize_plan_json_with_temp_home() {
 
     let output = Command::new(env!("CARGO_BIN_EXE_vole"))
         .env("HOME", home)
-        .args(["optimize", "--plan", "--json", "--task", "saved_state_cleanup"])
+        .args([
+            "optimize",
+            "--plan",
+            "--json",
+            "--task",
+            "saved_state_cleanup",
+        ])
         .output()
         .expect("run vole optimize --plan --json");
     assert!(

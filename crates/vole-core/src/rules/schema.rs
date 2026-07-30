@@ -88,8 +88,12 @@ pub enum BrokenSymlinkAction {
 /// `[rule.guards]` 段。
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 pub struct GuardsConfig {
+    /// Exact process names (`pgrep -x`).
     #[serde(default)]
     pub not_running: Vec<String>,
+    /// Command-line substrings (`pgrep -f`).
+    #[serde(default)]
+    pub not_running_cmdline: Vec<String>,
     #[serde(default)]
     pub protect_symlink_target: Option<String>,
     #[serde(default)]

@@ -17,8 +17,100 @@ pub fn select_custom(
     match handler {
         "claude_desktop_bundled_versions" => claude_desktop_bundled_versions(entries, home, rule),
         "codex_stale_runtimes" => codex_stale_runtimes(entries),
+        "final_cut_pro_generated_caches" => final_cut_pro_generated_caches(entries),
         _ => Vec::new(),
     }
+}
+
+fn final_cut_pro_generated_caches(entries: &[PathEntry]) -> Vec<PathBuf> {
+    let mut selected = Vec::new();
+    for entry in entries {
+        let library = &entry.path;
+        if !is_fcpbundle_library(library) {
+            continue;
+        }
+        collect_fcp_generated_targets(library, &mut selected);
+    }
+    selected
+}
+
+fn is_fcpbundle_library(library: &Path) -> bool {
+    let Some(name) = library.file_name().and_then(|n| n.to_str()) else {
+        return false;
+    };
+    if !name.ends_with(".fcpbundle") {
+        return false;
+    }
+    // Align mole: only libraries under a Movies directory (paths glob enforces ~/Movies).
+    let under_movies = library.ancestors().any(|p| {
+        p.file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n == "Movies")
+    });
+    if !under_movies {
+        return false;
+    }
+    let Ok(meta) = fs::symlink_metadata(library) else {
+        return false;
+    };
+    meta.is_dir() && !meta.file_type().is_symlink()
+}
+
+fn collect_fcp_generated_targets(library: &Path, out: &mut Vec<PathBuf>) {
+    walk_fcp_library(library, library, out);
+}
+
+fn walk_fcp_library(library: &Path, dir: &Path, out: &mut Vec<PathBuf>) {
+    let Ok(rd) = fs::read_dir(dir) else {
+        return;
+    };
+    for ent in rd.flatten() {
+        let path = ent.path();
+        let Ok(meta) = fs::symlink_metadata(&path) else {
+            continue;
+        };
+        if meta.file_type().is_symlink() || !meta.is_dir() {
+            continue;
+        }
+        let name = ent.file_name();
+        let name = name.to_string_lossy();
+        if matches!(
+            name.as_ref(),
+            "Original Media"
+                | "Analysis Files"
+                | "Motion Templates"
+                | "Final Cut Pro Backups"
+                | "CurrentVersion.flexolibrary"
+                | "CurrentVersion.plist"
+                | "Settings.plist"
+        ) {
+            continue;
+        }
+        if is_safe_fcp_generated_target(library, &path) {
+            out.push(path);
+            continue;
+        }
+        walk_fcp_library(library, &path, out);
+    }
+}
+
+fn is_safe_fcp_generated_target(library: &Path, target: &Path) -> bool {
+    let Ok(rel) = target.strip_prefix(library) else {
+        return false;
+    };
+    let parts: Vec<_> = rel.components().collect();
+    // …/Render Files/High Quality Media
+    if parts.len() >= 2 {
+        let a = parts[parts.len() - 2].as_os_str();
+        let b = parts[parts.len() - 1].as_os_str();
+        if a == "Render Files" && b == "High Quality Media" {
+            return true;
+        }
+        if a == "Transcoded Media" && b == "Proxy Media" {
+            return true;
+        }
+    }
+    false
 }
 
 fn claude_desktop_bundled_versions(
@@ -192,6 +284,42 @@ mod tests {
         let selected = claude_desktop_bundled_versions(&entries, home.path(), &rule);
         assert_eq!(selected.len(), 1);
         assert!(selected[0].ends_with("2.1.142"));
+    }
+
+    #[test]
+    fn fcp_generated_selects_only_safe_media_dirs() {
+        let home = tempfile::tempdir().unwrap();
+        let movies = home.path().join("Movies/Project.fcpbundle");
+        let docs = home.path().join("Documents/Other.fcpbundle");
+        for p in [
+            movies.join("Event/Render Files/High Quality Media"),
+            movies.join("Event/Transcoded Media/Proxy Media"),
+            movies.join("Event/Transcoded Media/High Quality Media"),
+            movies.join("Event/Original Media/Render Files/High Quality Media"),
+            movies.join("Event/Analysis Files/Stabilization"),
+            docs.join("Event/Render Files/High Quality Media"),
+        ] {
+            fs::create_dir_all(&p).unwrap();
+        }
+
+        let entries = vec![entry(&movies.to_string_lossy(), 1)];
+        let selected = final_cut_pro_generated_caches(&entries);
+        assert_eq!(selected.len(), 2);
+        assert!(selected
+            .iter()
+            .any(|p| p.ends_with("Render Files/High Quality Media")));
+        assert!(selected
+            .iter()
+            .any(|p| p.ends_with("Transcoded Media/Proxy Media")));
+        assert!(!selected
+            .iter()
+            .any(|p| p.to_string_lossy().contains("Original Media")));
+        assert!(!selected
+            .iter()
+            .any(|p| p.ends_with("Transcoded Media/High Quality Media")));
+        // Documents libraries are rejected (must live under Movies/).
+        let docs_only = final_cut_pro_generated_caches(&[entry(&docs.to_string_lossy(), 1)]);
+        assert!(docs_only.is_empty());
     }
 
     #[test]

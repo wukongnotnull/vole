@@ -15,7 +15,8 @@ pub use load::{
     default_rules_dir, load_rules_from_dir, load_rules_from_file, load_rules_from_str, LoadError,
 };
 pub use process_guard::{
-    should_skip_for_not_running, FakeProcessProbe, PgrepProcessProbe, ProcessProbe, ProcessState,
+    should_skip_for_cmdline, should_skip_for_guards, should_skip_for_not_running, FakeProcessProbe,
+    PgrepProcessProbe, ProcessProbe, ProcessState,
 };
 pub use schema::{
     BrokenSymlinkAction, GuardsConfig, Rule, RulesFile, StrategyConfig, StrategyKind,

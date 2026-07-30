@@ -102,9 +102,10 @@ bash scripts/verify-clean-candidates.sh   # VOLE_TEST_ROOT 双跑
 1. ~~**guard 子集**~~ — 已落地（见 `2026-07-guard-not-running.md`）
 2. ~~**inventory slug 对齐**~~ — 已落地（见 `2026-07-inventory-slug-alignment.md`；`unported_all` 22→2）
 3. ~~**Developer ID 下 TCC 完整矩阵**~~ — 已测（`2026-07-phase1-tcc-devid-matrix.md`）
-4. （可选）cmdline/`pgrep -f`、FCP generated 等重 guard
+4. ~~（可选）cmdline/`pgrep -f`、FCP generated~~ — 已落地（`2026-07-cmdline-fcp-generated.md`）
 5. （可选）SwiftUI 桌面 app（协议已冻结）
 6. （可选）Raycast / `open -a` 手测补全 TCC 矩阵
+7. （可选）剪映 generated / Simulator 复合 guard
 
 ---
 

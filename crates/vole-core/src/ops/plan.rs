@@ -6,8 +6,8 @@ use std::time::{Duration, SystemTime};
 
 use crate::protection::AppProtection;
 use crate::rules::{
-    collect_path_candidates, resolve_strategy, select_custom, should_skip_for_not_running,
-    PathEntry, ResolvedStrategy, Rule, Strategy,
+    collect_path_candidates, resolve_strategy, select_custom, should_skip_for_guards, PathEntry,
+    ResolvedStrategy, Rule, Strategy,
 };
 use crate::safety::{
     capture_plan_entry_identity, validate_path_for_deletion, PlanEntryIdentity, ValidationError,
@@ -109,7 +109,7 @@ impl Orchestrator {
                 continue;
             }
 
-            if should_skip_for_not_running(self.process_probe.as_ref(), &rule.guards.not_running) {
+            if should_skip_for_guards(self.process_probe.as_ref(), &rule.guards) {
                 self.emit(StreamEvent::Skipped {
                     rule_id: rule.id.clone(),
                     reason: SkipReason::AppRunning,
@@ -441,7 +441,7 @@ mod tests {
 
         let probe = Arc::new(FakeProcessProbe {
             running: HashSet::from(["claude".into()]),
-            unknown: HashSet::new(),
+            ..Default::default()
         });
         let (tx, rx) = unbounded();
         let orch =

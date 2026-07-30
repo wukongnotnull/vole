@@ -1345,6 +1345,23 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+
+[[rule]]
+id = "final-cut-pro-generated-cache"
+category = "app-caches"
+label = "Final Cut Pro generated cache"
+platform = ["macos"]
+paths = ["~/Movies/*.fcpbundle"]
+impact = "Regenerable render/proxy media inside Final Cut libraries under Movies"
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "custom"
+handler = "final_cut_pro_generated_caches"
+
+[rule.guards]
+not_running = ["Final Cut Pro"]
+not_running_cmdline = ["/Final Cut Pro.app/"]
 # Batch 7 wave: gaming/download/productivity app caches
 
 [[rule]]

@@ -22,10 +22,14 @@
       "mkdir": "~/Movies/Project.fcpbundle/Event/Transcoded Media/Proxy Media"
     }
   ],
+  "expect_selected": [
+    "~/Movies/Project.fcpbundle/Event/Render Files/High Quality Media|Final Cut Pro generated cache",
+    "~/Movies/Project.fcpbundle/Event/Transcoded Media/Proxy Media|Final Cut Pro generated cache"
+  ],
   "expect_not_selected": [
-    "Analysis Files",
-    "Documents/Other.fcpbundle",
-    "Original Media",
-    "Transcoded Media/High Quality Media"
+    "~/Documents/Other.fcpbundle/Event/Render Files/High Quality Media",
+    "~/Movies/Project.fcpbundle/Event/Analysis Files/Stabilization",
+    "~/Movies/Project.fcpbundle/Event/Original Media/Render Files/High Quality Media",
+    "~/Movies/Project.fcpbundle/Event/Transcoded Media/High Quality Media"
   ]
 }

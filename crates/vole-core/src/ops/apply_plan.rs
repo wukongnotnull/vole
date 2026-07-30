@@ -10,7 +10,7 @@ use crate::delete::{
 };
 use crate::oplog::OperationLogger;
 use crate::protection::AppProtection;
-use crate::rules::{should_skip_for_not_running, ProcessProbe, Rule};
+use crate::rules::{should_skip_for_guards, ProcessProbe, Rule};
 use crate::safety::{
     verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity, ValidationError,
 };
@@ -150,7 +150,7 @@ pub fn apply_plan(
         }
 
         if let Some(rule) = ctx.rules.iter().find(|r| r.id == entry.rule_id) {
-            if should_skip_for_not_running(ctx.process_probe, &rule.guards.not_running) {
+            if should_skip_for_guards(ctx.process_probe, &rule.guards) {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -608,7 +608,7 @@ mod tests {
 
         let probe = FakeProcessProbe {
             running: HashSet::from(["Firefox".into()]),
-            unknown: HashSet::new(),
+            ..Default::default()
         };
         let fake_trash = FakeTrash::default();
 

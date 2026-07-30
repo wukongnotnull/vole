@@ -1,0 +1,24 @@
+# Recent items lists (mole user.sh `_clean_recent_items`)
+# Preferences plist already lives in app-caches.toml as recent-items-preferences.
+
+[[rule]]
+id = "recent-items-list"
+category = "user"
+label = "Recent items list"
+platform = ["macos"]
+paths = [
+  "~/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.RecentApplications.sfl2",
+  "~/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.RecentDocuments.sfl2",
+  "~/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.RecentServers.sfl2",
+  "~/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.RecentHosts.sfl2",
+  "~/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.RecentApplications.sfl",
+  "~/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.RecentDocuments.sfl",
+  "~/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.RecentServers.sfl",
+  "~/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.RecentHosts.sfl",
+]
+impact = "Clears macOS recent applications/documents/servers/hosts lists; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"

@@ -9,22 +9,22 @@
 #   brew install wukongnotnull/vole/vole
 #
 # Refresh stable url/sha256 after each release:
-#   bash scripts/update-homebrew-formula.sh 0.0.9
+#   bash scripts/update-homebrew-formula.sh 0.0.10
 class Vole < Formula
   desc "macOS cleanup and monitoring CLI (Mole-derived, GPL-3.0)"
   homepage "https://github.com/wukongnotnull/vole"
   license "GPL-3.0-only"
-  version "0.0.9"
+  version "0.0.10"
   depends_on :macos
 
   on_macos do
     on_arm do
-      url "https://github.com/wukongnotnull/vole/releases/download/v0.0.9/vole-0.0.9-aarch64-apple-darwin.tar.gz"
-      sha256 "27e970862e94627be28b17f377f1398e0837dd82bcf1f010922f1e6de9f2dc25"
+      url "https://github.com/wukongnotnull/vole/releases/download/v0.0.10/vole-0.0.10-aarch64-apple-darwin.tar.gz"
+      sha256 "d8fbdd76f5d370a2d6953a74a2e1f825f80c6a242c5fb17eaf21e2a1f1309234"
     end
     on_intel do
-      url "https://github.com/wukongnotnull/vole/releases/download/v0.0.9/vole-0.0.9-x86_64-apple-darwin.tar.gz"
-      sha256 "9ee057dd4a827b96969befbe46ca2c201083acdc7c680269a1ebc1044fcdfb24"
+      url "https://github.com/wukongnotnull/vole/releases/download/v0.0.10/vole-0.0.10-x86_64-apple-darwin.tar.gz"
+      sha256 "f2b80acb25c6390a0a2fbb27a48828122bd4891bebb4a3ffef7ea5d50aaef4a0"
     end
   end
 

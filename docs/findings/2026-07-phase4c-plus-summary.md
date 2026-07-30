@@ -105,7 +105,7 @@ bash scripts/verify-clean-candidates.sh   # VOLE_TEST_ROOT 双跑
 4. ~~（可选）cmdline/`pgrep -f`、FCP generated~~ — 已落地（`2026-07-cmdline-fcp-generated.md`）
 5. （可选）SwiftUI 桌面 app（协议已冻结）
 6. （可选）Raycast / `open -a` 手测补全 TCC 矩阵
-7. （可选）剪映 generated / Simulator 复合 guard
+7. ~~（可选）剪映 generated~~ — 已落地（`2026-07-jianyingpro-generated.md`）；Simulator 复合 guard 仍可选
 
 ---
 

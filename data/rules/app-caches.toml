@@ -3219,3 +3219,20 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+
+[[rule]]
+id = "jianyingpro-generated-cache"
+category = "app-caches"
+label = "JianyingPro generated cache"
+platform = ["macos"]
+paths = ["~/Movies/JianyingPro/User Data/Cache"]
+impact = "Regenerable scratch under JianyingPro Cache; excludes drafts and imported material"
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "custom"
+handler = "jianyingpro_generated_caches"
+
+[rule.guards]
+not_running = ["VideoFusion-macOS"]
+not_running_cmdline = ["/VideoFusion-macOS.app/Contents/MacOS/VideoFusion-macOS"]

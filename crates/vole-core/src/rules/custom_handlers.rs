@@ -388,9 +388,7 @@ mod tests {
     #[test]
     fn jianyingpro_generated_selects_only_whitelisted_subdirs() {
         let home = tempfile::tempdir().unwrap();
-        let cache = home
-            .path()
-            .join("Movies/JianyingPro/User Data/Cache");
+        let cache = home.path().join("Movies/JianyingPro/User Data/Cache");
         for name in [
             "recognize",
             "frameThumbnail",
@@ -411,8 +409,7 @@ mod tests {
         )
         .unwrap();
 
-        let selected =
-            jianyingpro_generated_caches(&[entry(&cache.to_string_lossy(), 1)]);
+        let selected = jianyingpro_generated_caches(&[entry(&cache.to_string_lossy(), 1)]);
         assert_eq!(selected.len(), 4);
         for name in ["recognize", "frameThumbnail", "audioWave", "AlgorithmCache"] {
             assert!(
@@ -430,9 +427,7 @@ mod tests {
             "Projects",
         ] {
             assert!(
-                !selected
-                    .iter()
-                    .any(|p| p.to_string_lossy().contains(name)),
+                !selected.iter().any(|p| p.to_string_lossy().contains(name)),
                 "must not select protected path containing {name}: {selected:?}"
             );
         }
@@ -440,8 +435,7 @@ mod tests {
         // Non-Movies / non-Cache roots are rejected.
         let elsewhere = home.path().join("Documents/JianyingPro/User Data/Cache");
         fs::create_dir_all(elsewhere.join("recognize")).unwrap();
-        let rejected =
-            jianyingpro_generated_caches(&[entry(&elsewhere.to_string_lossy(), 1)]);
+        let rejected = jianyingpro_generated_caches(&[entry(&elsewhere.to_string_lossy(), 1)]);
         assert!(rejected.is_empty());
     }
 

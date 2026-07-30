@@ -1,0 +1,14 @@
+{
+  "id": "alibaba_cloud_cache_selects_dir",
+  "source_bats": "manual",
+  "source_test": "alibaba-cloud-cache selects cache directory",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.alibaba.teambitiondisk"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.alibaba.teambitiondisk|Alibaba Cloud cache"
+  ],
+  "expect_not_selected": []
+}

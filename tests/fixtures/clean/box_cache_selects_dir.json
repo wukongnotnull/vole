@@ -1,0 +1,14 @@
+{
+  "id": "box_cache_selects_dir",
+  "source_bats": "manual",
+  "source_test": "box-cache selects cache directory",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.box.desktop"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.box.desktop|Box cache"
+  ],
+  "expect_not_selected": []
+}

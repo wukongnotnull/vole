@@ -603,4 +603,106 @@ mod tests {
         std::env::remove_var("VOLE_TEST_HOME");
         let _ = fs::remove_dir_all(&home);
     }
+
+    fn xctest_devices_rule(pattern: String) -> Rule {
+        let mut rule = all_rule("xcode-xctest-devices", vec![pattern], false);
+        rule.label = "Xcode XCTestDevices test data".into();
+        rule.guards.not_running = vec![
+            "Xcode".into(),
+            "Simulator".into(),
+            "CoreSimulatorService".into(),
+            "simdiskimaged".into(),
+            "xcodebuild".into(),
+            "xctest".into(),
+            "XCTRunner".into(),
+        ];
+        rule.guards.not_running_cmdline = vec![
+            "com.apple.CoreSimulator".into(),
+            "com.apple.dt.XCTest".into(),
+            "XCTest".into(),
+        ];
+        rule
+    }
+
+    #[test]
+    fn plan_skips_xctest_devices_when_xcode_running() {
+        let _guard = test_env::lock();
+        let dir = scratch("xctest-running");
+        let device = dir.join("XCTestDevices/device-1");
+        fs::create_dir_all(&device).unwrap();
+        let pattern = format!("{}/*", dir.join("XCTestDevices").display());
+
+        let rule = xctest_devices_rule(pattern);
+        let probe = Arc::new(FakeProcessProbe {
+            running: HashSet::from(["Xcode".into()]),
+            ..Default::default()
+        });
+        let (tx, rx) = unbounded();
+        let orch =
+            Orchestrator::with_process_probe(crate::cancel::CancelToken::new(), Some(tx), probe);
+        let plan = orch
+            .build_plan(&[rule], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert!(plan.entries.is_empty());
+        assert!(matches!(
+            rx.try_recv().unwrap(),
+            StreamEvent::Skipped {
+                reason: SkipReason::AppRunning,
+                ..
+            }
+        ));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn plan_skips_xctest_devices_when_cmdline_xctest_hits() {
+        let _guard = test_env::lock();
+        let dir = scratch("xctest-cmdline");
+        let device = dir.join("XCTestDevices/device-1");
+        fs::create_dir_all(&device).unwrap();
+        let pattern = format!("{}/*", dir.join("XCTestDevices").display());
+
+        let rule = xctest_devices_rule(pattern);
+        let probe = Arc::new(FakeProcessProbe {
+            cmdline_running: HashSet::from(["com.apple.dt.XCTest".into()]),
+            ..Default::default()
+        });
+        let (tx, rx) = unbounded();
+        let orch =
+            Orchestrator::with_process_probe(crate::cancel::CancelToken::new(), Some(tx), probe);
+        let plan = orch
+            .build_plan(&[rule], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert!(plan.entries.is_empty());
+        assert!(matches!(
+            rx.try_recv().unwrap(),
+            StreamEvent::Skipped {
+                reason: SkipReason::AppRunning,
+                ..
+            }
+        ));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn plan_selects_xctest_devices_when_idle() {
+        let _guard = test_env::lock();
+        let dir = scratch("xctest-idle");
+        let device = dir.join("XCTestDevices/device-1");
+        fs::create_dir_all(&device).unwrap();
+        let pattern = format!("{}/*", dir.join("XCTestDevices").display());
+
+        let rule = xctest_devices_rule(pattern);
+        let probe = Arc::new(FakeProcessProbe::default());
+        let orch = Orchestrator::with_process_probe(crate::cancel::CancelToken::new(), None, probe);
+        let plan = orch
+            .build_plan(&[rule], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert_eq!(plan.entries.len(), 1);
+        assert!(plan.entries[0].path.ends_with("device-1"));
+        let _ = fs::remove_dir_all(&dir);
+    }
 }

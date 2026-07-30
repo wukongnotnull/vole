@@ -1,0 +1,14 @@
+{
+  "id": "xcode_xctest_devices_selects_child",
+  "source_bats": "manual",
+  "source_test": "xcode-xctest-devices selects child under XCTestDevices",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Developer/XCTestDevices/device-1"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Developer/XCTestDevices/device-1|Xcode XCTestDevices test data"
+  ],
+  "expect_not_selected": []
+}

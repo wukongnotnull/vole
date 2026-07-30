@@ -222,6 +222,35 @@ last_verified = "2026-07"
 kind = "all"
 
 [[rule]]
+id = "xcode-xctest-devices"
+category = "app-caches"
+label = "Xcode XCTestDevices test data"
+platform = ["macos"]
+paths = ["~/Library/Developer/XCTestDevices/*"]
+impact = "Rebuildable XCTest device data; skip while Xcode/Simulator/XCTest run"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = [
+  "Xcode",
+  "Simulator",
+  "CoreSimulatorService",
+  "simdiskimaged",
+  "xcodebuild",
+  "xctest",
+  "XCTRunner",
+]
+not_running_cmdline = [
+  "com.apple.CoreSimulator",
+  "com.apple.dt.XCTest",
+  "XCTest",
+]
+
+[[rule]]
 id = "sublime-text-cache"
 category = "app-caches"
 label = "Sublime Text cache"

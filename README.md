@@ -15,7 +15,7 @@
 | **Mole 兼容 JSON** | `status` / `analyze` / `history` 同名字段口径对齐，现有脚本可平滑迁移 |
 | **废纸篓口径诚实** | 报告区分 `trashed_bytes` / `deleted_bytes`，不把「进废纸篓」吹成「已释放」 |
 | **扫描更扎实** | 硬链接去重、折叠目录、`jwalk` 并行遍历 |
-| **规则数据化** | **504** 条高价值清理规则以 TOML 声明，可 diff、可禁用、可 fixture 回归 |
+| **规则数据化** | **509** 条高价值清理规则以 TOML 声明，可 diff、可禁用、可 fixture 回归 |
 
 适合：想要更现代、更可脚本化、更偏「安全预览再执行」的日常清理与磁盘洞察。若你需要成熟全家桶（卸载、系统优化、purge 等），请继续用 [Mole](https://github.com/tw93/Mole)。
 
@@ -31,7 +31,7 @@
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |
 | 外部依赖 | 无第三方 CLI 依赖 | 部分场景推荐 `fd` 等 |
-| 规则规模 | **504** 条高价值规则（Phase 4c+ 持续扩展） | 全量数百条 `safe_clean` 目标 |
+| 规则规模 | **509** 条高价值规则（Phase 4c+ 持续扩展） | 全量数百条 `safe_clean` 目标 |
 | 桌面端路线 | 协议已为 SwiftUI sidecar 预留 | 另有商业 [Mole for Mac](https://mole.fit) |
 | 许可证 | GPL-3.0（衍生作品，唯一可选） | GPL-3.0 |
 
@@ -130,7 +130,7 @@ v1 聚焦高频三命令 + `history`。`uninstall` / `optimize` / `purge` / `ins
 | Phase 1 基础设施（协议、oplog、互斥） | 已落地 |
 | Phase 2 `status` | 可用 |
 | Phase 3 `analyze` | 可用（目录模式） |
-| Phase 4 `clean` | 可用；规则 **504** 条（含浏览器 guard/UTM、Adobe/Pacifist/Recent items、JianyingPro generated） |
+| Phase 4 `clean` | 可用；规则 **509** 条（含浏览器/云盘/Mail 具名缓存、XCTestDevices、JianyingPro generated） |
 | Phase 5 `history` + 协议冻结 + 菜单 / 补全 | 可用；**v0.0.10** Developer ID + 公证（504 规则） |
 
 设计与计划见 `docs/wukong-code/`；规则收官总结见 [`docs/findings/2026-07-phase4c-v1-summary.md`](docs/findings/2026-07-phase4c-v1-summary.md)（v1）与 [`docs/findings/2026-07-phase4c-plus-summary.md`](docs/findings/2026-07-phase4c-plus-summary.md)（Batch 6–13）；guard 见 [`docs/findings/2026-07-guard-not-running.md`](docs/findings/2026-07-guard-not-running.md)、[`docs/findings/2026-07-cmdline-fcp-generated.md`](docs/findings/2026-07-cmdline-fcp-generated.md) 与 [`docs/findings/2026-07-jianyingpro-generated.md`](docs/findings/2026-07-jianyingpro-generated.md)。

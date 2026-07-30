@@ -1,0 +1,14 @@
+{
+  "id": "baidu_netdisk_cache_selects_dir",
+  "source_bats": "manual",
+  "source_test": "baidu-netdisk-cache selects cache directory",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.baidu.netdisk"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.baidu.netdisk|Baidu Netdisk cache"
+  ],
+  "expect_not_selected": []
+}

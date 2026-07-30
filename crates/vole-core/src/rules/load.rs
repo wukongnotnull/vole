@@ -135,10 +135,7 @@ mod tests {
             share.display()
         );
         assert!(
-            share
-                .canonicalize()
-                .unwrap()
-                .ends_with("share/vole/rules"),
+            share.canonicalize().unwrap().ends_with("share/vole/rules"),
             "canonical path should end with share/vole/rules"
         );
         let loaded = load_rules_from_dir(share).expect("load share rules");

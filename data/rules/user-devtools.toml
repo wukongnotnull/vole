@@ -2320,6 +2320,58 @@ kind = "all"
 not_running = ["OneDrive"]
 
 [[rule]]
+id = "baidu-netdisk-cache"
+category = "user-devtools"
+label = "Baidu Netdisk cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.baidu.netdisk"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "alibaba-cloud-cache"
+category = "user-devtools"
+label = "Alibaba Cloud cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.alibaba.teambitiondisk"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "box-cache"
+category = "user-devtools"
+label = "Box cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.box.desktop"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "apple-mail-cache"
+category = "user-devtools"
+label = "Apple Mail cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.apple.mail/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
 id = "firefox-profile-cache"
 category = "user-devtools"
 label = "Firefox profile cache"

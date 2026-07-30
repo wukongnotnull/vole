@@ -1,0 +1,14 @@
+{
+  "id": "apple_mail_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "apple-mail-cache selects glob child under com.apple.mail",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.apple.mail/Cache.db"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.apple.mail/Cache.db|Apple Mail cache"
+  ],
+  "expect_not_selected": []
+}

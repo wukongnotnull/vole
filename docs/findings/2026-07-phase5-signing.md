@@ -129,8 +129,9 @@ codesign -dv --verbose=4 dist/vole-0.0.9-aarch64-apple-darwin/bin/vole
 ```bash
 brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
 brew install vole
-export VOLE_RULES_DIR="$(brew --prefix vole)/share/vole/rules"
 ```
+
+规则目录随 formula 安装，默认自动发现；仅自定义路径时设置 `VOLE_RULES_DIR`。
 
 ---
 

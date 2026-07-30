@@ -34,4 +34,16 @@ Homebrew 解压单顶层目录后，`install` 的 cwd/`buildpath` 已在 `vole-1
 
 ### Homebrew 本机安装
 
-（提交 Formula 修复并 `git -C …/homebrew-vole pull` 后记录）
+```bash
+git -C /opt/homebrew/Library/Taps/wukongnotnull/homebrew-vole pull
+HOMEBREW_NO_AUTO_UPDATE=1 brew reinstall --formula wukongnotnull/vole/vole
+unset VOLE_RULES_DIR
+vole clean --plan   # exit 0；本机观测 entries=964
+ls "$(brew --prefix vole)/share/vole/rules"
+```
+
+Caveats 已不再要求 `export VOLE_RULES_DIR`。
+
+### 文档同步
+
+- `README.md` / `docs/findings/2026-07-phase5-signing.md` / `install.sh`：去掉强制 env；Homebrew 主路径两行（tap + install）。

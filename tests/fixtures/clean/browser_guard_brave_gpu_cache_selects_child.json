@@ -1,0 +1,14 @@
+{
+  "id": "browser_guard_brave_gpu_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "brave-gpu-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/BraveSoftware/Brave-Browser/Default/GPUCache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/BraveSoftware/Brave-Browser/Default/GPUCache/item|Brave GPU cache"
+  ],
+  "expect_not_selected": []
+}

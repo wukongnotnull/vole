@@ -2345,6 +2345,10 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["Brave Browser"]
+
+
 [[rule]]
 id = "brave-shader-cache"
 category = "user-devtools"
@@ -2357,6 +2361,10 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+
+[rule.guards]
+not_running = ["Brave Browser"]
+
 
 [[rule]]
 id = "brave-crash-reports"
@@ -2371,6 +2379,10 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["Brave Browser"]
+
+
 [[rule]]
 id = "arc-user-data-code-cache"
 category = "user-devtools"
@@ -2383,6 +2395,10 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+
+[rule.guards]
+not_running = ["Arc"]
+
 
 [[rule]]
 id = "arc-user-data-gpu-cache"
@@ -2397,6 +2413,10 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["Arc"]
+
+
 [[rule]]
 id = "arc-user-data-component-crx-cache"
 category = "user-devtools"
@@ -2409,6 +2429,10 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+
+[rule.guards]
+not_running = ["Arc"]
+
 
 [[rule]]
 id = "opera-cache"
@@ -2448,6 +2472,10 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["Brave Browser"]
+
+
 [[rule]]
 id = "brave-profile-graphite-dawn-cache"
 category = "user-devtools"
@@ -2460,6 +2488,10 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+
+[rule.guards]
+not_running = ["Brave Browser"]
+
 
 [[rule]]
 id = "brave-gr-shader-cache"
@@ -2474,6 +2506,10 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["Brave Browser"]
+
+
 [[rule]]
 id = "brave-dawn-cache"
 category = "user-devtools"
@@ -2486,6 +2522,10 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+
+[rule.guards]
+not_running = ["Brave Browser"]
+
 
 [[rule]]
 id = "helium-cache"
@@ -2798,6 +2838,10 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["Arc"]
+
+
 [[rule]]
 id = "arc-profile-gpu-cache"
 category = "user-devtools"
@@ -2810,6 +2854,10 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+
+[rule.guards]
+not_running = ["Arc"]
+
 
 [[rule]]
 id = "arc-user-data-root-shader-cache"
@@ -2824,6 +2872,10 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["Arc"]
+
+
 [[rule]]
 id = "arc-user-data-root-gr-shader-cache"
 category = "user-devtools"
@@ -2837,6 +2889,10 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["Arc"]
+
+
 [[rule]]
 id = "arc-user-data-root-graphite-dawn-cache"
 category = "user-devtools"
@@ -2849,6 +2905,10 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+
+[rule.guards]
+not_running = ["Arc"]
+
 
 [[rule]]
 id = "messages-sticker-cache"
@@ -3009,3 +3069,112 @@ kind = "all"
 [rule.guards]
 not_running = ["Google Chrome", "Google Chrome Helper"]
 not_running_cmdline = ["/Google Chrome.app/"]
+
+[[rule]]
+id = "brave-app-cache"
+category = "user-devtools"
+label = "Brave app cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/BraveSoftware/Brave-Browser/*/Application Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["Brave Browser"]
+
+[[rule]]
+id = "brave-code-cache"
+category = "user-devtools"
+label = "Brave code cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/BraveSoftware/Brave-Browser/*/Code Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["Brave Browser"]
+
+[[rule]]
+id = "brave-gpu-cache"
+category = "user-devtools"
+label = "Brave GPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/BraveSoftware/Brave-Browser/*/GPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["Brave Browser"]
+
+[[rule]]
+id = "brave-profile-dawn-cache"
+category = "user-devtools"
+label = "Brave profile Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/BraveSoftware/Brave-Browser/*/DawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["Brave Browser"]
+
+[[rule]]
+id = "arc-cache"
+category = "user-devtools"
+label = "Arc cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/company.thebrowser.Browser/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "arc-dawn-cache"
+category = "user-devtools"
+label = "Arc Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/*/DawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["Arc"]
+
+[[rule]]
+id = "arc-gr-shader-cache"
+category = "user-devtools"
+label = "Arc GR shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Arc/*/GrShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["Arc"]

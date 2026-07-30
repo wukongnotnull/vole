@@ -1,0 +1,14 @@
+{
+  "id": "browser_guard_arc_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "arc-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/company.thebrowser.Browser/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/company.thebrowser.Browser/item|Arc cache"
+  ],
+  "expect_not_selected": []
+}

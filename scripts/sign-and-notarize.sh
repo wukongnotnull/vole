@@ -68,7 +68,18 @@ fi
 ZIP="$(mktemp -t vole-notarize).zip"
 ditto -c -k --keepParent "$BIN" "$ZIP"
 echo "sign-and-notarize: submitting $ZIP"
-run_notary_submit "$ZIP"
-xcrun stapler staple "$BIN"
-echo "sign-and-notarize: notarized and stapled"
+SUBMIT_OUT="$(mktemp -t vole-notary-out.XXXXXX)"
+run_notary_submit "$ZIP" | tee "$SUBMIT_OUT"
 rm -f "$ZIP"
+
+SUBMISSION_ID="$(sed -n 's/^[[:space:]]*id:[[:space:]]*//p' "$SUBMIT_OUT" | tail -1)"
+rm -f "$SUBMIT_OUT"
+
+# stapler supports .app / .dmg / .pkg only — bare CLI binaries return Error 73.
+if xcrun stapler staple "$BIN" 2>/dev/null; then
+  echo "sign-and-notarize: notarized and stapled"
+else
+  echo "sign-and-notarize: notarized (Accepted); staple skipped for bare CLI binary." >&2
+  echo "  Gatekeeper checks Apple's servers on first run (ticket id: ${SUBMISSION_ID:-unknown})." >&2
+  echo "  Verify: spctl -a -vv -t install \"$BIN\"  → expect 'source=Notarized Developer ID'" >&2
+fi

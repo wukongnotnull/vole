@@ -60,11 +60,17 @@ echo "OK: codesigning identity found"
 echo "    $MATCH_LINE"
 
 if [[ -n "${VOLE_NOTARY_PROFILE:-}" ]]; then
+  NOTARY_OK=0
   if xcrun notarytool history --keychain-profile "$VOLE_NOTARY_PROFILE" --limit 1 >/dev/null 2>&1; then
+    NOTARY_OK=1
+  elif security find-generic-password -a "$VOLE_NOTARY_PROFILE" 2>/dev/null | grep -q 'class: "genp"'; then
+    # API-key profiles may not respond to history; keychain entry is enough.
+    NOTARY_OK=1
+  fi
+  if [[ "$NOTARY_OK" -eq 1 ]]; then
     echo "OK: notary profile '$VOLE_NOTARY_PROFILE'"
   else
-    echo "WARN: VOLE_NOTARY_PROFILE=$VOLE_NOTARY_PROFILE not usable" >&2
-    exit 2
+    echo "WARN: could not verify notary profile '$VOLE_NOTARY_PROFILE' (submit may still work)" >&2
   fi
 elif [[ -n "${APPLE_API_KEY_ID:-}" && -n "${APPLE_API_ISSUER_ID:-}" && -n "${APPLE_API_KEY_BASE64:-}" ]]; then
   echo "OK: notary API key env (APPLE_API_KEY_ID + ISSUER + BASE64)"

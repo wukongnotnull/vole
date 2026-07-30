@@ -10,9 +10,9 @@
 | 项 | 状态 |
 |---|---|
 | 本机签名 | `bash scripts/check-signing.sh` → OK |
-| 本机公证 | 待运行 `bash scripts/setup-notary-profile.sh` |
-| GitHub CI secrets | 待运行 `bash scripts/setup-ci-secrets.sh` |
-| Release | v0.0.8 已签名；v0.0.9+ 可启用公证 |
+| 本机公证 | `bash scripts/setup-notary-profile.sh` ✓ |
+| GitHub CI secrets | `bash scripts/setup-ci-secrets.sh` ✓ |
+| Release | v0.0.9+ 签名 + 公证（CLI 无 staple） |
 
 ---
 
@@ -98,6 +98,17 @@ bash scripts/package-release.sh 0.0.8
 ```
 
 `VOLE_NOTARY_PROFILE` 未设置时为 **sign-only**，与 v0.0.8 一致。
+
+### CLI 公证 vs staple
+
+vole 是**裸 Mach-O 可执行文件**，不是 `.app` bundle。Apple 公证会 **Accepted**，但 `stapler staple` 会报 **Error 73**（正常）。Gatekeeper 在首次运行时会**联网**查公证票据。
+
+验证命令（期望含 `source=Notarized Developer ID` 或 `#: accepted`）：
+
+```bash
+spctl -a -vv -t install dist/vole-0.0.9-aarch64-apple-darwin/bin/vole
+codesign -dv --verbose=4 dist/vole-0.0.9-aarch64-apple-darwin/bin/vole
+```
 
 ---
 

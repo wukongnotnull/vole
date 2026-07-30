@@ -26,8 +26,8 @@
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | **1.0.0**：v1 CLI 范围冻结 | 成熟、功能最全 |
-| 核心命令 | `status` / `analyze` / `clean` / `history` | 另有 `uninstall` / `optimize` / `purge` / `installer` 等 |
+| 成熟度 | **1.1.0**：产品 v2 已开 `uninstall`；`optimize` 待续 | 成熟、功能最全 |
+| 核心命令 | `status` / `analyze` / `clean` / `history` / `uninstall` | 另有 `optimize` / `purge` / `installer` 等 |
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |
 | 外部依赖 | 无第三方 CLI 依赖 | 部分场景推荐 `fd` 等 |
@@ -53,19 +53,19 @@ export PATH="$HOME/.local/bin:$PATH"
 export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"
 ```
 
-**预编译包**（GitHub Release [v1.0.0](https://github.com/wukongnotnull/vole/releases/tag/v1.0.0)，**Developer ID 签名 + 公证**）：
+**预编译包**（GitHub Release [v1.1.0](https://github.com/wukongnotnull/vole/releases/tag/v1.1.0)，**Developer ID 签名 + 公证**）：
 
 ```bash
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v1.0.0/vole-1.0.0-aarch64-apple-darwin.tar.gz
-tar xzf vole-1.0.0-aarch64-apple-darwin.tar.gz
-install -m 755 vole-1.0.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-mkdir -p ~/.local/share/vole && cp -R vole-1.0.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v1.1.0/vole-1.1.0-aarch64-apple-darwin.tar.gz
+tar xzf vole-1.1.0-aarch64-apple-darwin.tar.gz
+install -m 755 vole-1.1.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+mkdir -p ~/.local/share/vole && cp -R vole-1.1.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"
 ```
 
 Intel 将 `aarch64-apple-darwin` 换为 `x86_64-apple-darwin`。
 
-**Homebrew（stable v1.0.0）**：
+**Homebrew（stable v1.1.0）**：
 
 ```bash
 brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole

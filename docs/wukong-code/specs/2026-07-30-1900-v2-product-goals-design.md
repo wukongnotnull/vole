@@ -88,6 +88,8 @@ SwiftUI 桌面 app **不在本代际并行主路径**：等产品 v2 CLI 成熟�
 - 产品「v2」与包 `1.x` 关系写死
 - SwiftUI 不在本代际并行主路径写死
 
-## 9. 下一步（本设计之外）
+## 9. 下一步
 
-用户审阅本 spec 通过后，再单独撰写 **M0/M1 实施计划**（`uninstall` spike + 实现），不在本文展开实现细节。
+**M0/M1 实施计划**：[`../plans/2026-07-30-1910-v2-m0-m1-uninstall.md`](../plans/2026-07-30-1910-v2-m0-m1-uninstall.md)（`uninstall` spike + 实现 → 包 `1.1.0`）。
+
+M2/M3（`optimize`）在 M1 发版后再单独立项。

@@ -26,7 +26,7 @@
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | **1.2.0 筹备**：产品 v2 已开 `uninstall` + `optimize` | 成熟、功能最全 |
+| 成熟度 | **1.2.0**：产品 v2 CLI（`uninstall` + `optimize`）已达 | 成熟、功能最全 |
 | 核心命令 | `status` / `analyze` / `clean` / `history` / `uninstall` / `optimize` | 另有 `purge` / `installer` 等 |
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |
@@ -53,19 +53,19 @@ export PATH="$HOME/.local/bin:$PATH"
 export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"
 ```
 
-**预编译包**（GitHub Release [v1.1.0](https://github.com/wukongnotnull/vole/releases/tag/v1.1.0)，**Developer ID 签名 + 公证**）：
+**预编译包**（GitHub Release [v1.2.0](https://github.com/wukongnotnull/vole/releases/tag/v1.2.0)，**Developer ID 签名 + 公证**）：
 
 ```bash
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v1.1.0/vole-1.1.0-aarch64-apple-darwin.tar.gz
-tar xzf vole-1.1.0-aarch64-apple-darwin.tar.gz
-install -m 755 vole-1.1.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-mkdir -p ~/.local/share/vole && cp -R vole-1.1.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v1.2.0/vole-1.2.0-aarch64-apple-darwin.tar.gz
+tar xzf vole-1.2.0-aarch64-apple-darwin.tar.gz
+install -m 755 vole-1.2.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+mkdir -p ~/.local/share/vole && cp -R vole-1.2.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"
 ```
 
 Intel 将 `aarch64-apple-darwin` 换为 `x86_64-apple-darwin`。
 
-**Homebrew（stable v1.1.0）**：
+**Homebrew（stable v1.2.0）**：
 
 ```bash
 brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
@@ -129,7 +129,7 @@ VERIFY_LOCAL_SKIP_CROSS=1 bash scripts/verify-local.sh
 
 ## 当前范围与状态
 
-**v1 CLI** 已完成。**产品 v2（进行中）**：`uninstall` + `optimize` 已实现（包目标 **1.2.0**）。`purge` / `installer` / 真 sudo / SwiftUI 仍不在范围内——见 [`docs/wukong-code/specs/2026-07-30-1900-v2-product-goals-design.md`](docs/wukong-code/specs/2026-07-30-1900-v2-product-goals-design.md)。
+**v1 CLI** 已完成。**产品 v2 CLI 已成熟**：`uninstall` + `optimize` 已交付（**[v1.2.0](https://github.com/wukongnotnull/vole/releases/tag/v1.2.0)**）。`purge` / `installer` / 真 sudo / SwiftUI 仍不在范围内——见 [`docs/wukong-code/specs/2026-07-30-1900-v2-product-goals-design.md`](docs/wukong-code/specs/2026-07-30-1900-v2-product-goals-design.md)。
 
 | 阶段 | 状态 |
 |---|---|
@@ -140,7 +140,7 @@ VERIFY_LOCAL_SKIP_CROSS=1 bash scripts/verify-local.sh
 | Phase 5 `history` + 协议冻结 + 菜单 / 补全 | 可用；**v1.0.0** Developer ID + 公证（**511** 规则） |
 | **v1 closeout** | 范围冻结；见 [`docs/wukong-code/specs/2026-07-30-v1-closeout-design.md`](docs/wukong-code/specs/2026-07-30-v1-closeout-design.md) |
 | **产品 v2 / M1** | **`vole uninstall`**；包版本 **[v1.1.0](https://github.com/wukongnotnull/vole/releases/tag/v1.1.0)** |
-| **产品 v2 / M2–M3** | **`vole optimize`**；包目标 **1.2.0** |
+| **产品 v2 / M2–M3** | **`vole optimize`**；包版本 **[v1.2.0](https://github.com/wukongnotnull/vole/releases/tag/v1.2.0)** |
 
 **版本策略**：严格 SemVer；见 [`docs/wukong-code/specs/2026-07-30-semver-policy-design.md`](docs/wukong-code/specs/2026-07-30-semver-policy-design.md)。
 

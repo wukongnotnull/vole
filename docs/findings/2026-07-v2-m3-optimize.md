@@ -16,7 +16,7 @@
 | `vole optimize` CLI | ✅ |
 | 菜单 / protocol / README | ✅ |
 | 包 bump 1.2.0 + release notes | ✅ |
-| tag / Formula | 合并后另做 |
+| tag / Formula | ✅（见 [`2026-07-v1.2.0-release.md`](2026-07-v1.2.0-release.md)） |
 
 ## 主路径交付（12）
 

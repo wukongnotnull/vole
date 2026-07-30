@@ -350,7 +350,7 @@ Gatekeeper 拦的是带 `com.apple.quarantine` 扩展属性的可执行文件，
 - **Homebrew Cask**（预编译二进制）：2026-09-01 起官方 Tap 要求 codesign + notarize；`--no-quarantine` 将移除（[brew#20755](https://github.com/Homebrew/brew/issues/20755)）。
 - **Homebrew Formula**（源码构建 / 本地 bottle）：不受 Cask 审计约束，**无强制公证**。
 - CLI 若走 Formula 分发无需 $99/yr；若走 Cask 分发预编译 `vole` 则必须 Developer ID + 公证。
-- 「两份 vole 用同一签名身份才能共享 TCC 授权」——方向上合理；Phase 0.5 本机 ad-hoc 读 Containers 未弹窗，**Developer ID 下的 cdhash 行为待 Phase 1 完整矩阵**。
+- ~~「两份 vole 用同一签名身份才能共享 TCC 授权」——方向上合理；Phase 0.5 本机 ad-hoc 读 Containers 未弹窗，**Developer ID 下的 cdhash 行为待 Phase 1 完整矩阵**。~~ → 2026-07-30 矩阵：Developer ID rebuild 会换 CDHash；同身份稳定的是**同一份已签名 Release 产物**，不是「每次 cargo build」。见 `docs/findings/2026-07-phase1-tcc-devid-matrix.md`。
 
 **能确定的部分**：SwiftUI app 若要在 Mac 外分发，Developer ID 签名 + notarization 是硬要求；app bundle 内嵌的可执行文件必须随 bundle 一起签名与公证。签名身份与 [4.1](#41-tcc完全磁盘访问) 的 TCC 身份是同一件事的两面，因此仍然建议**尽早**走通签名流程（哪怕先用 ad-hoc），不要留到发布前。
 

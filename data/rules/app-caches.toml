@@ -1495,6 +1495,19 @@ last_verified = "2026-07"
 kind = "all"
 
 [[rule]]
+id = "pacifist-cache"
+category = "app-caches"
+label = "Pacifist cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.charlessoft.pacifist/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
 id = "steam-cache"
 category = "app-caches"
 label = "Steam cache"

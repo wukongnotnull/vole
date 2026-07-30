@@ -50,7 +50,7 @@ class Vole < Formula
       Add to your shell rc:
         export VOLE_RULES_DIR="#{share}/vole/rules"
 
-      Stable bottles are ad-hoc signed (not notarized). If Gatekeeper blocks:
+      Stable bottles are Developer ID signed (not notarized). If Gatekeeper blocks:
         xattr -cr #{bin}/vole
     EOS
   end

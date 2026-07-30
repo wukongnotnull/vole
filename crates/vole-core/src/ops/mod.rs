@@ -7,10 +7,11 @@ mod proto_plan;
 
 use crate::vole_proto::StreamEvent;
 use crossbeam_channel::Sender;
+use std::sync::Arc;
 use thiserror::Error;
 
 use crate::cancel::{CancelToken, Cancelled};
-use crate::rules::StrategyBuildError;
+use crate::rules::{PgrepProcessProbe, ProcessProbe, StrategyBuildError};
 
 pub use apply_plan::{
     apply_plan, apply_proto_plan, ApplyPlanContext, ApplyPlanError, ApplyPlanOptions,
@@ -36,11 +37,24 @@ impl From<Cancelled> for OpsError {
 pub struct Orchestrator {
     cancel: CancelToken,
     events: Option<Sender<StreamEvent>>,
+    process_probe: Arc<dyn ProcessProbe>,
 }
 
 impl Orchestrator {
     pub fn new(cancel: CancelToken, events: Option<Sender<StreamEvent>>) -> Self {
-        Self { cancel, events }
+        Self::with_process_probe(cancel, events, Arc::new(PgrepProcessProbe))
+    }
+
+    pub fn with_process_probe(
+        cancel: CancelToken,
+        events: Option<Sender<StreamEvent>>,
+        process_probe: Arc<dyn ProcessProbe>,
+    ) -> Self {
+        Self {
+            cancel,
+            events,
+            process_probe,
+        }
     }
 
     pub fn check_cancel(&self) -> Result<(), OpsError> {

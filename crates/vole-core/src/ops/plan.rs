@@ -6,8 +6,8 @@ use std::time::{Duration, SystemTime};
 
 use crate::protection::AppProtection;
 use crate::rules::{
-    collect_path_candidates, resolve_strategy, select_custom, PathEntry, ResolvedStrategy, Rule,
-    Strategy,
+    collect_path_candidates, resolve_strategy, select_custom, should_skip_for_not_running,
+    PathEntry, ResolvedStrategy, Rule, Strategy,
 };
 use crate::safety::{
     capture_plan_entry_identity, validate_path_for_deletion, PlanEntryIdentity, ValidationError,
@@ -106,6 +106,17 @@ impl Orchestrator {
             self.check_cancel()?;
 
             if rule.disabled {
+                continue;
+            }
+
+            if should_skip_for_not_running(
+                self.process_probe.as_ref(),
+                &rule.guards.not_running,
+            ) {
+                self.emit(StreamEvent::Skipped {
+                    rule_id: rule.id.clone(),
+                    reason: SkipReason::AppRunning,
+                });
                 continue;
             }
 
@@ -243,10 +254,12 @@ fn skip_reason_for_validation(err: &ValidationError) -> SkipReason {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rules::StrategyConfig;
+    use crate::rules::{FakeProcessProbe, StrategyConfig};
     use crate::test_env;
     use crossbeam_channel::unbounded;
+    use std::collections::HashSet;
     use std::fs;
+    use std::sync::Arc;
     use std::thread;
     use std::time::Duration as StdDuration;
 
@@ -416,5 +429,67 @@ mod tests {
     fn plan_builder_uses_custom_ttl() {
         let builder = PlanBuilder::new().with_ttl(Duration::from_secs(60));
         assert_eq!(builder.ttl(), Duration::from_secs(60));
+    }
+
+    #[test]
+    fn plan_skips_rule_when_not_running_guard_hits() {
+        let _guard = test_env::lock();
+        let dir = scratch("not-running-hit");
+        let file = dir.join("real/.claude/sessions/old");
+        touch(&file);
+        let pattern = file.to_string_lossy().into_owned();
+
+        let mut rule = all_rule("claude-like", vec![pattern], false);
+        rule.guards.not_running = vec!["claude".into()];
+
+        let probe = Arc::new(FakeProcessProbe {
+            running: HashSet::from(["claude".into()]),
+            unknown: HashSet::new(),
+        });
+        let (tx, rx) = unbounded();
+        let orch = Orchestrator::with_process_probe(
+            crate::cancel::CancelToken::new(),
+            Some(tx),
+            probe,
+        );
+        let plan = orch
+            .build_plan(&[rule], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert!(plan.entries.is_empty());
+        let ev = rx.try_recv().unwrap();
+        assert!(matches!(
+            ev,
+            StreamEvent::Skipped {
+                reason: SkipReason::AppRunning,
+                ..
+            }
+        ));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn plan_selects_when_process_idle() {
+        let _guard = test_env::lock();
+        let dir = scratch("not-running-idle");
+        let file = dir.join("real/.claude/sessions/old");
+        touch(&file);
+        let pattern = file.to_string_lossy().into_owned();
+
+        let mut rule = all_rule("claude-like-idle", vec![pattern], false);
+        rule.guards.not_running = vec!["claude".into()];
+
+        let probe = Arc::new(FakeProcessProbe::default());
+        let orch = Orchestrator::with_process_probe(
+            crate::cancel::CancelToken::new(),
+            None,
+            probe,
+        );
+        let plan = orch
+            .build_plan(&[rule], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert_eq!(plan.entries.len(), 1);
+        let _ = fs::remove_dir_all(&dir);
     }
 }

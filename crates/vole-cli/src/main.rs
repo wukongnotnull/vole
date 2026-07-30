@@ -4,6 +4,7 @@
 mod clean;
 mod history_cmd;
 mod interactive;
+mod optimize;
 mod signals;
 mod terminal;
 mod tui;
@@ -113,6 +114,33 @@ enum Command {
         /// 可选：按 bundle id / 应用名过滤。
         target: Option<String>,
     },
+    /// 系统优化任务（plan → apply；无 sudo 长尾进 coverage_note）。
+    Optimize {
+        /// 只产出候选集，不改动任何文件（默认）。
+        #[arg(long, conflicts_with = "apply")]
+        plan: bool,
+        /// 同 `--plan`。
+        #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
+        dry_run: bool,
+        /// 执行 plan 文件中的条目。
+        #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
+        apply: Option<PathBuf>,
+        /// 永久删除而非移入废纸篓（仅与 `--apply` 联用；仅影响 delete 类条目）。
+        #[arg(long, requires = "apply")]
+        permanent: bool,
+        /// 输出 JSON。
+        #[arg(long)]
+        json: bool,
+        /// NDJSON 事件流。
+        #[arg(long = "json-stream")]
+        json_stream: bool,
+        /// 将 plan JSON 写入文件。
+        #[arg(long, conflicts_with = "apply")]
+        plan_out: Option<PathBuf>,
+        /// 可选：只跑单个 Mole task id（实验性）。
+        #[arg(long, value_name = "TASK_ID")]
+        task: Option<String>,
+    },
     /// 实时系统监控。
     Status {
         /// 输出 JSON 而非 TUI。
@@ -214,6 +242,26 @@ fn main() {
                 apply_plan: apply,
                 permanent,
                 target,
+            });
+            std::process::exit(code);
+        }
+        Some(Command::Optimize {
+            plan: _,
+            dry_run: _,
+            apply,
+            permanent,
+            json,
+            json_stream,
+            plan_out,
+            task,
+        }) => {
+            let code = optimize::run_optimize(optimize::OptimizeOptions {
+                json,
+                json_stream,
+                plan_out,
+                apply_plan: apply,
+                permanent,
+                task,
             });
             std::process::exit(code);
         }

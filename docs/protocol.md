@@ -31,6 +31,11 @@ JSON 对象：`schema_version`, `created_at`, `ttl_secs`（默认 900）, `entri
 
 `vole uninstall` 复用同一 Plan / Report / 事件形状；`rule_id` 使用前缀 `uninstall:`（应用本体）或 `uninstall:leftover:`（用户域残留）。勿用 `vole clean --apply` 执行 uninstall plan（apply 路径独立）。
 
+`vole optimize` 同样复用 Plan / Report；`rule_id` 约定：
+- `optimize:delete:<task_id>` — 删除类（默认废纸篓）
+- `optimize:action:<task_id>` — 副作用类（VACUUM / defaults / Dock / LaunchServices 等）
+勿用 clean/uninstall apply 执行 optimize plan。
+
 ## Report
 
 `succeeded`, `skipped`, `failed`, `skipped_by_reason[]`, `trashed_bytes`, `deleted_bytes`。

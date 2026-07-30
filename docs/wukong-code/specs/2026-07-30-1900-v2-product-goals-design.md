@@ -90,8 +90,10 @@ SwiftUI 桌面 app **不在本代际并行主路径**：等产品 v2 CLI 成熟�
 
 ## 9. 下一步
 
-**M0/M1 实施计划**：[`../plans/2026-07-30-1910-v2-m0-m1-uninstall.md`](../plans/2026-07-30-1910-v2-m0-m1-uninstall.md)（`uninstall` spike + 实现 → 包 `1.1.0`）。
+**M0/M1（已完成）**：[`../plans/2026-07-30-1910-v2-m0-m1-uninstall.md`](../plans/2026-07-30-1910-v2-m0-m1-uninstall.md) → 包 **`1.1.0`**；findings：[`../../findings/2026-07-v2-m0-uninstall-spike.md`](../../findings/2026-07-v2-m0-uninstall-spike.md)、[`../../findings/2026-07-v2-m1-uninstall.md`](../../findings/2026-07-v2-m1-uninstall.md)。
 
-**M0 spike findings**：[`../../findings/2026-07-v2-m0-uninstall-spike.md`](../../findings/2026-07-v2-m0-uninstall-spike.md)。
+**M2/M3 实施计划**：[`../plans/2026-07-30-2012-v2-m2-m3-optimize.md`](../plans/2026-07-30-2012-v2-m2-m3-optimize.md)（`optimize` spike + 实现 → 包 `1.2.0`）。
 
-M2/M3（`optimize`）在 M1 发版后再单独立项。
+**M2 spike findings**：[`../../findings/2026-07-v2-m2-optimize-spike.md`](../../findings/2026-07-v2-m2-optimize-spike.md)。
+
+**M3 findings**：[`../../findings/2026-07-v2-m3-optimize.md`](../../findings/2026-07-v2-m3-optimize.md)。

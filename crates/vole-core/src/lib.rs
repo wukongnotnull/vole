@@ -15,6 +15,7 @@ pub mod history;
 pub mod mutex;
 pub mod oplog;
 pub mod ops;
+pub mod optimize;
 pub mod protection;
 pub mod rules;
 pub mod safety;

@@ -26,8 +26,8 @@
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | **1.1.0**：产品 v2 已开 `uninstall`；`optimize` 待续 | 成熟、功能最全 |
-| 核心命令 | `status` / `analyze` / `clean` / `history` / `uninstall` | 另有 `optimize` / `purge` / `installer` 等 |
+| 成熟度 | **1.2.0 筹备**：产品 v2 已开 `uninstall` + `optimize` | 成熟、功能最全 |
+| 核心命令 | `status` / `analyze` / `clean` / `history` / `uninstall` / `optimize` | 另有 `purge` / `installer` 等 |
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |
 | 外部依赖 | 无第三方 CLI 依赖 | 部分场景推荐 `fd` 等 |
@@ -93,6 +93,8 @@ vole clean --apply <plan.json>
 vole clean --whitelist
 vole uninstall --plan
 vole uninstall --apply <plan.json>
+vole optimize --plan
+vole optimize --apply <plan.json>
 vole history
 vole history --json
 
@@ -119,6 +121,7 @@ VERIFY_LOCAL_SKIP_CROSS=1 bash scripts/verify-local.sh
 | `vole analyze [path]` | 目录磁盘下钻（默认 `$HOME`）；`--json` |
 | `vole clean` | `--plan` / `--apply`、`--json-stream`、`--whitelist`；默认废纸篓，`--permanent` 永久删除 |
 | `vole uninstall` | 卸载应用 + 用户域残留；`--plan` / `--apply` / `--json`；默认废纸篓 |
+| `vole optimize` | 系统优化任务；`--plan` / `--apply` / `--json`；无 sudo 长尾进 coverage_note |
 | `vole history` | 操作历史；`--json` / `--limit` |
 | `vole completions` | 生成 shell 补全 |
 
@@ -126,7 +129,7 @@ VERIFY_LOCAL_SKIP_CROSS=1 bash scripts/verify-local.sh
 
 ## 当前范围与状态
 
-**v1 CLI** 已完成。**产品 v2（进行中）**：`vole uninstall` 已交付（包目标 **1.1.0**）；`optimize` 为下一里程碑。`purge` / `installer` / 真 sudo / SwiftUI 仍不在范围内——见 [`docs/wukong-code/specs/2026-07-30-1900-v2-product-goals-design.md`](docs/wukong-code/specs/2026-07-30-1900-v2-product-goals-design.md)。
+**v1 CLI** 已完成。**产品 v2（进行中）**：`uninstall` + `optimize` 已实现（包目标 **1.2.0**）。`purge` / `installer` / 真 sudo / SwiftUI 仍不在范围内——见 [`docs/wukong-code/specs/2026-07-30-1900-v2-product-goals-design.md`](docs/wukong-code/specs/2026-07-30-1900-v2-product-goals-design.md)。
 
 | 阶段 | 状态 |
 |---|---|
@@ -137,6 +140,7 @@ VERIFY_LOCAL_SKIP_CROSS=1 bash scripts/verify-local.sh
 | Phase 5 `history` + 协议冻结 + 菜单 / 补全 | 可用；**v1.0.0** Developer ID + 公证（**511** 规则） |
 | **v1 closeout** | 范围冻结；见 [`docs/wukong-code/specs/2026-07-30-v1-closeout-design.md`](docs/wukong-code/specs/2026-07-30-v1-closeout-design.md) |
 | **产品 v2 / M1** | **`vole uninstall`**；包版本 **[v1.1.0](https://github.com/wukongnotnull/vole/releases/tag/v1.1.0)** |
+| **产品 v2 / M2–M3** | **`vole optimize`**；包目标 **1.2.0** |
 
 **版本策略**：严格 SemVer；见 [`docs/wukong-code/specs/2026-07-30-semver-policy-design.md`](docs/wukong-code/specs/2026-07-30-semver-policy-design.md)。
 

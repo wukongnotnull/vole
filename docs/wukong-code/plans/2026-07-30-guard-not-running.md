@@ -1,6 +1,6 @@
 # Guard `not_running` 子集 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use wukong-code:subagent-driven-development (recommended) or wukong-code:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use wukong-code:subagent-driven-development (recommended) or wukong-code:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 让 `guards.not_running` 在 plan/apply 生效（精确进程名 / fail-closed），兑现既有 AI/Codex 声明，并落地 Firefox + 云盘缓存静态 guard 子集。
 
@@ -60,7 +60,7 @@ docs/findings/
     - 任一 `Running` 或 `Unknown` → `true`
   - `pub struct FakeProcessProbe { pub running: std::collections::HashSet<String>, pub unknown: std::collections::HashSet<String> }`（`cfg(test)` 可 `pub` 或 `pub(crate)` 供 ops 测试；生产代码也可用 `#[cfg(test)]` 模块内 Fake，但 apply/plan 测试在 ops —— 将 Fake 放在 `process_guard` 且 `pub` 仅在 test 时不够；**直接 `pub struct FakeProcessProbe`** 供测试与注入）
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```rust
 #[cfg(test)]
@@ -106,13 +106,13 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Run tests — expect FAIL**（module / symbols missing）
+- [x] **Step 2: Run tests — expect FAIL**（module / symbols missing）
 
 ```bash
 cargo test -p vole-core should_skip_for_not_running -- --nocapture
 ```
 
-- [ ] **Step 3: Minimal implementation**
+- [x] **Step 3: Minimal implementation**
 
 ```rust
 use std::collections::HashSet;
@@ -156,13 +156,13 @@ pub fn should_skip_for_not_running(probe: &dyn ProcessProbe, names: &[String]) -
 
 Export from `rules/mod.rs`.
 
-- [ ] **Step 4: Tests PASS**
+- [x] **Step 4: Tests PASS**
 
 ```bash
 cargo test -p vole-core process_guard -- --nocapture
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add crates/vole-core/src/rules/process_guard.rs crates/vole-core/src/rules/mod.rs
@@ -185,7 +185,7 @@ EOF
 - Produces: `pub struct PgrepProcessProbe;` + `impl ProcessProbe`
   - `pgrep -x <name>`：exit 0 → Running；exit 1 → Idle；其它 / Timeout / spawn 失败 → Unknown
 
-- [ ] **Step 1: Write failing test**（用假 SysCommand 较难；对本任务用文档化行为 + 可选集成测）
+- [x] **Step 1: Write failing test**（用假 SysCommand 较难；对本任务用文档化行为 + 可选集成测）
 
 优先：抽出内部函数便于测：
 
@@ -204,13 +204,13 @@ pub(crate) fn state_from_pgrep_status(code: Option<i32>, timed_out: bool) -> Pro
 
 测试上述映射；`PgrepProcessProbe` 实现调用 `MacSysCommand.run(&["pgrep", "-x", name], Duration::from_secs(2))`。
 
-- [ ] **Step 2: Run mapping tests — FAIL then implement — PASS**
+- [x] **Step 2: Run mapping tests — FAIL then implement — PASS**
 
 ```bash
 cargo test -p vole-core state_from_pgrep_status -- --nocapture
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -am "$(cat <<'EOF'
@@ -245,7 +245,7 @@ if should_skip_for_not_running(self.process_probe.as_ref(), &rule.guards.not_run
 }
 ```
 
-- [ ] **Step 1: Failing ops test**
+- [x] **Step 1: Failing ops test**
 
 在 `plan.rs` `#[cfg(test)]`：
 
@@ -265,17 +265,17 @@ fn plan_skips_rule_when_not_running_guard_hits() {
 
 （用 `test_env` + 临时 HOME，仿现有 plan 测试。）
 
-- [ ] **Step 2: Run — FAIL（无跳过）**
+- [x] **Step 2: Run — FAIL（无跳过）**
 
 ```bash
 cargo test -p vole-core plan_skips_rule_when_not_running_guard_hits -- --nocapture
 ```
 
-- [ ] **Step 3: Wire Orchestrator + plan check — PASS**
+- [x] **Step 3: Wire Orchestrator + plan check — PASS**
 
-- [ ] **Step 4: 加对称测试** `plan_selects_when_process_idle`
+- [x] **Step 4: 加对称测试** `plan_selects_when_process_idle`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git commit -am "$(cat <<'EOF'
@@ -310,11 +310,11 @@ if let Some(rule) = ctx.rules.iter().find(|r| r.id == entry.rule_id) {
 
 若 `rule_id` 找不到：不因 guard 跳过（仍走路径校验；与「规则已卸载」一致）。
 
-- [ ] **Step 1: Failing apply test** — FakeTrash + running probe + rule with not_running → 不调用 trash，skipped++
+- [x] **Step 1: Failing apply test** — FakeTrash + running probe + rule with not_running → 不调用 trash，skipped++
 
-- [ ] **Step 2: Implement + CLI 传入 `load_rules` 结果与 `PgrepProcessProbe`
+- [x] **Step 2: Implement + CLI 传入 `load_rules` 结果与 `PgrepProcessProbe`
 
-- [ ] **Step 3: PASS + Commit**
+- [x] **Step 3: PASS + Commit**
 
 ```bash
 git commit -am "$(cat <<'EOF'
@@ -381,9 +381,9 @@ not_running = ["OneDrive"]
 
 Fixtures：mkdir 子路径 + `expect_selected`（默认 pgrep 在测试机上通常 Idle；若 CI 碰巧跑着同名进程，单测 Fake 已覆盖守卫逻辑 —— fixture 只验路径选择）。
 
-- [ ] **Step 1: 写 TOML + fixtures**
+- [x] **Step 1: 写 TOML + fixtures**
 
-- [ ] **Step 2:**
+- [x] **Step 2:**
 
 ```bash
 cargo test -p vole-core verify_clean_fixtures -- --nocapture
@@ -392,7 +392,7 @@ cargo test -p vole-core -- --nocapture
 
 Expected: PASS
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -am "$(cat <<'EOF'
@@ -411,9 +411,9 @@ EOF
 - Modify: `crates/vole-core/src/ops/coverage.rs`（可选：coverage_note 去掉或弱化「需进程检测的 guard」一句，改为「部分 guard 已落地；generated/cmdline 仍未移植」）
 - Modify: `README.md` 仅当规则计数变化时更新总数（470 + 3 = **473**）
 
-- [ ] **Step 1: findings 短记**（引擎行为、子集列表、非目标）
+- [x] **Step 1: findings 短记**（引擎行为、子集列表、非目标）
 
-- [ ] **Step 2: 规则计数**
+- [x] **Step 2: 规则计数**
 
 ```bash
 rg -c '^\[\[rule\]\]' data/rules/*.toml
@@ -421,7 +421,7 @@ rg -c '^\[\[rule\]\]' data/rules/*.toml
 
 更新 README「470」→ 实际总数。
 
-- [ ] **Step 3:**
+- [x] **Step 3:**
 
 ```bash
 cargo fmt --all -- --check
@@ -429,7 +429,7 @@ cargo clippy -p vole-core -p vole-cli --all-targets -- -D warnings
 cargo test -p vole-core
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git commit -am "$(cat <<'EOF'
@@ -439,7 +439,7 @@ EOF
 )"
 ```
 
-- [ ] **Step 5: 勾选本计划全部 checkbox 为 `[x]` 并 commit**
+- [x] **Step 5: 勾选本计划全部 checkbox 为 `[x]` 并 commit**
 
 ---
 

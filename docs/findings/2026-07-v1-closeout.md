@@ -1,7 +1,7 @@
 # Vole v1 Closeout 勾选
 
 **日期**：2026-07-30  
-**状态**：完成（v0.0.11 已发布）  
+**状态**：完成（v0.0.11 已发布；v1.x B1–B3 见 `2026-07-v1x-dedup-codex-toolbox.md`）  
 **设计**：[`docs/wukong-code/specs/2026-07-30-v1-closeout-design.md`](../wukong-code/specs/2026-07-30-v1-closeout-design.md)  
 **计划**：[`docs/wukong-code/plans/2026-07-30-v1-closeout.md`](../wukong-code/plans/2026-07-30-v1-closeout.md)
 
@@ -14,7 +14,7 @@
 | `analyze` | ✅ |
 | `clean` plan/apply + 废纸篓口径 | ✅ |
 | 保护层 / 白名单 / oplog | ✅ |
-| 规则 Top 150+（现 509） | ✅ |
+| 规则 Top 150+（现 **511**） | ✅ |
 | `history` + 菜单 + 补全 | ✅ |
 | 协议 FROZEN | ✅ |
 | Developer ID + 公证 | ✅（v0.0.9+） |
@@ -28,14 +28,14 @@
 | 类 | 条数 | 处理 |
 |---|---|---|
 | `all` 刻意跳过 | 2 | pending-uploads / Rosetta `/Library` |
-| custom 可选 | ~8 | Toolbox / Codex staging / orphaned / 动态 label → **v1.x** |
+| custom 可选 | ~5 | orphaned / 动态 label → 延后 |
 
 ## v1.x backlog
 
-| ID | 内容 | 估时 |
+| ID | 内容 | 状态 |
 |---|---|---|
-| B1 | JetBrains Toolbox 旧 IDE keep-N | 1–2d |
-| B2 | Codex Desktop stale staging（无 lsof） | 0.5–1d |
-| B3 | plan 同路径去重 | 1d |
-| B4 | orphaned apps | ≥1w + 安全评审 |
+| B1 | JetBrains Toolbox 旧 IDE keep-N | ✅ |
+| B2 | Codex Desktop stale staging（无 lsof） | ✅ |
+| B3 | plan 同路径去重 | ✅ |
+| B4 | orphaned apps | 延后（≥1w + 安全评审） |
 | C | SwiftUI 桌面 | 另仓 |

@@ -47,3 +47,30 @@ Caveats 已不再要求 `export VOLE_RULES_DIR`。
 ### 文档同步
 
 - `README.md` / `docs/findings/2026-07-phase5-signing.md` / `install.sh`：去掉强制 env；Homebrew 主路径两行（tap + install）。
+
+## Core formula
+
+候选：`docs/homebrew/vole-homebrew-core.rb`（源码构建，`std_cargo_args` + `pkgshare.install "data/rules"`）。
+
+### 本机构建
+
+临时 tap `wukongnotnull/vole-core-test`：
+
+```text
+==> cargo install --path=crates/vole-cli
+🍺  /opt/homebrew/Cellar/vole/1.2.0: 14 files, 5.8MB, built in 2 minutes 17 seconds
+```
+
+无 `VOLE_RULES_DIR`：`vole clean --plan` → entries=989，exit 0。
+
+### Audit
+
+```bash
+brew audit --strict --online wukongnotnull/vole-core-test/vole
+```
+
+初版问题（已修进候选）：
+
+- Use `pkgshare` instead of `share/"vole"`（两处）
+
+`--new` audit 结果见下方续记。

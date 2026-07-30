@@ -46,7 +46,7 @@ class Vole < Formula
       bin.install root/"bin/vole"
       (share/"vole/rules").install Dir[root/"share/vole/rules/*.toml"]
     else
-      system "cargo", "install", *std_cargo_install_args(path: "crates/vole-cli")
+      system "cargo", "install", *std_cargo_args(path: "crates/vole-cli")
       (share/"vole").install "data/rules"
     end
   end

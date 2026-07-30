@@ -17,6 +17,16 @@ pub fn load_rules_from_file(path: impl AsRef<Path>) -> Result<Vec<Rule>, LoadErr
     load_rules_from_str(&content)
 }
 
+/// Candidates relative to the directory that contains the `vole` binary.
+///
+/// Homebrew / release layout installs rules at `../share/vole/rules` from `bin/`.
+pub(crate) fn rules_dir_candidates_from_exe_parent(parent: &Path) -> [PathBuf; 2] {
+    [
+        parent.join("data/rules"),
+        parent.join("../share/vole/rules"),
+    ]
+}
+
 /// 默认规则数据目录：开发构建用 `data/rules`，安装布局或 `VOLE_RULES_DIR` 可覆盖。
 pub fn default_rules_dir() -> PathBuf {
     if let Ok(dir) = std::env::var("VOLE_RULES_DIR") {
@@ -24,10 +34,7 @@ pub fn default_rules_dir() -> PathBuf {
     }
     if let Ok(exe) = std::env::current_exe() {
         if let Some(parent) = exe.parent() {
-            for candidate in [
-                parent.join("data/rules"),
-                parent.join("../share/vole/rules"),
-            ] {
+            for candidate in rules_dir_candidates_from_exe_parent(parent) {
                 if candidate.is_dir() {
                     return candidate;
                 }
@@ -109,5 +116,32 @@ mod tests {
         let rules = load_rules_from_dir(dir).expect("load dir");
         assert!(rules.iter().any(|r| r.id == "chrome-cache"));
         assert!(rules.iter().any(|r| r.id == "codex-stale-runtimes"));
+    }
+
+    #[test]
+    fn default_rules_dir_finds_share_layout_relative_to_exe() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bin = tmp.path().join("bin");
+        let rules = tmp.path().join("share/vole/rules");
+        std::fs::create_dir_all(&bin).unwrap();
+        std::fs::create_dir_all(&rules).unwrap();
+        std::fs::write(rules.join("probe.toml"), "rule = []\n").unwrap();
+
+        let candidates = rules_dir_candidates_from_exe_parent(&bin);
+        let share = &candidates[1];
+        assert!(
+            share.is_dir(),
+            "Homebrew Cellar relative layout must resolve: {}",
+            share.display()
+        );
+        assert!(
+            share
+                .canonicalize()
+                .unwrap()
+                .ends_with("share/vole/rules"),
+            "canonical path should end with share/vole/rules"
+        );
+        let loaded = load_rules_from_dir(share).expect("load share rules");
+        assert!(loaded.is_empty(), "probe.toml has empty rule list");
     }
 }

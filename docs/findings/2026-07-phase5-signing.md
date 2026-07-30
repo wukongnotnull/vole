@@ -16,6 +16,8 @@
 
 ## 快速开始（本机 Mac）
 
+**注意**：Cursor 内置终端使用临时 `HOME`，`security find-identity` 常显示 0，与「钥匙串访问」GUI 不一致。请在 **终端.app** 中执行以下命令。
+
 ```bash
 # 1. 从 Apple Developer 下载 Developer ID Application 证书，双击安装到「登录」钥匙串
 # 2. 配置环境（不提交 git）

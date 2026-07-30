@@ -40,6 +40,33 @@ pub struct UninstallApplyContext<'a> {
     pub now: SystemTime,
 }
 
+pub fn apply_uninstall_plan(
+    plan: &ProtoPlan,
+    protection: &AppProtection,
+    options: UninstallApplyOptions,
+    on_event: Option<&dyn Fn(StreamEvent)>,
+) -> Result<Report, UninstallApplyError> {
+    let deletion_log = DeletionLogger::from_env();
+    let mut oplog = OperationLogger::new("uninstall");
+    let _ = oplog.session_start();
+    let mut ctx = UninstallApplyContext {
+        protection,
+        whitelist_patterns: &[],
+        options,
+        trash: &vole_sys::macos::MacTrash,
+        deletion_log: &deletion_log,
+        oplog: &mut oplog,
+        on_event,
+        now: SystemTime::now(),
+    };
+    let report = apply_uninstall_proto_plan(plan, &mut ctx)?;
+    let _ = oplog.session_end(
+        report.succeeded,
+        report.trashed_bytes / 1024 + report.deleted_bytes / 1024,
+    );
+    Ok(report)
+}
+
 pub fn apply_uninstall_proto_plan(
     plan: &ProtoPlan,
     ctx: &mut UninstallApplyContext<'_>,

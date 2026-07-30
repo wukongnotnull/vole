@@ -7,6 +7,7 @@ mod interactive;
 mod signals;
 mod terminal;
 mod tui;
+mod uninstall;
 
 use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
@@ -85,6 +86,32 @@ enum Command {
             conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist"]
         )]
         whitelist_list: bool,
+    },
+    /// 卸载应用及其用户域残留（plan → apply）。
+    Uninstall {
+        /// 只产出候选集，不改动任何文件（默认）。
+        #[arg(long, conflicts_with = "apply")]
+        plan: bool,
+        /// 同 `--plan`。
+        #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
+        dry_run: bool,
+        /// 执行 plan 文件中的条目。
+        #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
+        apply: Option<PathBuf>,
+        /// 永久删除而非移入废纸篓（仅与 `--apply` 联用）。
+        #[arg(long, requires = "apply")]
+        permanent: bool,
+        /// 输出 JSON。
+        #[arg(long)]
+        json: bool,
+        /// NDJSON 事件流。
+        #[arg(long = "json-stream")]
+        json_stream: bool,
+        /// 将 plan JSON 写入文件。
+        #[arg(long, conflicts_with = "apply")]
+        plan_out: Option<PathBuf>,
+        /// 可选：按 bundle id / 应用名过滤。
+        target: Option<String>,
     },
     /// 实时系统监控。
     Status {
@@ -167,6 +194,26 @@ fn main() {
                 whitelist_add,
                 whitelist_remove,
                 whitelist_list,
+            });
+            std::process::exit(code);
+        }
+        Some(Command::Uninstall {
+            plan: _,
+            dry_run: _,
+            apply,
+            permanent,
+            json,
+            json_stream,
+            plan_out,
+            target,
+        }) => {
+            let code = uninstall::run_uninstall(uninstall::UninstallOptions {
+                json,
+                json_stream,
+                plan_out,
+                apply_plan: apply,
+                permanent,
+                target,
             });
             std::process::exit(code);
         }

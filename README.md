@@ -26,7 +26,7 @@
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | 早期可用（核心命令已落地） | 成熟、功能最全 |
+| 成熟度 | **1.0.0**：v1 CLI 范围冻结 | 成熟、功能最全 |
 | 核心命令 | `status` / `analyze` / `clean` / `history` | 另有 `uninstall` / `optimize` / `purge` / `installer` 等 |
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |
@@ -53,19 +53,19 @@ export PATH="$HOME/.local/bin:$PATH"
 export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"
 ```
 
-**预编译包**（GitHub Release [v0.0.11](https://github.com/wukongnotnull/vole/releases/tag/v0.0.11)，**Developer ID 签名 + 公证**）：
+**预编译包**（GitHub Release [v1.0.0](https://github.com/wukongnotnull/vole/releases/tag/v1.0.0)，**Developer ID 签名 + 公证**）：
 
 ```bash
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v0.0.11/vole-0.0.11-aarch64-apple-darwin.tar.gz
-tar xzf vole-0.0.11-aarch64-apple-darwin.tar.gz
-install -m 755 vole-0.0.11-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-mkdir -p ~/.local/share/vole && cp -R vole-0.0.11-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v1.0.0/vole-1.0.0-aarch64-apple-darwin.tar.gz
+tar xzf vole-1.0.0-aarch64-apple-darwin.tar.gz
+install -m 755 vole-1.0.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+mkdir -p ~/.local/share/vole && cp -R vole-1.0.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"
 ```
 
 Intel 将 `aarch64-apple-darwin` 换为 `x86_64-apple-darwin`。
 
-**Homebrew（stable v0.0.11）**：
+**Homebrew（stable v1.0.0）**：
 
 ```bash
 brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
@@ -131,8 +131,10 @@ VERIFY_LOCAL_SKIP_CROSS=1 bash scripts/verify-local.sh
 | Phase 2 `status` | 可用 |
 | Phase 3 `analyze` | 可用（目录模式） |
 | Phase 4 `clean` | 可用；规则 **511** 条 |
-| Phase 5 `history` + 协议冻结 + 菜单 / 补全 | 可用；**v0.0.11** Developer ID + 公证（发版 509；main **511**） |
+| Phase 5 `history` + 协议冻结 + 菜单 / 补全 | 可用；**v1.0.0** Developer ID + 公证（**511** 规则） |
 | **v1 closeout** | 范围冻结；见 [`docs/wukong-code/specs/2026-07-30-v1-closeout-design.md`](docs/wukong-code/specs/2026-07-30-v1-closeout-design.md) |
+
+**版本策略**：严格 SemVer；见 [`docs/wukong-code/specs/2026-07-30-semver-policy-design.md`](docs/wukong-code/specs/2026-07-30-semver-policy-design.md)。
 
 设计与计划见 `docs/wukong-code/`；规则收官见 [`docs/findings/2026-07-phase4c-v1-summary.md`](docs/findings/2026-07-phase4c-v1-summary.md) 与 [`docs/findings/2026-07-phase4c-plus-summary.md`](docs/findings/2026-07-phase4c-plus-summary.md)；v1 收口见 [`docs/findings/2026-07-v1-closeout.md`](docs/findings/2026-07-v1-closeout.md)。
 

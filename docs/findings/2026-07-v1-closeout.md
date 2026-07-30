@@ -1,7 +1,7 @@
 # Vole v1 Closeout 勾选
 
 **日期**：2026-07-30  
-**状态**：完成（v0.0.11 已发布；v1.x B1–B3 见 `2026-07-v1x-dedup-codex-toolbox.md`）  
+**状态**：完成（产品目标于 v0.0.11；包版本于 **v1.0.0** 对齐 SemVer；B1–B3 见 `2026-07-v1x-dedup-codex-toolbox.md`）  
 **设计**：[`docs/wukong-code/specs/2026-07-30-v1-closeout-design.md`](../wukong-code/specs/2026-07-30-v1-closeout-design.md)  
 **计划**：[`docs/wukong-code/plans/2026-07-30-v1-closeout.md`](../wukong-code/plans/2026-07-30-v1-closeout.md)
 
@@ -18,8 +18,9 @@
 | `history` + 菜单 + 补全 | ✅ |
 | 协议 FROZEN | ✅ |
 | Developer ID + 公证 | ✅（v0.0.9+） |
-| Homebrew Formula | ✅（0.0.11） |
-| v0.0.11 发版（509） | ✅ |
+| Homebrew Formula | ✅（1.0.0） |
+| v0.0.11 发版（509） | ✅（历史；前 SemVer 纪律） |
+| **v1.0.0** 包版本对齐（511） | ✅ |
 | 桌面 app | ❌ 非目标 |
 | uninstall / optimize / purge / … | ❌ 非目标 |
 

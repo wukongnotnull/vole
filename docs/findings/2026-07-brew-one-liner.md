@@ -92,3 +92,22 @@ Homebrew Core new formula PR：https://github.com/Homebrew/homebrew-core/pull/29
 | 5 | PR 或阻塞说明 | https://github.com/Homebrew/homebrew-core/pull/296168 |
 
 本仓部分已交付；真正一行 `brew install vole` 取决于 Core PR 合并。
+
+## Homebrew Core CI（2026-07-30）
+
+[PR #296168](https://github.com/Homebrew/homebrew-core/pull/296168) CI 失败根因（`brew audit --online --new`）：
+
+```text
+Self-submitted GitHub repository not notable enough
+(<90 forks, <90 watchers and <225 stars)
+```
+
+本机/CI 构建本身成功（x86 bottle 已打出）；阻塞是 **Homebrew 新 formula 知名度门禁**，不是编译错误。
+
+当时仓库指标：stars=0 / forks=0 / watchers=0（仓库创建于 2026-07-29）。
+
+**对策：**
+1. 短期：继续自建 tap 两行安装（已合并进 vole `main`）。
+2. 达标后再推 Core：需达到 forks≥90 **或** watchers≥90 **或** stars≥225（满足其一即可，以 audit 文案为准）。
+3. 不要为此改 formula「绕过」audit；无公开 exception 路径。
+

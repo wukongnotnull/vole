@@ -1,0 +1,14 @@
+{
+  "id": "adobe_app_caches_selects_child",
+  "source_bats": "manual",
+  "source_test": "adobe-app-caches selects glob child under com.adobe.*",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.adobe.Photoshop/temp"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.adobe.Photoshop/temp|Adobe app caches"
+  ],
+  "expect_not_selected": []
+}

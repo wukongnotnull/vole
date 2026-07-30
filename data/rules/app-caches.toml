@@ -679,6 +679,32 @@ last_verified = "2026-07"
 kind = "all"
 
 [[rule]]
+id = "adobe-app-caches"
+category = "app-caches"
+label = "Adobe app caches"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.adobe.*/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "adobe-media-cache-files"
+category = "app-caches"
+label = "Adobe media cache files"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Adobe/Common/Media Cache Files/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
 id = "screenflow-cache"
 category = "app-caches"
 label = "ScreenFlow cache"

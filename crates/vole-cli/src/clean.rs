@@ -12,7 +12,7 @@ use vole_core::ops::{
     ApplyPlanOptions, OpsError, Orchestrator, Plan, ProtoPlanError,
 };
 use vole_core::protection::AppProtection;
-use vole_core::rules::{default_rules_dir, load_rules_from_dir, LoadError};
+use vole_core::rules::{default_rules_dir, load_rules_from_dir, LoadError, PgrepProcessProbe};
 use vole_core::units;
 use vole_core::vole_proto::{Plan as ProtoPlan, Report, StreamEvent, SCHEMA_VERSION};
 use vole_core::whitelist;
@@ -133,11 +133,13 @@ fn run_apply(opts: &CleanOptions, plan_path: &PathBuf) -> io::Result<()> {
     let json = std::fs::read_to_string(plan_path)?;
     let plan: ProtoPlan = serde_json::from_str(&json).map_err(io::Error::other)?;
 
+    let rules = load_rules_from_dir(default_rules_dir()).map_err(map_load_error)?;
     let whitelist_patterns = whitelist::load_clean()?;
     let protection = AppProtection::new();
     let apply_opts = ApplyPlanOptions {
         permanent: opts.permanent,
     };
+    let process_probe = PgrepProcessProbe;
 
     let report = if opts.json_stream {
         let (event_tx, event_rx) = unbounded();
@@ -150,6 +152,8 @@ fn run_apply(opts: &CleanOptions, plan_path: &PathBuf) -> io::Result<()> {
             &protection,
             &whitelist_patterns,
             apply_opts,
+            &rules,
+            &process_probe,
             Some(&on_event),
         )
         .map_err(map_apply_error)?;
@@ -158,8 +162,16 @@ fn run_apply(opts: &CleanOptions, plan_path: &PathBuf) -> io::Result<()> {
             .map_err(|_| io::Error::other("stream writer panicked"))??;
         report
     } else {
-        apply_proto_plan(&plan, &protection, &whitelist_patterns, apply_opts, None)
-            .map_err(map_apply_error)?
+        apply_proto_plan(
+            &plan,
+            &protection,
+            &whitelist_patterns,
+            apply_opts,
+            &rules,
+            &process_probe,
+            None,
+        )
+        .map_err(map_apply_error)?
     };
 
     write_apply_output(opts, &report)?;

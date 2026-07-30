@@ -10,6 +10,7 @@ use crate::delete::{
 };
 use crate::oplog::OperationLogger;
 use crate::protection::AppProtection;
+use crate::rules::{should_skip_for_not_running, ProcessProbe, Rule};
 use crate::safety::{
     verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity, ValidationError,
 };
@@ -38,6 +39,8 @@ pub struct ApplyPlanContext<'a> {
     pub trash: &'a dyn Trash,
     pub deletion_log: &'a DeletionLogger,
     pub oplog: &'a mut OperationLogger,
+    pub rules: &'a [Rule],
+    pub process_probe: &'a dyn ProcessProbe,
     pub on_event: Option<&'a dyn Fn(StreamEvent)>,
     pub now: SystemTime,
 }
@@ -50,6 +53,8 @@ impl<'a> ApplyPlanContext<'a> {
         trash: &'a dyn Trash,
         deletion_log: &'a DeletionLogger,
         oplog: &'a mut OperationLogger,
+        rules: &'a [Rule],
+        process_probe: &'a dyn ProcessProbe,
         on_event: Option<&'a dyn Fn(StreamEvent)>,
     ) -> Self {
         Self {
@@ -59,6 +64,8 @@ impl<'a> ApplyPlanContext<'a> {
             trash,
             deletion_log,
             oplog,
+            rules,
+            process_probe,
             on_event,
             now: SystemTime::now(),
         }
@@ -70,6 +77,8 @@ pub fn apply_proto_plan(
     protection: &AppProtection,
     whitelist_patterns: &[String],
     options: ApplyPlanOptions,
+    rules: &[Rule],
+    process_probe: &dyn ProcessProbe,
     on_event: Option<&dyn Fn(StreamEvent)>,
 ) -> Result<Report, ApplyPlanError> {
     let deletion_log = DeletionLogger::with_path(crate::delete::deletion_log_path());
@@ -81,6 +90,8 @@ pub fn apply_proto_plan(
         &vole_sys::macos::MacTrash,
         &deletion_log,
         &mut oplog,
+        rules,
+        process_probe,
         on_event,
     );
     apply_plan(plan, &mut ctx)
@@ -135,6 +146,20 @@ pub fn apply_plan(
             }
             skip_tracker.record(reason, &entry.rule_id);
             continue;
+        }
+
+        if let Some(rule) = ctx.rules.iter().find(|r| r.id == entry.rule_id) {
+            if should_skip_for_not_running(ctx.process_probe, &rule.guards.not_running) {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::AppRunning,
+                    });
+                }
+                skip_tracker.record(SkipReason::AppRunning, &entry.rule_id);
+                continue;
+            }
         }
 
         let path = entry.path.display().to_string();
@@ -344,20 +369,47 @@ mod tests {
         deletion_log: &DeletionLogger,
         oplog: &mut OperationLogger,
         now: Option<SystemTime>,
+        rules: &[crate::rules::Rule],
+        process_probe: &dyn crate::rules::ProcessProbe,
+        trash: &dyn Trash,
     ) -> Result<Report, ApplyPlanError> {
         let mut ctx = ApplyPlanContext::new(
             protection,
             &[],
             options,
-            &MacTrash,
+            trash,
             deletion_log,
             oplog,
+            rules,
+            process_probe,
             None,
         );
         if let Some(now) = now {
             ctx.now = now;
         }
         apply_plan(plan, &mut ctx)
+    }
+
+    fn run_apply_defaults(
+        plan: &ProtoPlan,
+        protection: &AppProtection,
+        options: ApplyPlanOptions,
+        deletion_log: &DeletionLogger,
+        oplog: &mut OperationLogger,
+        now: Option<SystemTime>,
+    ) -> Result<Report, ApplyPlanError> {
+        let probe = crate::rules::FakeProcessProbe::default();
+        run_apply(
+            plan,
+            protection,
+            options,
+            deletion_log,
+            oplog,
+            now,
+            &[],
+            &probe,
+            &MacTrash,
+        )
     }
 
     #[test]
@@ -374,7 +426,7 @@ mod tests {
         let mut oplog = OperationLogger::new("clean");
         let now = UNIX_EPOCH + Duration::from_secs(120);
 
-        let err = run_apply(
+        let err = run_apply_defaults(
             &plan,
             &protection,
             apply_opts(false),
@@ -404,7 +456,7 @@ mod tests {
         let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
         let mut oplog = OperationLogger::new("clean");
 
-        let report = run_apply(
+        let report = run_apply_defaults(
             &plan,
             &protection,
             apply_opts(false),
@@ -436,7 +488,7 @@ mod tests {
         let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
         let mut oplog = OperationLogger::new("clean");
 
-        let report = run_apply(
+        let report = run_apply_defaults(
             &plan,
             &protection,
             apply_opts(false),
@@ -473,7 +525,7 @@ mod tests {
         let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
         let mut oplog = OperationLogger::new("clean");
 
-        let report = run_apply(
+        let report = run_apply_defaults(
             &plan,
             &protection,
             apply_opts(true),
@@ -491,6 +543,97 @@ mod tests {
 
         std::env::remove_var("MOLE_TEST_TRASH_DIR");
         std::env::remove_var("MOLE_DELETE_LOG");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_skips_when_not_running_guard_hits_at_apply() {
+        use crate::rules::{FakeProcessProbe, Rule, StrategyConfig};
+        use std::collections::HashSet;
+        use std::sync::Mutex;
+
+        struct FakeTrash {
+            calls: Mutex<Vec<PathBuf>>,
+        }
+
+        impl Default for FakeTrash {
+            fn default() -> Self {
+                Self {
+                    calls: Mutex::new(Vec::new()),
+                }
+            }
+        }
+
+        impl Trash for FakeTrash {
+            fn trash_path(
+                &self,
+                path: &std::path::Path,
+                _timeout: Duration,
+            ) -> std::io::Result<()> {
+                self.calls.lock().unwrap().push(path.to_path_buf());
+                Ok(())
+            }
+        }
+
+        fn all_rule(id: &str) -> Rule {
+            Rule {
+                id: id.into(),
+                category: None,
+                label: format!("label-{id}"),
+                platform: vec![],
+                paths: vec![],
+                impact: None,
+                disabled: false,
+                last_verified: None,
+                strategy: StrategyConfig::default(),
+                guards: Default::default(),
+            }
+        }
+
+        let _guard = test_env::lock();
+        let root = scratch("apply-not-running");
+        let file = root.join("victim.txt");
+        fs::write(&file, b"keep-me").unwrap();
+
+        let rule_id = "firefox-cache";
+        let mut rule = all_rule(rule_id);
+        rule.guards.not_running = vec!["Firefox".into()];
+
+        let plan = fresh_plan(vec![plan_entry(&file, rule_id)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+
+        let probe = FakeProcessProbe {
+            running: HashSet::from(["Firefox".into()]),
+            unknown: HashSet::new(),
+        };
+        let fake_trash = FakeTrash::default();
+
+        let report = run_apply(
+            &plan,
+            &protection,
+            apply_opts(false),
+            &deletion_log,
+            &mut oplog,
+            None,
+            std::slice::from_ref(&rule),
+            &probe,
+            &fake_trash,
+        )
+        .unwrap();
+
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(file.exists());
+        assert!(fake_trash.calls.lock().unwrap().is_empty());
+        assert!(
+            report
+                .skipped_by_reason
+                .iter()
+                .any(|s| s.reason == SkipReason::AppRunning)
+        );
+
         fs::remove_dir_all(&root).ok();
     }
 
@@ -514,7 +657,7 @@ mod tests {
         let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
         let mut oplog = OperationLogger::new("clean");
 
-        let report = run_apply(
+        let report = run_apply_defaults(
             &plan,
             &protection,
             apply_opts(false),

@@ -17,6 +17,7 @@ struct ProtectionFile {
 #[derive(Debug, Clone)]
 pub struct ProtectionCatalog {
     data_protected: Vec<Pattern>,
+    system_critical: Vec<Pattern>,
     /// cleanup 模式合并 system + data pattern（对齐 mole `should_protect_path` step 6）。
     cleanup_patterns: Vec<Pattern>,
 }
@@ -26,16 +27,21 @@ impl ProtectionCatalog {
         let file: ProtectionFile = toml::from_str(EMBEDDED_TOML).expect("protection.toml parse");
         let system_critical = compile_patterns(&file.system_critical_bundles);
         let data_protected = compile_patterns(&file.data_protected_bundles);
-        let mut cleanup_patterns = system_critical;
+        let mut cleanup_patterns = system_critical.clone();
         cleanup_patterns.extend(data_protected.clone());
         Self {
             data_protected,
+            system_critical,
             cleanup_patterns,
         }
     }
 
     pub fn matches_cleanup_pattern(&self, text: &str) -> bool {
         self.cleanup_patterns.iter().any(|p| p.matches(text))
+    }
+
+    pub fn matches_system_critical(&self, text: &str) -> bool {
+        self.system_critical.iter().any(|p| p.matches(text))
     }
 
     pub fn matches_data_protected(&self, text: &str) -> bool {

@@ -6,6 +6,13 @@ use super::bundle::should_protect_data;
 use super::data::ProtectionCatalog;
 use crate::safety::is_endpoint_security_cache_path;
 
+/// cleanup = 日常清理；uninstall = Mole `MOLE_UNINSTALL_MODE=1`。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProtectionMode {
+    Cleanup,
+    Uninstall,
+}
+
 fn ci_contains(haystack: &str, needle: &str) -> bool {
     haystack
         .to_ascii_lowercase()
@@ -34,8 +41,13 @@ fn is_container_cache_or_tmp(path: &str) -> bool {
     path.contains("/Data/Library/Caches/") || path.contains("/Data/tmp/")
 }
 
-/// cleanup 模式下的路径保护（`MOLE_UNINSTALL_MODE` 未实现，仅 cleanup）。
-pub fn should_protect_path(path: &str, catalog: &ProtectionCatalog) -> bool {
+/// 路径保护。`Cleanup` 对齐现网；`Uninstall` 对齐 mole `MOLE_UNINSTALL_MODE=1`
+///（不因 data-protected 拦截；仍拦 system-critical / EDR / 关键路径）。
+pub fn should_protect_path(
+    path: &str,
+    catalog: &ProtectionCatalog,
+    mode: ProtectionMode,
+) -> bool {
     if path.is_empty() {
         return false;
     }
@@ -78,7 +90,7 @@ pub fn should_protect_path(path: &str, catalog: &ProtectionCatalog) -> bool {
     if let Some(bundle_id) = extract_container_bundle_id(path) {
         if is_container_cache_or_tmp(path) {
             container_cache = true;
-        } else if should_protect_data(&bundle_id, catalog) {
+        } else if mode == ProtectionMode::Cleanup && should_protect_data(&bundle_id, catalog) {
             return true;
         }
     }
@@ -103,15 +115,19 @@ pub fn should_protect_path(path: &str, catalog: &ProtectionCatalog) -> bool {
     }
 
     // 6. Full-path pattern lists
-    if !container_cache
-        && !is_explicit_clean_cache_path(path)
-        && catalog.matches_cleanup_pattern(path)
-    {
-        return true;
+    if !container_cache && !is_explicit_clean_cache_path(path) {
+        let matched = match mode {
+            ProtectionMode::Cleanup => catalog.matches_cleanup_pattern(path),
+            // Apple uninstallable allowlist 在 Task 3；此处仅 system-critical。
+            ProtectionMode::Uninstall => catalog.matches_system_critical(path),
+        };
+        if matched {
+            return true;
+        }
     }
 
-    // 7. Filename fallback — skip for explicit cache/log targets (align mole safe_clean).
-    if !container_cache {
+    // 7. Filename fallback — cleanup only（uninstall：用户已显式选择卸载）。
+    if mode == ProtectionMode::Cleanup && !container_cache {
         if let Some(name) = Path::new(path).file_name().and_then(|n| n.to_str()) {
             if !is_explicit_clean_cache_path(path) && should_protect_data(name, catalog) {
                 return true;
@@ -280,15 +296,15 @@ mod tests {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/test".into());
         assert!(!should_protect_path(
             &format!("{home}/Library/Caches/com.navicat.premium"),
-            &c
+            &c, ProtectionMode::Cleanup
         ));
         assert!(!should_protect_path(
             &format!("{home}/Library/Caches/com.dbeaver.DBeaver"),
-            &c
+            &c, ProtectionMode::Cleanup
         ));
         assert!(!should_protect_path(
             &format!("{home}/Library/Caches/com.postmanlabs.mac/item"),
-            &c
+            &c, ProtectionMode::Cleanup
         ));
     }
 
@@ -299,19 +315,19 @@ mod tests {
         let shared = format!("{home}/Library/Application Support/com.apple.sharedfilelist");
         assert!(!should_protect_path(
             &format!("{shared}/com.apple.LSSharedFileList.RecentApplications.sfl2"),
-            &c
+            &c, ProtectionMode::Cleanup
         ));
         assert!(!should_protect_path(
             &format!("{home}/Library/Preferences/com.apple.recentitems.plist"),
-            &c
+            &c, ProtectionMode::Cleanup
         ));
         assert!(should_protect_path(
             &format!("{shared}/com.apple.LSSharedFileList.FavoriteVolumes.sfl2"),
-            &c
+            &c, ProtectionMode::Cleanup
         ));
         assert!(should_protect_path(
             &format!("{shared}/com.apple.settings.sfl2"),
-            &c
+            &c, ProtectionMode::Cleanup
         ));
     }
 
@@ -321,31 +337,31 @@ mod tests {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/test".into());
         assert!(should_protect_path(
             &format!("{home}/Library/Caches/ms-playwright/chromium-123"),
-            &c
+            &c, ProtectionMode::Cleanup
         ));
         assert!(should_protect_path(
             &format!("{home}/Library/Caches/com.apple.homed/state"),
-            &c
+            &c, ProtectionMode::Cleanup
         ));
         assert!(should_protect_path(
             &format!("{home}/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite"),
-            &c
+            &c, ProtectionMode::Cleanup
         ));
         assert!(should_protect_path(
             &format!("{home}/Library/Preferences/com.paceap.eden.iLokLicenseManager.plist"),
-            &c
+            &c, ProtectionMode::Cleanup
         ));
         assert!(should_protect_path(
             "/private/var/folders/aa/bb/C/com.native-instruments.NativeAccess/license",
-            &c
+            &c, ProtectionMode::Cleanup
         ));
         assert!(should_protect_path(
             "/Library/Audio/Plug-Ins/VST3/Example.vst3",
-            &c
+            &c, ProtectionMode::Cleanup
         ));
         assert!(!should_protect_path(
             &format!("{home}/Library/Application Support/Example/Cache/item"),
-            &c
+            &c, ProtectionMode::Cleanup
         ));
     }
 
@@ -354,7 +370,7 @@ mod tests {
         let c = cat();
         assert!(should_protect_path(
             "/private/var/folders/9d/abc123/C/com.crowdstrike.falcon.App/com.apple.metalfe",
-            &c
+            &c, ProtectionMode::Cleanup
         ));
     }
 
@@ -364,11 +380,41 @@ mod tests {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/test".into());
         assert!(should_protect_path(
             &format!("{home}/Library/Group Containers/HUAQ24HBR6.dev.orbstack/data/data.img.raw"),
-            &c
+            &c, ProtectionMode::Cleanup
         ));
         assert!(should_protect_path(
             &format!("{home}/.orbstack/state.db"),
-            &c
+            &c, ProtectionMode::Cleanup
+        ));
+    }
+
+    #[test]
+    fn uninstall_mode_allows_data_protected_user_cache() {
+        let catalog = ProtectionCatalog::embedded();
+        let bundle = "com.freemacsoft.AppCleaner";
+        assert!(catalog.matches_data_protected(bundle));
+        // Application Support（非 explicit cache 路径）在 cleanup 下受 data_protected 保护。
+        let path = format!("/Users/test/Library/Application Support/{bundle}");
+        assert!(should_protect_path(
+            &path,
+            &catalog,
+            ProtectionMode::Cleanup
+        ));
+        assert!(!should_protect_path(
+            &path,
+            &catalog,
+            ProtectionMode::Uninstall
+        ));
+    }
+
+    #[test]
+    fn uninstall_mode_still_blocks_system_critical_path_keywords() {
+        let catalog = ProtectionCatalog::embedded();
+        let path = "/Users/test/Library/Caches/com.apple.finder.cache";
+        assert!(should_protect_path(
+            &path,
+            &catalog,
+            ProtectionMode::Uninstall
         ));
     }
 }

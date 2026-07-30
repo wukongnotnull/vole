@@ -3,11 +3,16 @@
 mod bundle;
 mod data;
 mod glob_match;
+mod leftovers;
 mod path;
 mod uninstall;
 
 pub use bundle::should_protect_data;
 pub use data::{OfficialUninstallerRule, ProtectionCatalog};
+pub use leftovers::{
+    find_app_leftovers, find_bundle_siblings, is_rejected_generic_name, is_reverse_dns_bundle_id,
+    naming_variants, read_bundle_id, read_display_name, AppIdentity, LeftoverHit, SiblingPresence,
+};
 pub use path::{should_protect_path, ProtectionMode};
 pub use uninstall::{official_uninstaller_vendor, should_protect_from_uninstall};
 

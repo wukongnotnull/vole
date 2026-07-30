@@ -945,6 +945,22 @@ last_verified = "2026-07"
 kind = "all"
 
 [[rule]]
+id = "jetbrains-toolbox-old-ide-version"
+category = "user-devtools"
+label = "JetBrains Toolbox old IDE version"
+platform = ["macos"]
+paths = ["~/Library/Application Support/JetBrains/Toolbox/apps/*"]
+impact = "删除 Toolbox 各 channel 中除最新 keep 份以外的旧 IDE 版本目录"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "custom"
+handler = "jetbrains_toolbox_old_versions"
+keep = 1
+env_override = "MOLE_JETBRAINS_TOOLBOX_KEEP"
+
+[[rule]]
 id = "container-storage-temp"
 category = "user-devtools"
 label = "Container storage temp"

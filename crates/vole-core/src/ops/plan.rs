@@ -296,6 +296,69 @@ mod tests {
     }
 
     #[test]
+    fn plan_selects_codex_desktop_stale_staging_by_age() {
+        let _guard = test_env::lock();
+        let home = scratch("codex-staging");
+        let staging =
+            home.join("Library/Caches/com.openai.codex/org.sparkle-project.Sparkle/Installation");
+        let old = staging.join("old-build");
+        let fresh = staging.join("fresh-build");
+        fs::create_dir_all(&old).unwrap();
+        fs::create_dir_all(&fresh).unwrap();
+        let old_mtime = SystemTime::UNIX_EPOCH + Duration::from_secs(1_700_000_000); // ~2023
+        let fresh_mtime = SystemTime::now();
+        filetime::set_file_mtime(&old, filetime::FileTime::from_system_time(old_mtime)).unwrap();
+        filetime::set_file_mtime(&fresh, filetime::FileTime::from_system_time(fresh_mtime))
+            .unwrap();
+        std::env::set_var("VOLE_TEST_HOME", &home);
+
+        let rule = Rule {
+            id: "codex-desktop-stale-update-staging".into(),
+            category: Some("developer".into()),
+            label: "Codex Desktop stale update staging".into(),
+            platform: vec![],
+            paths: vec![
+                "~/Library/Caches/com.openai.codex/org.sparkle-project.Sparkle/Installation/*"
+                    .into(),
+            ],
+            impact: None,
+            disabled: false,
+            last_verified: None,
+            strategy: StrategyConfig {
+                kind: crate::rules::StrategyKind::OlderThanDays,
+                keep: None,
+                env_override: None,
+                days: Some(30),
+                names: None,
+                handler: None,
+            },
+            guards: Default::default(),
+        };
+
+        let orch = Orchestrator::with_process_probe(
+            crate::cancel::CancelToken::new(),
+            None,
+            Arc::new(FakeProcessProbe::default()),
+        );
+        let plan = orch
+            .build_plan(&[rule], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert_eq!(
+            plan.entries.len(),
+            1,
+            "entries: {:?}",
+            plan.entries
+                .iter()
+                .map(|e| e.path.display().to_string())
+                .collect::<Vec<_>>()
+        );
+        assert!(plan.entries[0].path.ends_with("old-build"));
+        std::env::remove_var("VOLE_TEST_HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
     fn plan_dedupes_same_path_keeping_first_rule() {
         let _guard = test_env::lock();
         let dir = scratch("dedupe");

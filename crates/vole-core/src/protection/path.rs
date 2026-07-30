@@ -139,6 +139,10 @@ fn is_explicit_clean_cache_path(path: &str) -> bool {
     if is_explicit_recent_items_path(path) {
         return true;
     }
+    // mole `clean_dev_jetbrains_toolbox`: version dirs under Toolbox/apps.
+    if is_explicit_jetbrains_toolbox_apps_path(path) {
+        return true;
+    }
     const CACHE_SEGMENTS: &[&str] = &[
         "/Cache/",
         "/Code Cache/",
@@ -169,6 +173,10 @@ fn is_explicit_recent_items_path(path: &str) -> bool {
         || name.starts_with("com.apple.LSSharedFileList.RecentDocuments.")
         || name.starts_with("com.apple.LSSharedFileList.RecentServers.")
         || name.starts_with("com.apple.LSSharedFileList.RecentHosts.")
+}
+
+fn is_explicit_jetbrains_toolbox_apps_path(path: &str) -> bool {
+    path.contains("/Library/Application Support/JetBrains/Toolbox/apps/")
 }
 
 fn matches_critical_user_paths(path: &str) -> bool {

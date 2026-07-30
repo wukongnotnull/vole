@@ -183,6 +183,12 @@ mod verify_clean_fixtures {
             rules.iter().any(|r| r.id == "codex-stale-runtimes"),
             "expected codex runtime rule"
         );
+        let staging = rules
+            .iter()
+            .find(|r| r.id == "codex-desktop-stale-update-staging")
+            .expect("expected codex desktop staging rule");
+        assert_eq!(staging.strategy.days, Some(30));
+        assert!(!staging.guards.not_running_cmdline.is_empty());
 
         let dir = fixtures_dir();
         let entries: Vec<_> = fs::read_dir(&dir)

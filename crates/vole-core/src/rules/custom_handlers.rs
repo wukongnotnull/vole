@@ -3,6 +3,7 @@
 use std::cmp::Reverse;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 use crate::rules::schema::Rule;
 use crate::rules::strategy::PathEntry;
@@ -19,8 +20,96 @@ pub fn select_custom(
         "codex_stale_runtimes" => codex_stale_runtimes(entries),
         "final_cut_pro_generated_caches" => final_cut_pro_generated_caches(entries),
         "jianyingpro_generated_caches" => jianyingpro_generated_caches(entries),
+        "jetbrains_toolbox_old_versions" => jetbrains_toolbox_old_versions(entries, rule),
         _ => Vec::new(),
     }
+}
+
+/// JetBrains Toolbox: under each `apps/<product>/ch-*`, keep newest `keep` version
+/// dirs (by mtime), drop older ones. Aligns mole `clean_dev_jetbrains_toolbox`.
+fn jetbrains_toolbox_old_versions(entries: &[PathEntry], rule: &Rule) -> Vec<PathBuf> {
+    let keep = resolve_keep(rule);
+    let mut selected = Vec::new();
+    for entry in entries {
+        collect_toolbox_old_versions(&entry.path, keep, &mut selected);
+    }
+    selected
+}
+
+fn collect_toolbox_old_versions(product_dir: &Path, keep: usize, out: &mut Vec<PathBuf>) {
+    let Ok(channels) = fs::read_dir(product_dir) else {
+        return;
+    };
+    for channel in channels.flatten() {
+        let channel_path = channel.path();
+        let Some(name) = channel_path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        if !name.starts_with("ch-") || !channel_path.is_dir() {
+            continue;
+        }
+        collect_channel_old_versions(&channel_path, keep, out);
+    }
+}
+
+fn collect_channel_old_versions(channel_dir: &Path, keep: usize, out: &mut Vec<PathBuf>) {
+    let current_real = resolve_toolbox_current(channel_dir);
+
+    let Ok(entries) = fs::read_dir(channel_dir) else {
+        return;
+    };
+
+    let mut versions: Vec<(SystemTime, PathBuf)> = Vec::new();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        if name == "current" || name.starts_with('.') {
+            continue;
+        }
+        if name == "plugins" || name == "plugins-lib" || name == "plugins-libs" {
+            continue;
+        }
+        if !path.is_dir() {
+            continue;
+        }
+        if let Some(ref current) = current_real {
+            if &path == current {
+                continue;
+            }
+        }
+        if !name.chars().next().is_some_and(|c| c.is_ascii_digit()) {
+            continue;
+        }
+        let mtime = fs::symlink_metadata(&path)
+            .and_then(|m| m.modified())
+            .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+        versions.push((mtime, path));
+    }
+
+    versions.sort_by_key(|(mtime, _)| Reverse(*mtime));
+    for (_, path) in versions.into_iter().skip(keep) {
+        out.push(path);
+    }
+}
+
+fn resolve_toolbox_current(channel_dir: &Path) -> Option<PathBuf> {
+    let current = channel_dir.join("current");
+    let meta = fs::symlink_metadata(&current).ok()?;
+    if meta.file_type().is_symlink() {
+        let target = fs::read_link(&current).ok()?;
+        let resolved = if target.is_absolute() {
+            target
+        } else {
+            channel_dir.join(target)
+        };
+        return Some(resolved);
+    }
+    if meta.is_dir() {
+        return Some(current);
+    }
+    None
 }
 
 fn final_cut_pro_generated_caches(entries: &[PathEntry]) -> Vec<PathBuf> {
@@ -454,5 +543,61 @@ mod tests {
         ];
         let selected = codex_stale_runtimes(&entries);
         assert_eq!(selected, vec![stale]);
+    }
+
+    #[test]
+    fn jetbrains_toolbox_keeps_newest_and_skips_current() {
+        let tmp = tempfile::tempdir().unwrap();
+        let product = tmp.path().join("IntelliJIdea");
+        let channel = product.join("ch-0");
+        let v_old = channel.join("2023.1");
+        let v_mid = channel.join("2024.1");
+        let v_new = channel.join("2025.1");
+        fs::create_dir_all(&v_old).unwrap();
+        fs::create_dir_all(&v_mid).unwrap();
+        fs::create_dir_all(&v_new).unwrap();
+        std::os::unix::fs::symlink("2025.1", channel.join("current")).unwrap();
+
+        let t0 = SystemTime::UNIX_EPOCH + Duration::from_secs(100);
+        let t1 = SystemTime::UNIX_EPOCH + Duration::from_secs(200);
+        let t2 = SystemTime::UNIX_EPOCH + Duration::from_secs(300);
+        filetime::set_file_mtime(&v_old, filetime::FileTime::from_system_time(t0)).unwrap();
+        filetime::set_file_mtime(&v_mid, filetime::FileTime::from_system_time(t1)).unwrap();
+        filetime::set_file_mtime(&v_new, filetime::FileTime::from_system_time(t2)).unwrap();
+
+        let rule = Rule {
+            id: "jb".into(),
+            category: None,
+            label: "jb".into(),
+            platform: vec![],
+            paths: vec![],
+            impact: None,
+            disabled: false,
+            last_verified: None,
+            strategy: crate::rules::schema::StrategyConfig {
+                kind: crate::rules::schema::StrategyKind::Custom,
+                keep: Some(1),
+                env_override: Some("MOLE_JETBRAINS_TOOLBOX_KEEP".into()),
+                days: None,
+                names: None,
+                handler: Some("jetbrains_toolbox_old_versions".into()),
+            },
+            guards: Default::default(),
+        };
+
+        let selected =
+            jetbrains_toolbox_old_versions(&[entry(&product.to_string_lossy(), 1)], &rule);
+        assert_eq!(
+            selected.len(),
+            1,
+            "keep=1 among non-current → only oldest: {selected:?}"
+        );
+        assert!(selected[0].ends_with("2023.1"));
+        assert!(
+            !selected
+                .iter()
+                .any(|p| p.ends_with("2024.1") || p.ends_with("2025.1")),
+            "must keep newest non-current and current: {selected:?}"
+        );
     }
 }

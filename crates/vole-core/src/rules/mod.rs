@@ -4,6 +4,7 @@ mod candidate;
 mod custom_handlers;
 mod glob;
 mod load;
+mod process_guard;
 mod schema;
 mod strategy;
 
@@ -12,6 +13,9 @@ pub use custom_handlers::select_custom;
 pub use glob::{collect_path_candidates, expand_rule_path, GlobError};
 pub use load::{
     default_rules_dir, load_rules_from_dir, load_rules_from_file, load_rules_from_str, LoadError,
+};
+pub use process_guard::{
+    should_skip_for_not_running, FakeProcessProbe, ProcessProbe, ProcessState,
 };
 pub use schema::{
     BrokenSymlinkAction, GuardsConfig, Rule, RulesFile, StrategyConfig, StrategyKind,

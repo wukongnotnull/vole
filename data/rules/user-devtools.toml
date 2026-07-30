@@ -2243,6 +2243,54 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["Firefox"]
+
+[[rule]]
+id = "dropbox-cache"
+category = "user-devtools"
+label = "Dropbox cache"
+platform = ["macos"]
+paths = [
+  "~/Library/Caches/com.dropbox.*",
+  "~/Library/Caches/com.getdropbox.dropbox",
+]
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["Dropbox"]
+
+[[rule]]
+id = "google-drive-cache"
+category = "user-devtools"
+label = "Google Drive cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.google.GoogleDrive"]
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["Google Drive"]
+
+[[rule]]
+id = "onedrive-cache"
+category = "user-devtools"
+label = "OneDrive cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.microsoft.OneDrive"]
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["OneDrive"]
+
 [[rule]]
 id = "firefox-profile-cache"
 category = "user-devtools"

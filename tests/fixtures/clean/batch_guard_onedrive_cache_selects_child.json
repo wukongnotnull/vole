@@ -1,0 +1,14 @@
+{
+  "id": "batch_guard_onedrive_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "onedrive-cache selects cache dir when OneDrive idle",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.microsoft.OneDrive"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.microsoft.OneDrive|OneDrive cache"
+  ],
+  "expect_not_selected": []
+}

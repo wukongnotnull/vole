@@ -1,0 +1,18 @@
+{
+  "id": "batch_guard_dropbox_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "dropbox-cache selects com.dropbox.* child when Dropbox idle",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.dropbox.foo"
+    },
+    {
+      "write": "~/Library/Caches/com.dropbox.foo/cache.db",
+      "content": "fixture"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.dropbox.foo|Dropbox cache"
+  ],
+  "expect_not_selected": []
+}

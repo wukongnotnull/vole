@@ -1,0 +1,14 @@
+{
+  "id": "batch_guard_firefox_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "firefox-cache selects glob child when Firefox idle",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/Firefox/temp"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/Firefox/temp|Firefox cache"
+  ],
+  "expect_not_selected": []
+}

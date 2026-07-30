@@ -1,0 +1,14 @@
+{
+  "id": "batch_guard_google_drive_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "google-drive-cache selects cache dir when Google Drive idle",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.google.GoogleDrive"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.google.GoogleDrive|Google Drive cache"
+  ],
+  "expect_not_selected": []
+}

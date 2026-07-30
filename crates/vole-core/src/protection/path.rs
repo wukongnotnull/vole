@@ -430,7 +430,7 @@ mod tests {
         let catalog = ProtectionCatalog::embedded();
         let path = "/Users/test/Library/Caches/com.apple.finder.cache";
         assert!(should_protect_path(
-            &path,
+            path,
             &catalog,
             ProtectionMode::Uninstall
         ));

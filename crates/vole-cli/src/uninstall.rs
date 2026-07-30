@@ -2,7 +2,7 @@
 
 use std::env;
 use std::io::{self, IsTerminal, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::thread;
 
 use crossbeam_channel::unbounded;
@@ -138,7 +138,7 @@ fn run_apply(opts: &UninstallOptions, plan_path: &PathBuf) -> io::Result<()> {
     Ok(())
 }
 
-fn applications_dirs_from_env(home: &PathBuf) -> Vec<PathBuf> {
+fn applications_dirs_from_env(home: &Path) -> Vec<PathBuf> {
     if let Ok(raw) = env::var("VOLE_APPLICATIONS_DIR") {
         return raw
             .split(':')

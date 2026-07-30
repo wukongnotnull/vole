@@ -1,0 +1,14 @@
+{
+  "id": "browser_guard_yandex_gr_shader_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "yandex-gr-shader-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Yandex/YandexBrowser/GrShaderCache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Yandex/YandexBrowser/GrShaderCache/item|Yandex GR shader cache"
+  ],
+  "expect_not_selected": []
+}

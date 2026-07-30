@@ -2631,6 +2631,10 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["Vivaldi"]
+
+
 [[rule]]
 id = "vivaldi-gr-shader-cache"
 category = "user-devtools"
@@ -2644,6 +2648,10 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["Vivaldi"]
+
+
 [[rule]]
 id = "vivaldi-crash-reports"
 category = "user-devtools"
@@ -2656,6 +2664,10 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+
+[rule.guards]
+not_running = ["Vivaldi"]
+
 
 [[rule]]
 id = "comet-cache"
@@ -2709,6 +2721,10 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["QQBrowser3"]
+
+
 [[rule]]
 id = "qq-browser-component-cache"
 category = "user-devtools"
@@ -2722,6 +2738,10 @@ last_verified = "2026-07"
 [rule.strategy]
 kind = "all"
 
+[rule.guards]
+not_running = ["QQBrowser3"]
+
+
 [[rule]]
 id = "qq-browser-crash-reports"
 category = "user-devtools"
@@ -2734,6 +2754,10 @@ last_verified = "2026-07"
 
 [rule.strategy]
 kind = "all"
+
+[rule.guards]
+not_running = ["QQBrowser3"]
+
 [[rule]]
 id = "utm-temporary-files"
 category = "user-devtools"
@@ -3178,3 +3202,193 @@ kind = "all"
 
 [rule.guards]
 not_running = ["Arc"]
+
+[[rule]]
+id = "vivaldi-cache"
+category = "user-devtools"
+label = "Vivaldi cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.vivaldi.Vivaldi/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "vivaldi-code-cache"
+category = "user-devtools"
+label = "Vivaldi code cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Vivaldi/*/Code Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["Vivaldi"]
+
+[[rule]]
+id = "vivaldi-gpu-cache"
+category = "user-devtools"
+label = "Vivaldi GPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Vivaldi/*/GPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["Vivaldi"]
+
+[[rule]]
+id = "vivaldi-profile-dawn-cache"
+category = "user-devtools"
+label = "Vivaldi profile Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Vivaldi/*/DawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["Vivaldi"]
+
+[[rule]]
+id = "yandex-dawn-cache"
+category = "user-devtools"
+label = "Yandex Dawn cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Yandex/YandexBrowser/GraphiteDawnCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "yandex-gpu-cache"
+category = "user-devtools"
+label = "Yandex GPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Yandex/YandexBrowser/*/GPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "yandex-gr-shader-cache"
+category = "user-devtools"
+label = "Yandex GR shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Yandex/YandexBrowser/GrShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qq-browser-cache"
+category = "user-devtools"
+label = "QQ Browser cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/com.tencent.QQBrowser3/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "qq-browser-code-cache"
+category = "user-devtools"
+label = "QQ Browser code cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/QQBrowser3/*/Code Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["QQBrowser3"]
+
+[[rule]]
+id = "qq-browser-gpu-cache"
+category = "user-devtools"
+label = "QQ Browser GPU cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/QQBrowser3/*/GPUCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["QQBrowser3"]
+
+[[rule]]
+id = "qq-browser-shader-cache"
+category = "user-devtools"
+label = "QQ Browser shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/QQBrowser3/ShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["QQBrowser3"]
+
+[[rule]]
+id = "qq-browser-gr-shader-cache"
+category = "user-devtools"
+label = "QQ Browser GR shader cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/QQBrowser3/GrShaderCache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"
+
+[rule.guards]
+not_running = ["QQBrowser3"]
+
+[[rule]]
+id = "dia-cache"
+category = "user-devtools"
+label = "Dia cache"
+platform = ["macos"]
+paths = ["~/Library/Caches/company.thebrowser.dia/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-07"
+
+[rule.strategy]
+kind = "all"

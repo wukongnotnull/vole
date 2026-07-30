@@ -1,0 +1,14 @@
+{
+  "id": "browser_guard_qq_browser_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "qq-browser-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.tencent.QQBrowser3/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.tencent.QQBrowser3/item|QQ Browser cache"
+  ],
+  "expect_not_selected": []
+}

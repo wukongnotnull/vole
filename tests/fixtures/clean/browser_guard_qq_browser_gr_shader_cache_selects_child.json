@@ -1,0 +1,14 @@
+{
+  "id": "browser_guard_qq_browser_gr_shader_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "qq-browser-gr-shader-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/QQBrowser3/GrShaderCache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/QQBrowser3/GrShaderCache/item|QQ Browser GR shader cache"
+  ],
+  "expect_not_selected": []
+}

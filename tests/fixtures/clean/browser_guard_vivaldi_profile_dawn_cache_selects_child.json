@@ -1,0 +1,14 @@
+{
+  "id": "browser_guard_vivaldi_profile_dawn_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "vivaldi-profile-dawn-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Vivaldi/Default/DawnCache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Vivaldi/Default/DawnCache/item|Vivaldi profile Dawn cache"
+  ],
+  "expect_not_selected": []
+}

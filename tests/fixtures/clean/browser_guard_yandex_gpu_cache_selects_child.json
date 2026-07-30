@@ -1,0 +1,14 @@
+{
+  "id": "browser_guard_yandex_gpu_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "yandex-gpu-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Yandex/YandexBrowser/Default/GPUCache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Yandex/YandexBrowser/Default/GPUCache/item|Yandex GPU cache"
+  ],
+  "expect_not_selected": []
+}

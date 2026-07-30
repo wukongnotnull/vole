@@ -1,0 +1,14 @@
+{
+  "id": "browser_guard_qq_browser_code_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "qq-browser-code-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/QQBrowser3/Default/Code Cache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/QQBrowser3/Default/Code Cache/item|QQ Browser code cache"
+  ],
+  "expect_not_selected": []
+}

@@ -77,7 +77,7 @@ brew audit --strict --online wukongnotnull/vole-core-test/vole
 
 ## PR
 
-Homebrew Core new formula PR：https://github.com/Homebrew/homebrew-core/pull/296168
+Homebrew Core new formula PR：https://github.com/Homebrew/homebrew-core/pull/296168（曾因模板不完整被 bot 关闭，已按官方模板补全并自动 reopen）
 
 分支：`wukongnotnull/homebrew-core` → `vole-1.2.0-new-formula`
 

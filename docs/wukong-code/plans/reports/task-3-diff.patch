@@ -1,0 +1,223 @@
+diff --git a/crates/vole-core/src/ops/mod.rs b/crates/vole-core/src/ops/mod.rs
+index 557b95d..031a934 100644
+--- a/crates/vole-core/src/ops/mod.rs
++++ b/crates/vole-core/src/ops/mod.rs
+@@ -7,10 +7,11 @@ mod proto_plan;
+ 
+ use crate::vole_proto::StreamEvent;
+ use crossbeam_channel::Sender;
++use std::sync::Arc;
+ use thiserror::Error;
+ 
+ use crate::cancel::{CancelToken, Cancelled};
+-use crate::rules::StrategyBuildError;
++use crate::rules::{PgrepProcessProbe, ProcessProbe, StrategyBuildError};
+ 
+ pub use apply_plan::{
+     apply_plan, apply_proto_plan, ApplyPlanContext, ApplyPlanError, ApplyPlanOptions,
+@@ -36,11 +37,24 @@ impl From<Cancelled> for OpsError {
+ pub struct Orchestrator {
+     cancel: CancelToken,
+     events: Option<Sender<StreamEvent>>,
++    process_probe: Arc<dyn ProcessProbe>,
+ }
+ 
+ impl Orchestrator {
+     pub fn new(cancel: CancelToken, events: Option<Sender<StreamEvent>>) -> Self {
+-        Self { cancel, events }
++        Self::with_process_probe(cancel, events, Arc::new(PgrepProcessProbe))
++    }
++
++    pub fn with_process_probe(
++        cancel: CancelToken,
++        events: Option<Sender<StreamEvent>>,
++        process_probe: Arc<dyn ProcessProbe>,
++    ) -> Self {
++        Self {
++            cancel,
++            events,
++            process_probe,
++        }
+     }
+ 
+     pub fn check_cancel(&self) -> Result<(), OpsError> {
+diff --git a/crates/vole-core/src/ops/plan.rs b/crates/vole-core/src/ops/plan.rs
+index cd7e765..dd8862c 100644
+--- a/crates/vole-core/src/ops/plan.rs
++++ b/crates/vole-core/src/ops/plan.rs
+@@ -6,8 +6,8 @@ use std::time::{Duration, SystemTime};
+ 
+ use crate::protection::AppProtection;
+ use crate::rules::{
+-    collect_path_candidates, resolve_strategy, select_custom, PathEntry, ResolvedStrategy, Rule,
+-    Strategy,
++    collect_path_candidates, resolve_strategy, select_custom, should_skip_for_not_running,
++    PathEntry, ResolvedStrategy, Rule, Strategy,
+ };
+ use crate::safety::{
+     capture_plan_entry_identity, validate_path_for_deletion, PlanEntryIdentity, ValidationError,
+@@ -109,6 +109,17 @@ impl Orchestrator {
+                 continue;
+             }
+ 
++            if should_skip_for_not_running(
++                self.process_probe.as_ref(),
++                &rule.guards.not_running,
++            ) {
++                self.emit(StreamEvent::Skipped {
++                    rule_id: rule.id.clone(),
++                    reason: SkipReason::AppRunning,
++                });
++                continue;
++            }
++
+             let strategy = match resolve_strategy(&rule.strategy) {
+                 Ok(s) => s,
+                 Err(err) => return Err(OpsError::Strategy(err)),
+@@ -243,10 +254,12 @@ fn skip_reason_for_validation(err: &ValidationError) -> SkipReason {
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+-    use crate::rules::StrategyConfig;
++    use crate::rules::{FakeProcessProbe, StrategyConfig};
+     use crate::test_env;
+     use crossbeam_channel::unbounded;
++    use std::collections::HashSet;
+     use std::fs;
++    use std::sync::Arc;
+     use std::thread;
+     use std::time::Duration as StdDuration;
+ 
+@@ -417,4 +430,66 @@ mod tests {
+         let builder = PlanBuilder::new().with_ttl(Duration::from_secs(60));
+         assert_eq!(builder.ttl(), Duration::from_secs(60));
+     }
++
++    #[test]
++    fn plan_skips_rule_when_not_running_guard_hits() {
++        let _guard = test_env::lock();
++        let dir = scratch("not-running-hit");
++        let file = dir.join("real/.claude/sessions/old");
++        touch(&file);
++        let pattern = file.to_string_lossy().into_owned();
++
++        let mut rule = all_rule("claude-like", vec![pattern], false);
++        rule.guards.not_running = vec!["claude".into()];
++
++        let probe = Arc::new(FakeProcessProbe {
++            running: HashSet::from(["claude".into()]),
++            unknown: HashSet::new(),
++        });
++        let (tx, rx) = unbounded();
++        let orch = Orchestrator::with_process_probe(
++            crate::cancel::CancelToken::new(),
++            Some(tx),
++            probe,
++        );
++        let plan = orch
++            .build_plan(&[rule], &AppProtection::new(), &[])
++            .unwrap();
++
++        assert!(plan.entries.is_empty());
++        let ev = rx.try_recv().unwrap();
++        assert!(matches!(
++            ev,
++            StreamEvent::Skipped {
++                reason: SkipReason::AppRunning,
++                ..
++            }
++        ));
++        let _ = fs::remove_dir_all(&dir);
++    }
++
++    #[test]
++    fn plan_selects_when_process_idle() {
++        let _guard = test_env::lock();
++        let dir = scratch("not-running-idle");
++        let file = dir.join("real/.claude/sessions/old");
++        touch(&file);
++        let pattern = file.to_string_lossy().into_owned();
++
++        let mut rule = all_rule("claude-like-idle", vec![pattern], false);
++        rule.guards.not_running = vec!["claude".into()];
++
++        let probe = Arc::new(FakeProcessProbe::default());
++        let orch = Orchestrator::with_process_probe(
++            crate::cancel::CancelToken::new(),
++            None,
++            probe,
++        );
++        let plan = orch
++            .build_plan(&[rule], &AppProtection::new(), &[])
++            .unwrap();
++
++        assert_eq!(plan.entries.len(), 1);
++        let _ = fs::remove_dir_all(&dir);
++    }
+ }
+diff --git a/docs/wukong-code/plans/reports/task-3-plan-wire.md b/docs/wukong-code/plans/reports/task-3-plan-wire.md
+new file mode 100644
+index 0000000..380d465
+--- /dev/null
++++ b/docs/wukong-code/plans/reports/task-3-plan-wire.md
+@@ -0,0 +1,60 @@
++# Task 3 Report: Plan pipeline wires not_running
++
++## What was implemented
++
++- `Orchestrator` holds `process_probe: Arc<dyn ProcessProbe>`.
++- `Orchestrator::new` defaults to `Arc::new(PgrepProcessProbe)`.
++- `Orchestrator::with_process_probe(cancel, events, probe)` for test injection.
++- In `build_plan_with`, after `disabled` check and before `resolve_strategy`:
++  if `should_skip_for_not_running` hits, emit `Skipped { reason: AppRunning }` and `continue`.
++- Tests: `plan_skips_rule_when_not_running_guard_hits`, `plan_selects_when_process_idle`.
++
++`clean_fixture.rs` unchanged — `Orchestrator::new` signature unchanged.
++
++## TDD Evidence
++
++### RED
++
++```bash
++cargo test -p vole-core plan_skips_rule_when_not_running_guard_hits -- --nocapture
++```
++
++After adding tests + `with_process_probe` (no plan skip logic):
++
++```
++assertion failed: plan.entries.is_empty()
++test ops::plan::tests::plan_skips_rule_when_not_running_guard_hits ... FAILED
++```
++
++Expected: rule with `not_running=["claude"]` and Fake probe reporting `claude` running should produce no entries and emit `AppRunning`.
++
++### GREEN
++
++```bash
++cargo test -p vole-core plan_skips_rule_when_not_running_guard_hits -- --nocapture
++cargo test -p vole-core plan_selects_when_process_idle -- --nocapture
++cargo test -p vole-core -- --nocapture
++```
++
++```
++test ops::plan::tests::plan_skips_rule_when_not_running_guard_hits ... ok
++test ops::plan::tests::plan_selects_when_process_idle ... ok
++test result: ok. 126 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out
++```
++
++Output pristine (no warnings after skip logic wired).
++
++## Files changed
++
++- `crates/vole-core/src/ops/mod.rs`
++- `crates/vole-core/src/ops/plan.rs`
++
++## Self-review
++
++- Spec coverage: all Task 3 requirements met; apply unchanged (Task 4).
++- Tests use `test_env::lock()`, scratch dirs, `FakeProcessProbe`, and event channel pattern consistent with existing plan tests.
++- `process_probe` field is private; only accessed via `build_plan_with` in plan.rs.
++
++## Concerns
++
++None.

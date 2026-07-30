@@ -1,0 +1,107 @@
+diff --git a/crates/vole-core/src/rules/mod.rs b/crates/vole-core/src/rules/mod.rs
+index 31f3977..ac84603 100644
+--- a/crates/vole-core/src/rules/mod.rs
++++ b/crates/vole-core/src/rules/mod.rs
+@@ -4,6 +4,7 @@ mod candidate;
+ mod custom_handlers;
+ mod glob;
+ mod load;
++mod process_guard;
+ mod schema;
+ mod strategy;
+ 
+@@ -13,6 +14,9 @@ pub use glob::{collect_path_candidates, expand_rule_path, GlobError};
+ pub use load::{
+     default_rules_dir, load_rules_from_dir, load_rules_from_file, load_rules_from_str, LoadError,
+ };
++pub use process_guard::{
++    should_skip_for_not_running, FakeProcessProbe, ProcessProbe, ProcessState,
++};
+ pub use schema::{
+     BrokenSymlinkAction, GuardsConfig, Rule, RulesFile, StrategyConfig, StrategyKind,
+ };
+diff --git a/crates/vole-core/src/rules/process_guard.rs b/crates/vole-core/src/rules/process_guard.rs
+new file mode 100644
+index 0000000..9300411
+--- /dev/null
++++ b/crates/vole-core/src/rules/process_guard.rs
+@@ -0,0 +1,79 @@
++use std::collections::HashSet;
++
++#[derive(Debug, Clone, Copy, PartialEq, Eq)]
++pub enum ProcessState {
++    Running,
++    Idle,
++    Unknown,
++}
++
++pub trait ProcessProbe: Send + Sync {
++    fn exact_name_running(&self, name: &str) -> ProcessState;
++}
++
++#[derive(Debug, Default, Clone)]
++pub struct FakeProcessProbe {
++    pub running: HashSet<String>,
++    pub unknown: HashSet<String>,
++}
++
++impl ProcessProbe for FakeProcessProbe {
++    fn exact_name_running(&self, name: &str) -> ProcessState {
++        if self.running.contains(name) {
++            ProcessState::Running
++        } else if self.unknown.contains(name) {
++            ProcessState::Unknown
++        } else {
++            ProcessState::Idle
++        }
++    }
++}
++
++pub fn should_skip_for_not_running(probe: &dyn ProcessProbe, names: &[String]) -> bool {
++    names
++        .iter()
++        .filter(|n| !n.is_empty())
++        .any(|n| !matches!(probe.exact_name_running(n), ProcessState::Idle))
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use std::collections::HashSet;
++
++    #[test]
++    fn empty_names_never_skips() {
++        let probe = FakeProcessProbe::default();
++        assert!(!should_skip_for_not_running(&probe, &[]));
++    }
++
++    #[test]
++    fn skips_when_any_exact_name_running() {
++        let probe = FakeProcessProbe {
++            running: HashSet::from(["Firefox".into()]),
++            unknown: HashSet::new(),
++        };
++        assert!(should_skip_for_not_running(
++            &probe,
++            &["Chrome".into(), "Firefox".into()]
++        ));
++    }
++
++    #[test]
++    fn idle_when_none_running() {
++        let probe = FakeProcessProbe::default();
++        assert!(!should_skip_for_not_running(
++            &probe,
++            &["Firefox".into()]
++        ));
++    }
++
++    #[test]
++    fn unknown_fail_closed_skips() {
++        let probe = FakeProcessProbe {
++            running: HashSet::new(),
++            unknown: HashSet::from(["Mail".into()]),
++        };
++        assert!(should_skip_for_not_running(&probe, &["Mail".into()]));
++    }
++}

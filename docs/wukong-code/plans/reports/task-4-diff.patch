@@ -1,0 +1,392 @@
+diff --git a/crates/vole-cli/src/clean.rs b/crates/vole-cli/src/clean.rs
+index 1a770b3..e28961e 100644
+--- a/crates/vole-cli/src/clean.rs
++++ b/crates/vole-cli/src/clean.rs
+@@ -12,7 +12,7 @@ use vole_core::ops::{
+     ApplyPlanOptions, OpsError, Orchestrator, Plan, ProtoPlanError,
+ };
+ use vole_core::protection::AppProtection;
+-use vole_core::rules::{default_rules_dir, load_rules_from_dir, LoadError};
++use vole_core::rules::{default_rules_dir, load_rules_from_dir, LoadError, PgrepProcessProbe};
+ use vole_core::units;
+ use vole_core::vole_proto::{Plan as ProtoPlan, Report, StreamEvent, SCHEMA_VERSION};
+ use vole_core::whitelist;
+@@ -133,11 +133,13 @@ fn run_apply(opts: &CleanOptions, plan_path: &PathBuf) -> io::Result<()> {
+     let json = std::fs::read_to_string(plan_path)?;
+     let plan: ProtoPlan = serde_json::from_str(&json).map_err(io::Error::other)?;
+ 
++    let rules = load_rules_from_dir(default_rules_dir()).map_err(map_load_error)?;
+     let whitelist_patterns = whitelist::load_clean()?;
+     let protection = AppProtection::new();
+     let apply_opts = ApplyPlanOptions {
+         permanent: opts.permanent,
+     };
++    let process_probe = PgrepProcessProbe;
+ 
+     let report = if opts.json_stream {
+         let (event_tx, event_rx) = unbounded();
+@@ -150,6 +152,8 @@ fn run_apply(opts: &CleanOptions, plan_path: &PathBuf) -> io::Result<()> {
+             &protection,
+             &whitelist_patterns,
+             apply_opts,
++            &rules,
++            &process_probe,
+             Some(&on_event),
+         )
+         .map_err(map_apply_error)?;
+@@ -158,8 +162,16 @@ fn run_apply(opts: &CleanOptions, plan_path: &PathBuf) -> io::Result<()> {
+             .map_err(|_| io::Error::other("stream writer panicked"))??;
+         report
+     } else {
+-        apply_proto_plan(&plan, &protection, &whitelist_patterns, apply_opts, None)
+-            .map_err(map_apply_error)?
++        apply_proto_plan(
++            &plan,
++            &protection,
++            &whitelist_patterns,
++            apply_opts,
++            &rules,
++            &process_probe,
++            None,
++        )
++        .map_err(map_apply_error)?
+     };
+ 
+     write_apply_output(opts, &report)?;
+diff --git a/crates/vole-core/src/ops/apply_plan.rs b/crates/vole-core/src/ops/apply_plan.rs
+index c36a510..4c6adc1 100644
+--- a/crates/vole-core/src/ops/apply_plan.rs
++++ b/crates/vole-core/src/ops/apply_plan.rs
+@@ -10,6 +10,7 @@ use crate::delete::{
+ };
+ use crate::oplog::OperationLogger;
+ use crate::protection::AppProtection;
++use crate::rules::{should_skip_for_not_running, ProcessProbe, Rule};
+ use crate::safety::{
+     verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity, ValidationError,
+ };
+@@ -38,6 +39,8 @@ pub struct ApplyPlanContext<'a> {
+     pub trash: &'a dyn Trash,
+     pub deletion_log: &'a DeletionLogger,
+     pub oplog: &'a mut OperationLogger,
++    pub rules: &'a [Rule],
++    pub process_probe: &'a dyn ProcessProbe,
+     pub on_event: Option<&'a dyn Fn(StreamEvent)>,
+     pub now: SystemTime,
+ }
+@@ -50,6 +53,8 @@ impl<'a> ApplyPlanContext<'a> {
+         trash: &'a dyn Trash,
+         deletion_log: &'a DeletionLogger,
+         oplog: &'a mut OperationLogger,
++        rules: &'a [Rule],
++        process_probe: &'a dyn ProcessProbe,
+         on_event: Option<&'a dyn Fn(StreamEvent)>,
+     ) -> Self {
+         Self {
+@@ -59,6 +64,8 @@ impl<'a> ApplyPlanContext<'a> {
+             trash,
+             deletion_log,
+             oplog,
++            rules,
++            process_probe,
+             on_event,
+             now: SystemTime::now(),
+         }
+@@ -70,6 +77,8 @@ pub fn apply_proto_plan(
+     protection: &AppProtection,
+     whitelist_patterns: &[String],
+     options: ApplyPlanOptions,
++    rules: &[Rule],
++    process_probe: &dyn ProcessProbe,
+     on_event: Option<&dyn Fn(StreamEvent)>,
+ ) -> Result<Report, ApplyPlanError> {
+     let deletion_log = DeletionLogger::with_path(crate::delete::deletion_log_path());
+@@ -81,6 +90,8 @@ pub fn apply_proto_plan(
+         &vole_sys::macos::MacTrash,
+         &deletion_log,
+         &mut oplog,
++        rules,
++        process_probe,
+         on_event,
+     );
+     apply_plan(plan, &mut ctx)
+@@ -137,6 +148,20 @@ pub fn apply_plan(
+             continue;
+         }
+ 
++        if let Some(rule) = ctx.rules.iter().find(|r| r.id == entry.rule_id) {
++            if should_skip_for_not_running(ctx.process_probe, &rule.guards.not_running) {
++                skipped += 1;
++                if let Some(event) = &ctx.on_event {
++                    event(StreamEvent::Skipped {
++                        rule_id: entry.rule_id.clone(),
++                        reason: SkipReason::AppRunning,
++                    });
++                }
++                skip_tracker.record(SkipReason::AppRunning, &entry.rule_id);
++                continue;
++            }
++        }
++
+         let path = entry.path.display().to_string();
+         let identity = proto_identity(entry);
+ 
+@@ -344,14 +369,19 @@ mod tests {
+         deletion_log: &DeletionLogger,
+         oplog: &mut OperationLogger,
+         now: Option<SystemTime>,
++        rules: &[crate::rules::Rule],
++        process_probe: &dyn crate::rules::ProcessProbe,
++        trash: &dyn Trash,
+     ) -> Result<Report, ApplyPlanError> {
+         let mut ctx = ApplyPlanContext::new(
+             protection,
+             &[],
+             options,
+-            &MacTrash,
++            trash,
+             deletion_log,
+             oplog,
++            rules,
++            process_probe,
+             None,
+         );
+         if let Some(now) = now {
+@@ -360,6 +390,28 @@ mod tests {
+         apply_plan(plan, &mut ctx)
+     }
+ 
++    fn run_apply_defaults(
++        plan: &ProtoPlan,
++        protection: &AppProtection,
++        options: ApplyPlanOptions,
++        deletion_log: &DeletionLogger,
++        oplog: &mut OperationLogger,
++        now: Option<SystemTime>,
++    ) -> Result<Report, ApplyPlanError> {
++        let probe = crate::rules::FakeProcessProbe::default();
++        run_apply(
++            plan,
++            protection,
++            options,
++            deletion_log,
++            oplog,
++            now,
++            &[],
++            &probe,
++            &MacTrash,
++        )
++    }
++
+     #[test]
+     fn ttl_expired_rejects() {
+         let plan = ProtoPlan {
+@@ -374,7 +426,7 @@ mod tests {
+         let mut oplog = OperationLogger::new("clean");
+         let now = UNIX_EPOCH + Duration::from_secs(120);
+ 
+-        let err = run_apply(
++        let err = run_apply_defaults(
+             &plan,
+             &protection,
+             apply_opts(false),
+@@ -404,7 +456,7 @@ mod tests {
+         let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+         let mut oplog = OperationLogger::new("clean");
+ 
+-        let report = run_apply(
++        let report = run_apply_defaults(
+             &plan,
+             &protection,
+             apply_opts(false),
+@@ -436,7 +488,7 @@ mod tests {
+         let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+         let mut oplog = OperationLogger::new("clean");
+ 
+-        let report = run_apply(
++        let report = run_apply_defaults(
+             &plan,
+             &protection,
+             apply_opts(false),
+@@ -473,7 +525,7 @@ mod tests {
+         let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+         let mut oplog = OperationLogger::new("clean");
+ 
+-        let report = run_apply(
++        let report = run_apply_defaults(
+             &plan,
+             &protection,
+             apply_opts(true),
+@@ -494,6 +546,97 @@ mod tests {
+         fs::remove_dir_all(&root).ok();
+     }
+ 
++    #[test]
++    fn apply_skips_when_not_running_guard_hits_at_apply() {
++        use crate::rules::{FakeProcessProbe, Rule, StrategyConfig};
++        use std::collections::HashSet;
++        use std::sync::Mutex;
++
++        struct FakeTrash {
++            calls: Mutex<Vec<PathBuf>>,
++        }
++
++        impl Default for FakeTrash {
++            fn default() -> Self {
++                Self {
++                    calls: Mutex::new(Vec::new()),
++                }
++            }
++        }
++
++        impl Trash for FakeTrash {
++            fn trash_path(
++                &self,
++                path: &std::path::Path,
++                _timeout: Duration,
++            ) -> std::io::Result<()> {
++                self.calls.lock().unwrap().push(path.to_path_buf());
++                Ok(())
++            }
++        }
++
++        fn all_rule(id: &str) -> Rule {
++            Rule {
++                id: id.into(),
++                category: None,
++                label: format!("label-{id}"),
++                platform: vec![],
++                paths: vec![],
++                impact: None,
++                disabled: false,
++                last_verified: None,
++                strategy: StrategyConfig::default(),
++                guards: Default::default(),
++            }
++        }
++
++        let _guard = test_env::lock();
++        let root = scratch("apply-not-running");
++        let file = root.join("victim.txt");
++        fs::write(&file, b"keep-me").unwrap();
++
++        let rule_id = "firefox-cache";
++        let mut rule = all_rule(rule_id);
++        rule.guards.not_running = vec!["Firefox".into()];
++
++        let plan = fresh_plan(vec![plan_entry(&file, rule_id)]);
++        let protection = AppProtection::new();
++        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
++        let mut oplog = OperationLogger::new("clean");
++
++        let probe = FakeProcessProbe {
++            running: HashSet::from(["Firefox".into()]),
++            unknown: HashSet::new(),
++        };
++        let fake_trash = FakeTrash::default();
++
++        let report = run_apply(
++            &plan,
++            &protection,
++            apply_opts(false),
++            &deletion_log,
++            &mut oplog,
++            None,
++            std::slice::from_ref(&rule),
++            &probe,
++            &fake_trash,
++        )
++        .unwrap();
++
++        assert_eq!(report.succeeded, 0);
++        assert_eq!(report.skipped, 1);
++        assert!(file.exists());
++        assert!(fake_trash.calls.lock().unwrap().is_empty());
++        assert!(
++            report
++                .skipped_by_reason
++                .iter()
++                .any(|s| s.reason == SkipReason::AppRunning)
++        );
++
++        fs::remove_dir_all(&root).ok();
++    }
++
+     #[test]
+     fn replaced_inode_before_delete_is_skipped_not_succeeded() {
+         let _guard = test_env::lock();
+@@ -514,7 +657,7 @@ mod tests {
+         let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+         let mut oplog = OperationLogger::new("clean");
+ 
+-        let report = run_apply(
++        let report = run_apply_defaults(
+             &plan,
+             &protection,
+             apply_opts(false),
+diff --git a/docs/wukong-code/plans/reports/task-4-apply-recheck.md b/docs/wukong-code/plans/reports/task-4-apply-recheck.md
+new file mode 100644
+index 0000000..92f7c11
+--- /dev/null
++++ b/docs/wukong-code/plans/reports/task-4-apply-recheck.md
+@@ -0,0 +1,60 @@
++# Task 4 Report: Apply re-checks not_running guards
++
++## What was implemented
++
++- `ApplyPlanContext` gains `rules: &'a [Rule]` and `process_probe: &'a dyn ProcessProbe`.
++- `ApplyPlanContext::new` and `apply_proto_plan` updated to require rules + probe.
++- In `apply_plan`, before path validation/delete: lookup `entry.rule_id` in `ctx.rules`; if
++  `should_skip_for_not_running` hits, emit `Skipped { AppRunning }`, increment skipped, continue.
++- Missing `rule_id` in rules slice: no guard skip (continues to path validation).
++- CLI `run_apply` loads rules via `load_rules_from_dir` and passes `&PgrepProcessProbe`.
++- Test `apply_skips_when_not_running_guard_hits_at_apply` uses `FakeTrash` + `FakeProcessProbe`
++  (Firefox running) — file kept, trash not called, `AppRunning` in skip summary.
++
++## TDD Evidence
++
++### RED
++
++```bash
++cargo test -p vole-core apply_skips_when_not_running_guard_hits_at_apply -- --nocapture
++```
++
++After adding the failing test and updated `run_apply` helper (before `ApplyPlanContext` wiring):
++
++```
++error[E0061]: this function takes 7 arguments but 9 arguments were supplied
++   --> crates/vole-core/src/ops/apply_plan.rs:351:23
++```
++
++Expected: test module could not compile until context/probe fields exist. Once wired without
++guard logic, the test would fail `assert_eq!(report.succeeded, 0)` (file deleted instead).
++
++### GREEN
++
++```bash
++cargo test -p vole-core apply_skips_when_not_running_guard_hits_at_apply -- --nocapture
++cargo test -p vole-core -- --nocapture
++cargo check -p vole-cli
++```
++
++```
++test ops::apply_plan::tests::apply_skips_when_not_running_guard_hits_at_apply ... ok
++test result: ok. 127 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out
++```
++
++Output pristine (no warnings).
++
++## Files changed
++
++- `crates/vole-core/src/ops/apply_plan.rs`
++- `crates/vole-cli/src/clean.rs`
++
++## Self-review
++
++- Spec coverage: all Task 4 requirements met; guard runs after plan-level `skip_reason` but before delete.
++- `FakeTrash` is test-local (not exported); pattern matches plan tests' `FakeProcessProbe` usage.
++- Existing apply tests use `run_apply_defaults` with empty rules + idle probe — behavior unchanged.
++
++## Concerns
++
++None.

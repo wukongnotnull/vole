@@ -214,7 +214,19 @@ Mole 有 `check_tcc_permissions()`（`lib/clean/caches.sh:8`），在清理前�
 
 重点观察三件事：重新编译后是否重新弹窗（直接影响开发迭代效率）、授权能否从终端继承、以及 app spawn 时授权归属于谁。
 
-**Phase 0.5 最小子集**：本机 ad-hoc 签名下读 `~/Library/Containers` 退出码 0，未观测弹窗；不足以代表 Full Disk Access 场景。**Phase 1 完整矩阵 deferred**（无 Developer ID），见 `docs/findings/2026-07-phase1-tcc-deferred.md`；ad-hoc 子集结果已写入该文档。
+**Phase 0.5 最小子集**：本机 ad-hoc 签名下读 `~/Library/Containers` 退出码 0，未观测弹窗；不足以代表 Full Disk Access 场景。
+
+**Phase 1 完整矩阵（2026-07-30，Developer ID 已具备）**：见 `docs/findings/2026-07-phase1-tcc-devid-matrix.md`，脚本 `scripts/tcc-devid-matrix.sh`。要点：
+
+| 观察 | 结论 |
+|---|---|
+| 未签名二进制 | 本机终端 exec 被 **SIGKILL (137)**，未进入读路径 |
+| ad-hoc / Developer ID（终端） | 探针目录 `analyze` 均为 exit 0；未见新弹窗（可能继承终端权限） |
+| Developer ID CDHash | rebuild+重签必变；同字节带 `--timestamp` 再签也会变 |
+| Raycast / GUI `open -a` | 未自动化，仍需按需手测 |
+| 产品含义 | 分发必须签名；开发勿依赖 debug CDHash 稳定；桌面 app 应与内嵌 vole 同签身份 |
+
+旧 deferred 说明：`docs/findings/2026-07-phase1-tcc-deferred.md`。
 
 ### 4.2 提权模型：v1 不提权，但必须响亮地告知
 

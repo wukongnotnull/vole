@@ -34,9 +34,16 @@ find_identities() {
   fi
 }
 
-mapfile -t LINES < <(find_identities | grep -F "$IDENTITY" || true)
+FOUND=0
+while IFS= read -r line; do
+  if [[ "$line" == *"$IDENTITY"* ]]; then
+    FOUND=1
+    MATCH_LINE="$line"
+    break
+  fi
+done < <(find_identities)
 
-if ((${#LINES[@]} == 0)); then
+if [[ "$FOUND" -eq 0 ]]; then
   echo "FAIL: codesign CLI 未找到 identity。" >&2
   echo >&2
   echo "若「钥匙串访问」里已显示该证书 + 私钥，常见原因：" >&2
@@ -50,7 +57,7 @@ if ((${#LINES[@]} == 0)); then
 fi
 
 echo "OK: codesigning identity found"
-printf '    %s\n' "${LINES[0]}"
+echo "    $MATCH_LINE"
 
 if [[ -n "${VOLE_NOTARY_PROFILE:-}" ]]; then
   if xcrun notarytool history --keychain-profile "$VOLE_NOTARY_PROFILE" --limit 1 >/dev/null 2>&1; then

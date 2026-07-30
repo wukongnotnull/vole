@@ -136,6 +136,7 @@ VERIFY_LOCAL_SKIP_CROSS=1 bash scripts/verify-local.sh
 | Phase 4 `clean` | 可用；规则 **511** 条 |
 | Phase 5 `history` + 协议冻结 + 菜单 / 补全 | 可用；**v1.0.0** Developer ID + 公证（**511** 规则） |
 | **v1 closeout** | 范围冻结；见 [`docs/wukong-code/specs/2026-07-30-v1-closeout-design.md`](docs/wukong-code/specs/2026-07-30-v1-closeout-design.md) |
+| **产品 v2 / M1** | **`vole uninstall`**；包版本 **[v1.1.0](https://github.com/wukongnotnull/vole/releases/tag/v1.1.0)** |
 
 **版本策略**：严格 SemVer；见 [`docs/wukong-code/specs/2026-07-30-semver-policy-design.md`](docs/wukong-code/specs/2026-07-30-semver-policy-design.md)。
 

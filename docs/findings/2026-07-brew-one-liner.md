@@ -87,11 +87,12 @@ Homebrew Core new formula PR：https://github.com/Homebrew/homebrew-core/pull/29
 |---|---|---|
 | 1 | 未设 env 可加载 rules | bottle 布局 entries=964；源码构建 entries=989 |
 | 2 | caveats 无强制 export | `Formula/vole.rb` caveats 仅 Gatekeeper |
-| 3 | README / findings 同步 | Task 2 + Core PR 链接 |
+| 3 | 安装文档同步短期两行 | README / phase5 / releases v1.1–v1.2 / GitHub Release |
 | 4 | core 候选 + audit | `docs/homebrew/vole-homebrew-core.rb`；`brew audit --new` 通过 |
-| 5 | PR 或阻塞说明 | https://github.com/Homebrew/homebrew-core/pull/296168 |
+| 5 | Core 尝试结论 | [#296168](https://github.com/Homebrew/homebrew-core/pull/296168) **已关闭**（notability） |
 
-本仓部分已交付；真正一行 `brew install vole` 取决于 Core PR 合并。
+**短期已交付**：`brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole && brew install vole`。  
+**一行 `brew install vole`**：延后到 Core 知名度达标后再提。
 
 ## Homebrew Core CI（2026-07-30）
 

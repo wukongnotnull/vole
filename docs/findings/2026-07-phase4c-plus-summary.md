@@ -107,6 +107,7 @@ bash scripts/verify-clean-candidates.sh   # VOLE_TEST_ROOT 双跑
 6. （可选）Raycast / `open -a` 手测补全 TCC 矩阵
 7. ~~（可选）剪映 generated~~ — 已落地（`2026-07-jianyingpro-generated.md`）
 8. ~~Mail/云盘具名 + XCTestDevices~~ — 已落地（`2026-07-mail-cloud-xctest.md`；规则 509）
+9. **v1 closeout** — 见 `2026-07-v1-closeout.md` / plan `2026-07-30-v1-closeout.md`
 
 ---
 

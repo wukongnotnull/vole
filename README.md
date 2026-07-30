@@ -53,19 +53,19 @@ export PATH="$HOME/.local/bin:$PATH"
 export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"
 ```
 
-**预编译包**（GitHub Release [v0.0.10](https://github.com/wukongnotnull/vole/releases/tag/v0.0.10)，**Developer ID 签名 + 公证**）：
+**预编译包**（GitHub Release [v0.0.11](https://github.com/wukongnotnull/vole/releases/tag/v0.0.11)，**Developer ID 签名 + 公证**）：
 
 ```bash
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v0.0.10/vole-0.0.10-aarch64-apple-darwin.tar.gz
-tar xzf vole-0.0.10-aarch64-apple-darwin.tar.gz
-install -m 755 vole-0.0.10-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-mkdir -p ~/.local/share/vole && cp -R vole-0.0.10-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v0.0.11/vole-0.0.11-aarch64-apple-darwin.tar.gz
+tar xzf vole-0.0.11-aarch64-apple-darwin.tar.gz
+install -m 755 vole-0.0.11-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+mkdir -p ~/.local/share/vole && cp -R vole-0.0.11-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 export VOLE_RULES_DIR="$HOME/.local/share/vole/rules"
 ```
 
 Intel 将 `aarch64-apple-darwin` 换为 `x86_64-apple-darwin`。
 
-**Homebrew（stable v0.0.10）**：
+**Homebrew（stable v0.0.11）**：
 
 ```bash
 brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
@@ -123,17 +123,18 @@ VERIFY_LOCAL_SKIP_CROSS=1 bash scripts/verify-local.sh
 
 ## 当前范围与状态
 
-v1 聚焦高频三命令 + `history`。`uninstall` / `optimize` / `purge` / `installer` 等不在范围内——需要它们时请用 Mole；`clean` 的 plan 报告也会提示未移植类别。
+**v1 CLI 产品目标已完成**（设计 §1）：`status` / `analyze` / `clean` / `history` + 冻结协议 + Developer ID 分发。`uninstall` / `optimize` / `purge` / `installer` 等仍不在范围内——需要时请用 Mole；可选规则长尾见 [`docs/findings/2026-07-v1-closeout.md`](docs/findings/2026-07-v1-closeout.md)。
 
 | 阶段 | 状态 |
 |---|---|
 | Phase 1 基础设施（协议、oplog、互斥） | 已落地 |
 | Phase 2 `status` | 可用 |
 | Phase 3 `analyze` | 可用（目录模式） |
-| Phase 4 `clean` | 可用；规则 **509** 条（含浏览器/云盘/Mail 具名缓存、XCTestDevices、JianyingPro generated） |
-| Phase 5 `history` + 协议冻结 + 菜单 / 补全 | 可用；**v0.0.10** Developer ID + 公证（504 规则） |
+| Phase 4 `clean` | 可用；规则 **509** 条 |
+| Phase 5 `history` + 协议冻结 + 菜单 / 补全 | 可用；**v0.0.11** Developer ID + 公证（509 规则） |
+| **v1 closeout** | 范围冻结；见 [`docs/wukong-code/specs/2026-07-30-v1-closeout-design.md`](docs/wukong-code/specs/2026-07-30-v1-closeout-design.md) |
 
-设计与计划见 `docs/wukong-code/`；规则收官总结见 [`docs/findings/2026-07-phase4c-v1-summary.md`](docs/findings/2026-07-phase4c-v1-summary.md)（v1）与 [`docs/findings/2026-07-phase4c-plus-summary.md`](docs/findings/2026-07-phase4c-plus-summary.md)（Batch 6–13）；guard 见 [`docs/findings/2026-07-guard-not-running.md`](docs/findings/2026-07-guard-not-running.md)、[`docs/findings/2026-07-cmdline-fcp-generated.md`](docs/findings/2026-07-cmdline-fcp-generated.md) 与 [`docs/findings/2026-07-jianyingpro-generated.md`](docs/findings/2026-07-jianyingpro-generated.md)。
+设计与计划见 `docs/wukong-code/`；规则收官见 [`docs/findings/2026-07-phase4c-v1-summary.md`](docs/findings/2026-07-phase4c-v1-summary.md) 与 [`docs/findings/2026-07-phase4c-plus-summary.md`](docs/findings/2026-07-phase4c-plus-summary.md)；v1 收口见 [`docs/findings/2026-07-v1-closeout.md`](docs/findings/2026-07-v1-closeout.md)。
 
 ## 许可证
 

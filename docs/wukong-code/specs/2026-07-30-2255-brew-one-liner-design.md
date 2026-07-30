@@ -1,7 +1,7 @@
 # 一行安装：`brew install vole`
 
 - 日期：2026-07-30
-- 状态：已批准（用户「要推进」；Condensed brainstorming）
+- 状态：本仓已交付；Homebrew Core PR 待合并（https://github.com/Homebrew/homebrew-core/pull/296168）
 - 依据：当前 `Formula/vole.rb` / `default_rules_dir`；`docs/findings/2026-07-phase5-signing.md`；mole 的 homebrew-core 路径
 
 ## 1. 结论

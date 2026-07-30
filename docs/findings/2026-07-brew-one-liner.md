@@ -73,4 +73,22 @@ brew audit --strict --online wukongnotnull/vole-core-test/vole
 
 - Use `pkgshare` instead of `share/"vole"`（两处）
 
-`--new` audit 结果见下方续记。
+`--new` audit：与 `--strict` 相同问题已消除后 **exit 0、无输出问题**。
+
+## PR
+
+Homebrew Core new formula PR：https://github.com/Homebrew/homebrew-core/pull/296168
+
+分支：`wukongnotnull/homebrew-core` → `vole-1.2.0-new-formula`
+
+## 验收
+
+| # | 标准 | 证据 |
+|---|---|---|
+| 1 | 未设 env 可加载 rules | bottle 布局 entries=964；源码构建 entries=989 |
+| 2 | caveats 无强制 export | `Formula/vole.rb` caveats 仅 Gatekeeper |
+| 3 | README / findings 同步 | Task 2 + Core PR 链接 |
+| 4 | core 候选 + audit | `docs/homebrew/vole-homebrew-core.rb`；`brew audit --new` 通过 |
+| 5 | PR 或阻塞说明 | https://github.com/Homebrew/homebrew-core/pull/296168 |
+
+本仓部分已交付；真正一行 `brew install vole` 取决于 Core PR 合并。

@@ -1,0 +1,14 @@
+{
+  "id": "pacifist_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "pacifist-cache selects glob child (declarative all)",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Caches/com.charlessoft.pacifist/temp"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Caches/com.charlessoft.pacifist/temp|Pacifist cache"
+  ],
+  "expect_not_selected": []
+}

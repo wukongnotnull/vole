@@ -1,0 +1,14 @@
+{
+  "id": "adobe_media_cache_files_selects_child",
+  "source_bats": "manual",
+  "source_test": "adobe-media-cache-files selects Media Cache Files child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Adobe/Common/Media Cache Files/temp"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Adobe/Common/Media Cache Files/temp|Adobe media cache files"
+  ],
+  "expect_not_selected": []
+}

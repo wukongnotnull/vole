@@ -8,5 +8,9 @@ pub use catalog::{
     OptimizeTask, OptimizeTaskKind,
 };
 pub use tasks::{
-    discover_cache_refresh, discover_saved_state_cleanup, OptimizeCandidate, SAVED_STATE_AGE_DAYS,
+    discover_cache_refresh, discover_fix_broken_configs, discover_launch_agents_cleanup,
+    discover_saved_state_cleanup, plan_coreduet_cleanup, plan_dock_refresh,
+    plan_launch_services_rebuild, plan_legacy_overrides_audit, plan_notification_cleanup,
+    plan_prevent_network_dsstore, plan_quarantine_cleanup, plan_sqlite_vacuum, OptimizeCandidate,
+    SAVED_STATE_AGE_DAYS,
 };

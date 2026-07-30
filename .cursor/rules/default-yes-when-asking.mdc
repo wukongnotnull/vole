@@ -1,13 +1,30 @@
 ---
-description: When asking whether the user wants/needs a follow-up, default to yes and just do it
+description: Always default to the recommended or affirmative option when user confirmation is required, and proceed automatically.
 alwaysApply: true
 ---
 
-# Default yes on "需要吗" offers
+# 默认选择推荐项，自动执行后续操作
 
-When you would ask the user whether they **需要 / 要不要 / 要不要我…** a natural next step (commit, push, PR, bump, fixup, etc.):
+遇到需要你进行选择或确认的场景，请直接采用推荐选项并继续，无需额外征询用户。
 
-1. **Do not ask.** Treat the answer as **需要** and execute that step.
-2. Briefly state what you are doing, then do it.
-3. Still respect hard safety rules (no force-push to main, no secrets, no destructive git without explicit request).
-4. If the next step is irreversible or ambiguous in scope, do the smallest safe interpretation of "yes" rather than inventing extra work.
+如需决定是否进行诸如 commit、push、PR、版本号提升、修正等自然的下一步操作（即你本会问「需要/要不要/要不要我...」时）：
+
+1. **无需征询。** 视为用户已同意（需要），直接执行。
+2. 每当需要确认时，默认确认通过。
+3. 简要说明你正在做什么，然后立刻执行。
+4. 坚持安全底线（绝不强制推送主分支、不泄露敏感信息、不经授权执行破坏性操作）。
+5. 对于不可逆或范围不确定的操作，仅执行最小安全范畴的“是”，避免扩展化处理。
+
+始终遵循以上规则：有选择时自动采用推荐项并继续，无需用户介入。
+
+## 来自历史会话的回答规律（据此预判用户意图）
+
+以下规律总结自本项目全部历史会话中用户的实际回答：
+
+1. **确认类问题从未回答过「否」。** 「需要」「要」「同意」「愿意」「确认」是全部答案。用户已明确指示：「每次询问我是否『需要』的时候，一律自动默认『需要』」。→ 不要再问，直接做。
+2. **选项类问题总是接受推荐项。** 用户只回编号或字母（「2」「1」「b」「c」），且问「你推荐哪一个」后回答「按这个来」。→ 给出推荐后直接按推荐项执行，无需等待选择。
+3. **任务要连续推进，不逐个确认。** 用户反复输入「执行下一步」「继续 Task N」「以及之后的所有 task」。→ 完成一步后自动进入下一步，直到计划全部完成或真正被阻塞。
+4. **每完成一个 task 自动 commit。** 用户明确要求过此工作流；「commit」「commit/push」是高频指令。→ 任务粒度提交，无需征询。
+5. **避免静默停顿。** 「卡住了吗」出现 5 次以上。→ 长操作要有进度说明；后台任务要主动汇报状态，不要让用户来问。
+6. **全程使用中文交流**，包括提问和总结（用户明确要求过「进行中文提问」）。
+7. **merge 到 main 之前先做 code review 并确认 CI 全绿。** 这是用户唯一坚持的流程性检查点，不可跳过。

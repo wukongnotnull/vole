@@ -29,16 +29,46 @@ echo "sign-and-notarize: codesign with identity: $IDENTITY"
 codesign --force --options runtime --timestamp --sign "$IDENTITY" "$BIN"
 codesign --verify --verbose=2 "$BIN"
 
-if [[ -z "$PROFILE" ]]; then
-  echo "sign-and-notarize: signed OK; VOLE_NOTARY_PROFILE unset — skipping notarization." >&2
-  echo "  Configure notarytool keychain profile, then re-run." >&2
+run_notary_submit() {
+  local zip="$1"
+  if [[ -n "$PROFILE" ]]; then
+    xcrun notarytool submit "$zip" --keychain-profile "$PROFILE" --wait
+    return 0
+  fi
+  if [[ -n "${APPLE_API_KEY_ID:-}" && -n "${APPLE_API_ISSUER_ID:-}" ]]; then
+    local key_file="${APPLE_API_KEY_PATH:-${RUNNER_TEMP:-/tmp}/vole-AuthKey.p8}"
+    if [[ -n "${APPLE_API_KEY_BASE64:-}" ]]; then
+      echo "$APPLE_API_KEY_BASE64" | base64 --decode > "$key_file"
+    elif [[ ! -f "$key_file" ]]; then
+      echo "sign-and-notarize: APPLE_API_KEY_BASE64 or APPLE_API_KEY_PATH required" >&2
+      return 1
+    fi
+    xcrun notarytool submit "$zip" \
+      --key "$key_file" \
+      --key-id "$APPLE_API_KEY_ID" \
+      --issuer "$APPLE_API_ISSUER_ID" \
+      --wait
+    return 0
+  fi
+  return 1
+}
+
+CAN_NOTARY=0
+if [[ -n "$PROFILE" ]] || [[ -n "${APPLE_API_KEY_ID:-}" && -n "${APPLE_API_ISSUER_ID:-}" ]]; then
+  CAN_NOTARY=1
+fi
+
+if [[ "$CAN_NOTARY" -eq 0 ]]; then
+  echo "sign-and-notarize: signed OK; notarization skipped (no profile / API key)." >&2
+  echo "  Local: bash scripts/setup-notary-profile.sh" >&2
+  echo "  CI: bash scripts/setup-ci-secrets.sh" >&2
   exit 0
 fi
 
 ZIP="$(mktemp -t vole-notarize).zip"
 ditto -c -k --keepParent "$BIN" "$ZIP"
-echo "sign-and-notarize: submitting $ZIP via profile $PROFILE"
-xcrun notarytool submit "$ZIP" --keychain-profile "$PROFILE" --wait
+echo "sign-and-notarize: submitting $ZIP"
+run_notary_submit "$ZIP"
 xcrun stapler staple "$BIN"
 echo "sign-and-notarize: notarized and stapled"
 rm -f "$ZIP"

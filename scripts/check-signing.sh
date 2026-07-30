@@ -66,6 +66,9 @@ if [[ -n "${VOLE_NOTARY_PROFILE:-}" ]]; then
     echo "WARN: VOLE_NOTARY_PROFILE=$VOLE_NOTARY_PROFILE not usable" >&2
     exit 2
   fi
+elif [[ -n "${APPLE_API_KEY_ID:-}" && -n "${APPLE_API_ISSUER_ID:-}" && -n "${APPLE_API_KEY_BASE64:-}" ]]; then
+  echo "OK: notary API key env (APPLE_API_KEY_ID + ISSUER + BASE64)"
 else
-  echo "SKIP: VOLE_NOTARY_PROFILE unset (sign-only OK)"
+  echo "SKIP: notarization not configured (sign-only OK)"
+  echo "      Local: bash scripts/setup-notary-profile.sh"
 fi

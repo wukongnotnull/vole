@@ -48,9 +48,7 @@ fn clean_apply_json_stream_exits_after_done() {
     let output = match rx.recv_timeout(Duration::from_secs(10)) {
         Ok(Ok(output)) => output,
         Ok(Err(e)) => panic!("failed to run vole: {e}"),
-        Err(_) => panic!(
-            "vole clean --apply --json-stream hung >10s (missing drop(event_tx)?)"
-        ),
+        Err(_) => panic!("vole clean --apply --json-stream hung >10s (missing drop(event_tx)?)"),
     };
 
     assert!(

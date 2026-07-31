@@ -10,3 +10,6 @@ scripts/signing.env
 
 # Git worktrees (local agent isolation)
 .worktrees/
+
+# Local multi-root IDE workspace (machine-specific paths)
+*.code-workspace

@@ -15,6 +15,7 @@ use std::sync::Arc;
 use thiserror::Error;
 
 use crate::cancel::{CancelToken, Cancelled};
+use crate::orphan::{LiveOrphanDeps, OrphanDeps};
 use crate::rules::{PgrepProcessProbe, ProcessProbe, StrategyBuildError};
 
 pub use apply_plan::{
@@ -54,6 +55,7 @@ pub struct Orchestrator {
     cancel: CancelToken,
     events: Option<Sender<StreamEvent>>,
     process_probe: Arc<dyn ProcessProbe>,
+    pub(crate) orphan_deps: Arc<dyn OrphanDeps>,
 }
 
 impl Orchestrator {
@@ -70,7 +72,13 @@ impl Orchestrator {
             cancel,
             events,
             process_probe,
+            orphan_deps: Arc::new(LiveOrphanDeps::new()),
         }
+    }
+
+    pub fn with_orphan_deps(mut self, orphan_deps: Arc<dyn OrphanDeps>) -> Self {
+        self.orphan_deps = orphan_deps;
+        self
     }
 
     pub fn check_cancel(&self) -> Result<(), OpsError> {

@@ -1,0 +1,20 @@
+# Orphaned app data — MUST load last (filename sorts after all other rule files).
+# NEVER expand to Containers / Group Containers / LaunchAgents / Application Scripts.
+
+[[rule]]
+id = "orphaned-app-data"
+category = "orphaned"
+label = "Orphaned app data"
+platform = ["macos"]
+paths = [
+  "~/Library/Caches/*",
+  "~/Library/Logs/*",
+  "~/Library/Saved Application State/*",
+]
+impact = "卸载后残留且 ≥30 天未改动的用户域缓存/日志/Saved State（启发式；com/org/net/io 前缀）"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "custom"
+handler = "orphaned_app_data"

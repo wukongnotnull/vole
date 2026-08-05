@@ -5,6 +5,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
+use crate::orphan::{
+    orphan_age_days_from_env, select_orphaned_paths, OrphanDeps,
+};
+use crate::protection::ProtectionCatalog;
 use crate::rules::schema::Rule;
 use crate::rules::strategy::PathEntry;
 
@@ -14,6 +18,7 @@ pub fn select_custom(
     entries: &[PathEntry],
     home: &Path,
     rule: &Rule,
+    orphan_deps: &dyn OrphanDeps,
 ) -> Vec<PathBuf> {
     match handler {
         "claude_desktop_bundled_versions" => claude_desktop_bundled_versions(entries, home, rule),
@@ -21,7 +26,26 @@ pub fn select_custom(
         "final_cut_pro_generated_caches" => final_cut_pro_generated_caches(entries),
         "jianyingpro_generated_caches" => jianyingpro_generated_caches(entries),
         "jetbrains_toolbox_old_versions" => jetbrains_toolbox_old_versions(entries, rule),
+        "orphaned_app_data" => orphaned_app_data(entries, home, orphan_deps),
         _ => Vec::new(),
+    }
+}
+
+fn orphaned_app_data(
+    entries: &[PathEntry],
+    home: &Path,
+    orphan_deps: &dyn OrphanDeps,
+) -> Vec<PathBuf> {
+    match select_orphaned_paths(
+        entries,
+        home,
+        &ProtectionCatalog::embedded(),
+        orphan_deps,
+        orphan_age_days_from_env(),
+        SystemTime::now(),
+    ) {
+        Ok(paths) => paths,
+        Err(_) => Vec::new(),
     }
 }
 

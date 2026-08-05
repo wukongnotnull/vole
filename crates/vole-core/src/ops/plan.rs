@@ -128,7 +128,13 @@ impl Orchestrator {
             let path_entries = build_path_entries(&expanded);
             let selected = match &strategy {
                 ResolvedStrategy::Custom(custom) => {
-                    select_custom(&custom.handler, &path_entries, &home, rule)
+                    select_custom(
+                        &custom.handler,
+                        &path_entries,
+                        &home,
+                        rule,
+                        self.orphan_deps.as_ref(),
+                    )
                 }
                 other => other.select(&path_entries),
             };
@@ -180,10 +186,16 @@ impl Orchestrator {
                 let id = format!("{}-{}", rule.id, next_id);
                 next_id += 1;
 
+                let label = if rule.id == crate::orphan::ORPHANED_RULE_ID {
+                    crate::orphan::orphan_label(&path)
+                } else {
+                    rule.label.clone()
+                };
+
                 self.emit(StreamEvent::Candidate {
                     id: id.clone(),
                     path: path_str,
-                    label: rule.label.clone(),
+                    label: label.clone(),
                     size,
                     rule_id: rule.id.clone(),
                 });
@@ -192,7 +204,7 @@ impl Orchestrator {
                 entries.push(PlanEntry {
                     id,
                     path,
-                    label: rule.label.clone(),
+                    label,
                     size,
                     rule_id: rule.id.clone(),
                     skip_reason: None,
@@ -799,5 +811,93 @@ mod tests {
         assert_eq!(plan.entries.len(), 1);
         assert!(plan.entries[0].path.ends_with("device-1"));
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    fn orphaned_rule(paths: Vec<String>) -> Rule {
+        Rule {
+            id: crate::orphan::ORPHANED_RULE_ID.into(),
+            category: Some("orphaned".into()),
+            label: "Orphaned app data".into(),
+            platform: vec![],
+            paths,
+            impact: None,
+            disabled: false,
+            last_verified: None,
+            strategy: StrategyConfig {
+                kind: crate::rules::StrategyKind::Custom,
+                keep: None,
+                env_override: None,
+                days: None,
+                names: None,
+                handler: Some("orphaned_app_data".into()),
+            },
+            guards: Default::default(),
+        }
+    }
+
+    fn fake_orphan_deps_uninstalled(bundle: &str) -> Arc<dyn crate::orphan::OrphanDeps> {
+        use crate::orphan::FakeOrphanDeps;
+        use std::collections::HashMap;
+        Arc::new(FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            mdfind: HashMap::from([(bundle.to_string(), Ok(false))]),
+            scan_error: false,
+        })
+    }
+
+    #[test]
+    fn plan_orphaned_selects_when_only_orphaned_matches() {
+        let _guard = test_env::lock();
+        let home = scratch("orphan-only");
+        let cache = home.join("Library/Caches/com.gone.app");
+        fs::create_dir_all(&cache).unwrap();
+        fs::write(cache.join("x"), b"data").unwrap();
+        let old = SystemTime::now() - Duration::from_secs(40 * 86400);
+        filetime::set_file_mtime(&cache, filetime::FileTime::from_system_time(old)).unwrap();
+        std::env::set_var("HOME", &home);
+
+        let rule = orphaned_rule(vec!["~/Library/Caches/*".into()]);
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), None)
+            .with_orphan_deps(fake_orphan_deps_uninstalled("com.gone.app"));
+        let plan = orch
+            .build_plan(&[rule], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert_eq!(plan.entries.len(), 1);
+        assert_eq!(plan.entries[0].rule_id, "orphaned-app-data");
+        assert!(plan.entries[0].label.contains("Orphaned Caches:"));
+        assert!(plan.entries[0].path.ends_with("com.gone.app"));
+        std::env::remove_var("HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn plan_orphaned_loses_dedup_to_named_rule() {
+        let _guard = test_env::lock();
+        let home = scratch("orphan-dedup");
+        let cache = home.join("Library/Caches/com.example.app");
+        fs::create_dir_all(&cache).unwrap();
+        fs::write(cache.join("x"), b"data").unwrap();
+        let old = SystemTime::now() - Duration::from_secs(40 * 86400);
+        filetime::set_file_mtime(&cache, filetime::FileTime::from_system_time(old)).unwrap();
+        std::env::set_var("HOME", &home);
+
+        let pattern = cache.to_string_lossy().into_owned();
+        let mut specific = all_rule("specific-cache", vec![pattern], false);
+        specific.label = "Specific cache".into();
+        let orphaned = orphaned_rule(vec!["~/Library/Caches/*".into()]);
+
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), None)
+            .with_orphan_deps(fake_orphan_deps_uninstalled("com.example.app"));
+        let plan = orch
+            .build_plan(&[specific, orphaned], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert_eq!(plan.entries.len(), 1);
+        assert_eq!(plan.entries[0].rule_id, "specific-cache");
+        assert_eq!(plan.entries[0].label, "Specific cache");
+        std::env::remove_var("HOME");
+        let _ = fs::remove_dir_all(&home);
     }
 }

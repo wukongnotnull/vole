@@ -21,13 +21,16 @@ use crate::rules::{PgrepProcessProbe, ProcessProbe, StrategyBuildError};
 pub use apply_plan::{
     apply_plan, apply_proto_plan, ApplyPlanContext, ApplyPlanError, ApplyPlanOptions,
 };
-pub use coverage::{coverage_note, enabled_rule_count, MOLE_INVENTORY_TOTAL};
+pub use coverage::{
+    coverage_note, coverage_with_orphan_notices, enabled_rule_count, MOLE_INVENTORY_TOTAL,
+    ORPHAN_LIBRARY_WARN,
+};
 pub use optimize_apply::{
     apply_optimize_plan, apply_optimize_proto_plan, OptimizeApplyContext, OptimizeApplyError,
     OptimizeApplyOptions,
 };
 pub use optimize_plan::{build_optimize_plan, OptimizePlanError, OptimizePlanOptions};
-pub use plan::{Plan, PlanBuilder, PlanEntry, DEFAULT_PLAN_TTL};
+pub use plan::{Plan, PlanBuilder, PlanEntry, PlanNotice, DEFAULT_PLAN_TTL};
 pub use proto_plan::{plan_to_proto, ProtoPlanError};
 pub use uninstall_apply::{
     apply_uninstall_plan, apply_uninstall_proto_plan, UninstallApplyContext, UninstallApplyError,

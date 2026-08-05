@@ -8,8 +8,9 @@ use crossbeam_channel::unbounded;
 use vole_core::cancel::CancelToken;
 use vole_core::mutex::{try_lock_clean, MutexError};
 use vole_core::ops::{
-    apply_proto_plan, coverage_note, enabled_rule_count, plan_to_proto, ApplyPlanError,
-    ApplyPlanOptions, OpsError, Orchestrator, Plan, ProtoPlanError,
+    apply_proto_plan, coverage_note, coverage_with_orphan_notices, enabled_rule_count,
+    plan_to_proto, ApplyPlanError, ApplyPlanOptions, OpsError, Orchestrator, Plan, PlanNotice,
+    ProtoPlanError, ORPHAN_LIBRARY_WARN,
 };
 use vole_core::protection::AppProtection;
 use vole_core::rules::{default_rules_dir, load_rules_from_dir, LoadError, PgrepProcessProbe};
@@ -68,7 +69,6 @@ fn run_clean_inner(opts: CleanOptions) -> io::Result<()> {
 fn run_plan(opts: CleanOptions) -> io::Result<()> {
     let rules = load_rules_from_dir(default_rules_dir()).map_err(map_load_error)?;
     let enabled = enabled_rule_count(&rules);
-    let note = coverage_note(enabled);
     let whitelist_patterns = whitelist::load_clean()?;
     let protection = AppProtection::new();
 
@@ -111,6 +111,9 @@ fn run_plan(opts: CleanOptions) -> io::Result<()> {
         }
     };
 
+    let base_note = coverage_note(enabled);
+    let note = coverage_with_orphan_notices(&base_note, &plan.notices);
+
     if opts.json_stream {
         orch.emit(StreamEvent::Done {
             report: plan_done_report(&note),
@@ -125,7 +128,7 @@ fn run_plan(opts: CleanOptions) -> io::Result<()> {
 
     let mut proto = plan_to_proto(&plan).map_err(map_proto_error)?;
     proto.coverage_note = Some(note.clone());
-    write_plan_output(&opts, &plan, &proto, &note)?;
+    write_plan_output(&opts, &plan, &proto, &base_note)?;
     Ok(())
 }
 
@@ -209,7 +212,7 @@ fn write_plan_output(
     opts: &CleanOptions,
     plan: &Plan,
     proto: &ProtoPlan,
-    coverage: &str,
+    base_coverage: &str,
 ) -> io::Result<()> {
     if let Some(path) = &opts.plan_out {
         let json = serde_json::to_string_pretty(proto).map_err(io::Error::other)?;
@@ -226,7 +229,7 @@ fn write_plan_output(
         return Ok(());
     }
 
-    print_human_plan(plan, coverage);
+    print_human_plan(plan, base_coverage);
     Ok(())
 }
 
@@ -268,6 +271,12 @@ fn print_human_plan(plan: &Plan, coverage: &str) {
     }
     eprintln!();
     eprintln!("{coverage}");
+    if plan
+        .notices
+        .contains(&PlanNotice::OrphanLibraryInaccessible)
+    {
+        eprintln!("{ORPHAN_LIBRARY_WARN}");
+    }
 }
 
 fn print_human_report(report: &Report) {

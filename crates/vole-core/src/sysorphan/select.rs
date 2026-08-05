@@ -194,7 +194,7 @@ fn pht_extension_skipped(filename: &str) -> bool {
     let Some((_, ext)) = filename.rsplit_once('.') else {
         return false; // extensionless helpers OK
     };
-    PHT_SKIP_EXTENSIONS.iter().any(|e| *e == ext)
+    PHT_SKIP_EXTENSIONS.contains(&ext)
 }
 
 fn is_plist_orphaned(
@@ -272,10 +272,7 @@ fn bundle_has_installed_app(
     if !deps.spotlight_available() {
         return true;
     }
-    match deps.mdfind_bundle(bundle_id) {
-        Ok(found) => found,
-        Err(_) => true,
-    }
+    deps.mdfind_bundle(bundle_id).unwrap_or(true)
 }
 
 #[cfg(test)]

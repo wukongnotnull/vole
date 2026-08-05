@@ -85,10 +85,10 @@ fn app_path_present(raw: &str, home: &Path) -> bool {
             return true;
         }
     }
-    if raw.starts_with("/Library/Input Methods/") {
-        if path_exists(&home.join("Library/Input Methods").join(name)) {
-            return true;
-        }
+    if raw.starts_with("/Library/Input Methods/")
+        && path_exists(&home.join("Library/Input Methods").join(name))
+    {
+        return true;
     }
     false
 }

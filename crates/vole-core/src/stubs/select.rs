@@ -295,6 +295,27 @@ mod tests {
     }
 
     #[test]
+    fn candidate_path_shape_gate() {
+        use super::super::is_container_stub_candidate_path as gate;
+        let home = Path::new("/Users/t");
+        assert!(gate(
+            Path::new("/Users/t/Library/Containers/com.macpaw.CleanMyMac4"),
+            home
+        ));
+        // 更深层级 / 根本身 / 家外路径 / `..` 均拒绝。
+        assert!(!gate(
+            Path::new("/Users/t/Library/Containers/com.macpaw.CleanMyMac4/Data"),
+            home
+        ));
+        assert!(!gate(Path::new("/Users/t/Library/Containers"), home));
+        assert!(!gate(Path::new("/Users/other/Library/Containers/x"), home));
+        assert!(!gate(
+            Path::new("/Users/t/Library/Containers/../Preferences"),
+            home
+        ));
+    }
+
+    #[test]
     fn label_uses_basename() {
         assert_eq!(
             super::super::container_stub_label(Path::new(

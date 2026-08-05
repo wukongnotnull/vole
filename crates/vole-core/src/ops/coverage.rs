@@ -16,6 +16,9 @@ pub const APPLY_PERMISSION_WARN: &str = "注意：部分条目因权限或系统
 /// system services 三树皆不可读时追加；不提 FDA。
 pub const SYSTEM_SERVICES_WARN: &str = "注意：orphaned-system-services 已跳过（无法读取 /Library/LaunchDaemons、LaunchAgents 或 PrivilegedHelperTools）。当前扫描不使用 sudo，结果为可读子集；完整清理请使用 Mole 或具备相应权限的环境。系统路径候选即使出现在 plan 中，apply 也会 NeedsPrivilege 硬跳过（发现优先，Vole 不删除）。";
 
+/// `~/Library/Containers` 不可列时追加（container stubs 规则降级）。
+pub const CONTAINER_STUBS_WARN: &str = "注意：orphaned-container-stubs 已跳过（无法读取 ~/Library/Containers）。若为权限问题，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole 后重试。";
+
 /// 已启用、未 `disabled` 的规则数。
 pub fn enabled_rule_count(rules: &[Rule]) -> usize {
     rules.iter().filter(|r| !r.disabled).count()
@@ -27,9 +30,10 @@ pub fn coverage_note(enabled_rules: usize) -> String {
         "本版本启用 {enabled_rules} 条清理规则（Mole v1.48.1 库存约 {MOLE_INVENTORY_TOTAL} 条）。\
          产品 v2 CLI（clean / uninstall / optimize）已达；用户域 orphaned app data（Caches/Logs/Saved State）、\
          Claude Desktop workspace VM orphan、system services orphan（/Library LaunchDaemons/Agents/PHT 可读子集；发现优先，删除请用 Mole/sudo）、\
+         container stubs（CleanMyMac allowlist）、\
          Toolbox keep-N、Codex staging、not_running（精确名 + cmdline）、\
          FCP / 剪映 generated、XCTestDevices 已落地。\
-         仍未移植：真 sudo 删除、Containers stubs、其它 sudo/系统路径（如 Rosetta `/Library`、claude pending-uploads）。\
+         仍未移植：真 sudo 删除、Group Containers 泛清理、其它 sudo/系统路径（如 Rosetta `/Library`、claude pending-uploads）。\
          如需完整清理，请继续使用 Mole：https://github.com/tw93/Mole"
     )
 }
@@ -42,6 +46,9 @@ pub fn coverage_with_orphan_notices(base: &str, notices: &[PlanNotice]) -> Strin
     }
     if notices.contains(&PlanNotice::SystemServicesInaccessible) {
         out = format!("{out}\n{SYSTEM_SERVICES_WARN}");
+    }
+    if notices.contains(&PlanNotice::ContainersInaccessible) {
+        out = format!("{out}\n{CONTAINER_STUBS_WARN}");
     }
     out
 }
@@ -119,7 +126,12 @@ mod tests {
             "must not claim user-domain orphaned is still unported"
         );
         assert!(unported.contains("真 sudo 删除"));
-        assert!(unported.contains("Containers stubs"));
+        assert!(unported.contains("Group Containers 泛清理"));
+        assert!(
+            !unported.contains("Containers stubs"),
+            "container stubs allowlist must not remain unported"
+        );
+        assert!(note.contains("container stubs（CleanMyMac allowlist）"));
     }
 
     #[test]
@@ -144,6 +156,11 @@ mod tests {
         assert!(sys.contains(SYSTEM_SERVICES_WARN));
         assert!(!sys.contains("完全磁盘访问权限"));
         assert!(sys.contains("NeedsPrivilege"));
+
+        let stubs =
+            coverage_with_orphan_notices(&base, &[crate::ops::PlanNotice::ContainersInaccessible]);
+        assert!(stubs.contains(CONTAINER_STUBS_WARN));
+        assert!(stubs.contains("完全磁盘访问权限"));
     }
 
     #[test]

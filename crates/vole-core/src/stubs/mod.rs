@@ -17,6 +17,21 @@ pub const STUB_ALLOWLIST: &[(&str, &str)] = &[
     ("*.com.macpaw.CleanMyMac*", "/Applications/CleanMyMac X.app"),
 ];
 
+/// Plan 入选闸口豁免的形状校验：路径必须恰为 `home/Library/Containers/<单层名>`
+/// （拒绝更深层级、`..`、非 Normal 组件）。豁免 `validate_path_for_deletion`
+/// 的候选必须先通过本检查。
+pub fn is_container_stub_candidate_path(path: &std::path::Path, home: &std::path::Path) -> bool {
+    let containers = home.join("Library/Containers");
+    let Ok(rel) = path.strip_prefix(&containers) else {
+        return false;
+    };
+    let mut comps = rel.components();
+    matches!(
+        (comps.next(), comps.next()),
+        (Some(std::path::Component::Normal(_)), None)
+    )
+}
+
 /// Plan 条目 label：`Orphaned container stub: <bundle_id>`。
 pub fn container_stub_label(path: &std::path::Path) -> String {
     let name = path

@@ -1,5 +1,7 @@
 # Orphaned app data — MUST load last (filename sorts after all other rule files).
 # NEVER expand to Containers / Group Containers / LaunchAgents / Application Scripts.
+# (orphaned-container-stubs below is a hardcoded-allowlist carve-out, NOT an
+#  expansion of the blanket Containers protection.)
 
 [[rule]]
 id = "orphaned-app-data"
@@ -18,6 +20,20 @@ last_verified = "2026-08"
 [rule.strategy]
 kind = "custom"
 handler = "orphaned_app_data"
+
+[[rule]]
+id = "orphaned-container-stubs"
+category = "orphaned"
+label = "Orphaned container stubs"
+platform = ["macos"]
+paths = ["~/Library/Containers"]
+impact = "卸载后残留的沙盒容器 stub（硬编码 CleanMyMac allowlist；仅『目录内只剩 containermanagerd metadata plist』的空壳）；apply 用专用 unlink+rmdir 删除，不进废纸篓，--permanent 不适用"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "custom"
+handler = "orphaned_container_stubs"
 
 [[rule]]
 id = "orphaned-system-services"

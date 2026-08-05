@@ -133,12 +133,21 @@ mod tests {
             .iter()
             .position(|r| r.id == "orphaned-app-data")
             .expect("orphaned-app-data");
+        let stub_idx = enabled
+            .iter()
+            .position(|r| r.id == "orphaned-container-stubs")
+            .expect("orphaned-container-stubs");
         let sys_idx = enabled
             .iter()
             .position(|r| r.id == "orphaned-system-services")
             .expect("orphaned-system-services");
-        assert!(orphan_idx < sys_idx);
+        assert!(orphan_idx < stub_idx);
+        assert!(stub_idx < sys_idx);
         assert_eq!(sys_idx, enabled.len() - 1);
+        assert_eq!(
+            enabled[stub_idx].strategy.handler.as_deref(),
+            Some("orphaned_container_stubs")
+        );
     }
 
     #[test]

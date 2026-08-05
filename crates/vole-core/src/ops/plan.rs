@@ -48,6 +48,7 @@ pub struct Plan {
 pub enum PlanNotice {
     OrphanLibraryInaccessible,
     SystemServicesInaccessible,
+    ContainersInaccessible,
 }
 
 /// plan 生成配置。
@@ -165,6 +166,15 @@ impl Orchestrator {
                             notices.push(PlanNotice::SystemServicesInaccessible);
                         }
                     }
+                    if let Some(CustomDegrade::ContainersInaccessible) = result.degrade {
+                        self.emit(StreamEvent::Skipped {
+                            rule_id: rule.id.clone(),
+                            reason: SkipReason::TccDenied,
+                        });
+                        if !notices.contains(&PlanNotice::ContainersInaccessible) {
+                            notices.push(PlanNotice::ContainersInaccessible);
+                        }
+                    }
                     result.paths
                 }
                 other => other.select(&path_entries),
@@ -189,7 +199,19 @@ impl Orchestrator {
 
                 let path_str = path.display().to_string();
 
-                if let Err(err) = validate_path_for_deletion(&path_str, protection) {
+                if rule.id == crate::stubs::CONTAINER_STUB_RULE_ID {
+                    // 审阅硬约束（设计 §5.1）：`com.macpaw.*` 在 data_protected_bundles，
+                    // 走 validate_path_for_deletion 必被挡 → 该规则改用窄形状校验
+                    //（必须恰为 ~/Library/Containers/<单层名>）。其它规则闸口不变。
+                    // 形状不符按 ProtectedPath 同语义映射（NeedsPrivilege）。
+                    if !crate::stubs::is_container_stub_candidate_path(&path, &home) {
+                        self.emit(StreamEvent::Skipped {
+                            rule_id: rule.id.clone(),
+                            reason: SkipReason::NeedsPrivilege,
+                        });
+                        continue;
+                    }
+                } else if let Err(err) = validate_path_for_deletion(&path_str, protection) {
                     self.emit_skipped(&rule.id, &err);
                     continue;
                 }
@@ -221,6 +243,8 @@ impl Orchestrator {
                     crate::orphan::orphan_label(&path)
                 } else if rule.id == crate::sysorphan::SYSTEM_SERVICES_RULE_ID {
                     crate::sysorphan::system_service_label(&path)
+                } else if rule.id == crate::stubs::CONTAINER_STUB_RULE_ID {
+                    crate::stubs::container_stub_label(&path)
                 } else {
                     rule.label.clone()
                 };
@@ -937,6 +961,98 @@ mod tests {
         assert_eq!(plan.entries[0].rule_id, "specific-cache");
         assert_eq!(plan.entries[0].label, "Specific cache");
         assert!(plan.notices.is_empty());
+        std::env::remove_var("HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    fn container_stub_rule() -> Rule {
+        Rule {
+            id: "orphaned-container-stubs".into(),
+            category: None,
+            label: "Orphaned container stubs".into(),
+            platform: vec!["macos".into()],
+            paths: vec!["~/Library/Containers".into()],
+            impact: None,
+            disabled: false,
+            last_verified: None,
+            strategy: StrategyConfig {
+                kind: crate::rules::StrategyKind::Custom,
+                keep: None,
+                env_override: None,
+                days: None,
+                names: None,
+                handler: Some("orphaned_container_stubs".into()),
+            },
+            guards: Default::default(),
+        }
+    }
+
+    #[test]
+    fn plan_container_stub_bypasses_data_protected_gate() {
+        let _guard = test_env::lock();
+        let home = scratch("stub-bypass");
+        let stub = home.join("Library/Containers/com.macpaw.CleanMyMac4");
+        fs::create_dir_all(&stub).unwrap();
+        fs::write(
+            stub.join(".com.apple.containermanagerd.metadata.plist"),
+            b"p",
+        )
+        .unwrap();
+        std::env::set_var("HOME", &home);
+
+        // 真 embedded protection：com.macpaw.* 是 data_protected，
+        // 走 validate_path_for_deletion 必被挡；本规则须经形状豁免入选。
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), None)
+            .with_orphan_deps(fake_orphan_deps_uninstalled("com.macpaw.CleanMyMac4"));
+        let plan = orch
+            .build_plan(&[container_stub_rule()], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert_eq!(plan.entries.len(), 1);
+        assert_eq!(plan.entries[0].rule_id, "orphaned-container-stubs");
+        assert_eq!(
+            plan.entries[0].label,
+            "Orphaned container stub: com.macpaw.CleanMyMac4"
+        );
+        assert!(plan.entries[0].path.ends_with("com.macpaw.CleanMyMac4"));
+        assert!(plan.notices.is_empty());
+        std::env::remove_var("HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn plan_container_stub_degrades_with_notice_when_unreadable() {
+        use std::os::unix::fs::PermissionsExt;
+        let _guard = test_env::lock();
+        let home = scratch("stub-degrade");
+        let containers = home.join("Library/Containers");
+        fs::create_dir_all(&containers).unwrap();
+        fs::set_permissions(&containers, fs::Permissions::from_mode(0o000)).unwrap();
+        std::env::set_var("HOME", &home);
+
+        let (tx, rx) = unbounded();
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), Some(tx))
+            .with_orphan_deps(fake_orphan_deps_uninstalled("com.macpaw.CleanMyMac4"));
+        let plan = orch
+            .build_plan(&[container_stub_rule()], &AppProtection::new(), &[])
+            .unwrap();
+        fs::set_permissions(&containers, fs::Permissions::from_mode(0o755)).unwrap();
+
+        assert!(plan.entries.is_empty());
+        assert!(plan.notices.contains(&PlanNotice::ContainersInaccessible));
+        let mut saw_tcc = false;
+        while let Ok(ev) = rx.try_recv() {
+            if let StreamEvent::Skipped {
+                rule_id,
+                reason: SkipReason::TccDenied,
+            } = ev
+            {
+                if rule_id == "orphaned-container-stubs" {
+                    saw_tcc = true;
+                }
+            }
+        }
+        assert!(saw_tcc, "expected Skipped TccDenied for container stubs");
         std::env::remove_var("HOME");
         let _ = fs::remove_dir_all(&home);
     }

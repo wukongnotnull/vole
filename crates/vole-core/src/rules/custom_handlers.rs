@@ -21,6 +21,8 @@ pub enum CustomDegrade {
     LibraryInaccessible,
     /// system services：三树皆不可列 / 权限导致零可读。
     SystemLibraryInaccessible,
+    /// container stubs：`~/Library/Containers` 存在但不可列（FDA 缺失等）。
+    ContainersInaccessible,
 }
 
 /// `select_custom` 的返回值。
@@ -62,6 +64,7 @@ pub fn select_custom(
             CustomSelectResult::ok(jetbrains_toolbox_old_versions(entries, rule))
         }
         "orphaned_app_data" => orphaned_app_data(entries, home, orphan_deps),
+        "orphaned_container_stubs" => orphaned_container_stubs(home, orphan_deps),
         "orphaned_system_services" => orphaned_system_services(home, orphan_deps),
         _ => CustomSelectResult::ok(Vec::new()),
     }
@@ -85,6 +88,16 @@ fn orphaned_app_data(
         Err(OrphanScanError::LibraryInaccessible) => CustomSelectResult {
             paths: Vec::new(),
             degrade: Some(CustomDegrade::LibraryInaccessible),
+        },
+    }
+}
+
+fn orphaned_container_stubs(home: &Path, orphan_deps: &dyn OrphanDeps) -> CustomSelectResult {
+    match crate::stubs::select_container_stubs(home, orphan_deps) {
+        Ok(paths) => CustomSelectResult::ok(paths),
+        Err(crate::stubs::StubScanError::ContainersInaccessible) => CustomSelectResult {
+            paths: Vec::new(),
+            degrade: Some(CustomDegrade::ContainersInaccessible),
         },
     }
 }
@@ -751,6 +764,59 @@ mod tests {
 
         assert!(got.paths.is_empty());
         assert_eq!(got.degrade, Some(CustomDegrade::SystemLibraryInaccessible));
+    }
+
+    #[test]
+    fn container_stubs_handler_selects_and_degrades() {
+        use crate::orphan::FakeOrphanDeps;
+        use std::os::unix::fs::PermissionsExt;
+
+        let rule = Rule {
+            id: "orphaned-container-stubs".into(),
+            category: None,
+            label: "t".into(),
+            platform: vec![],
+            paths: vec![],
+            impact: None,
+            disabled: false,
+            last_verified: None,
+            strategy: crate::rules::schema::StrategyConfig {
+                kind: crate::rules::schema::StrategyKind::Custom,
+                keep: None,
+                env_override: None,
+                days: None,
+                names: None,
+                handler: Some("orphaned_container_stubs".into()),
+            },
+            guards: Default::default(),
+        };
+        let deps = FakeOrphanDeps {
+            spotlight: true,
+            ..Default::default()
+        };
+
+        let home = tempfile::tempdir().unwrap();
+        let stub = home
+            .path()
+            .join("Library/Containers/com.macpaw.CleanMyMac4");
+        fs::create_dir_all(&stub).unwrap();
+        fs::write(
+            stub.join(".com.apple.containermanagerd.metadata.plist"),
+            b"p",
+        )
+        .unwrap();
+        let got = select_custom("orphaned_container_stubs", &[], home.path(), &rule, &deps);
+        assert_eq!(got.paths, vec![stub]);
+        assert!(got.degrade.is_none());
+
+        let denied = tempfile::tempdir().unwrap();
+        let containers = denied.path().join("Library/Containers");
+        fs::create_dir_all(&containers).unwrap();
+        fs::set_permissions(&containers, fs::Permissions::from_mode(0o000)).unwrap();
+        let got = select_custom("orphaned_container_stubs", &[], denied.path(), &rule, &deps);
+        fs::set_permissions(&containers, fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(got.paths.is_empty());
+        assert_eq!(got.degrade, Some(CustomDegrade::ContainersInaccessible));
     }
 
     #[test]

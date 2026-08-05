@@ -16,8 +16,10 @@ use crate::orphan::{
 use crate::protection::AppProtection;
 use crate::rules::{should_skip_for_guards, ProcessProbe, Rule};
 use crate::safety::{
-    verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity, ValidationError,
+    verify_plan_entry, verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity,
+    ValidationError,
 };
+use crate::stubs::{remove_verified_container_stub, CONTAINER_STUB_RULE_ID};
 use crate::sysorphan::SYSTEM_SERVICES_RULE_ID;
 use crate::vole_proto::{
     Plan as ProtoPlan, PlanEntry as ProtoPlanEntry, Report, SkipReason, SkipSummary, StreamEvent,
@@ -203,6 +205,33 @@ pub fn apply_plan(
 
         let path = entry.path.display().to_string();
         let identity = proto_identity(entry);
+
+        // Carve-out（设计 §6）：container stub 不走 mole_delete_verified /
+        // verify_plan_entry_for_apply（后者内含 validate_path_for_deletion，
+        // com.macpaw.* data_protected 会再次拒绝）。只做无 protect 的身份
+        // TOCTOU 重验 + stub 形状重验，然后 unlink metadata + rmdir。
+        if entry.rule_id == CONTAINER_STUB_RULE_ID {
+            let ok = verify_plan_entry(&path, &identity).is_ok()
+                && remove_verified_container_stub(&entry.path).is_ok();
+            if ok {
+                succeeded += 1;
+                ctx.deletion_log.log("stub-rmdir", "0", "ok", &path);
+                ctx.oplog
+                    .log("REMOVED", &entry.path, Some("stub-container"))
+                    .ok();
+            } else {
+                skipped += 1;
+                ctx.deletion_log.log("stub-rmdir", "0", "skipped", &path);
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+            }
+            continue;
+        }
 
         // 策略闸口先过一遍，再进入带身份重验的删除路径。
         if let Err(err) = verify_plan_entry_for_apply(&path, &identity, ctx.protection) {
@@ -611,6 +640,119 @@ mod tests {
             .any(|s| s.reason == SkipReason::NeedsPrivilege));
 
         std::env::remove_var("MOLE_DELETE_LOG");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_container_stub_carve_out_removes_without_trash() {
+        use std::sync::Mutex;
+
+        struct FakeTrash {
+            calls: Mutex<Vec<PathBuf>>,
+        }
+        impl Default for FakeTrash {
+            fn default() -> Self {
+                Self {
+                    calls: Mutex::new(Vec::new()),
+                }
+            }
+        }
+        impl Trash for FakeTrash {
+            fn trash_path(
+                &self,
+                path: &std::path::Path,
+                _timeout: Duration,
+            ) -> std::io::Result<()> {
+                self.calls.lock().unwrap().push(path.to_path_buf());
+                Ok(())
+            }
+        }
+
+        let _guard = test_env::lock();
+        let root = scratch("stub-carveout");
+        // com.macpaw.* 是 data_protected：走共享删除管线必被拒，
+        // 本测试证明 carve-out 真删且 trash 未被调用。
+        let stub = root.join("Library/Containers/com.macpaw.CleanMyMac4");
+        fs::create_dir_all(&stub).unwrap();
+        fs::write(
+            stub.join(".com.apple.containermanagerd.metadata.plist"),
+            b"p",
+        )
+        .unwrap();
+
+        let plan = fresh_plan(vec![plan_entry(&stub, CONTAINER_STUB_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let fake_trash = FakeTrash::default();
+
+        // --permanent 与默认行为一致：都是 carve-out（unlink + rmdir）。
+        let report = run_apply(
+            &plan,
+            &protection,
+            apply_opts(true),
+            &deletion_log,
+            &mut oplog,
+            None,
+            &[],
+            &probe,
+            &fake_trash,
+        )
+        .unwrap();
+
+        assert_eq!(report.succeeded, 1);
+        assert_eq!(report.skipped, 0);
+        assert!(!stub.exists());
+        assert!(
+            fake_trash.calls.lock().unwrap().is_empty(),
+            "carve-out must not touch trash"
+        );
+        assert_eq!(report.trashed_bytes, 0);
+        assert_eq!(report.deleted_bytes, 0);
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_container_stub_skips_when_content_appears_after_plan() {
+        let _guard = test_env::lock();
+        let root = scratch("stub-toctou");
+        let stub = root.join("Library/Containers/com.macpaw.CleanMyMac4");
+        fs::create_dir_all(&stub).unwrap();
+        fs::write(
+            stub.join(".com.apple.containermanagerd.metadata.plist"),
+            b"p",
+        )
+        .unwrap();
+
+        let plan = fresh_plan(vec![plan_entry(&stub, CONTAINER_STUB_RULE_ID)]);
+        // plan 之后长出用户数据 → apply 重验必须拒绝并保留。
+        fs::create_dir_all(stub.join("Data")).unwrap();
+
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+
+        let report = run_apply_defaults(
+            &plan,
+            &protection,
+            apply_opts(false),
+            &deletion_log,
+            &mut oplog,
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(stub
+            .join(".com.apple.containermanagerd.metadata.plist")
+            .exists());
+        assert!(stub.join("Data").exists());
+        assert!(report
+            .skipped_by_reason
+            .iter()
+            .any(|s| s.reason == SkipReason::PathVanished));
         fs::remove_dir_all(&root).ok();
     }
 

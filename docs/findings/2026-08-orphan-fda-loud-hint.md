@@ -14,6 +14,10 @@
 - [x] 文案中性（不声称扫描失败一定是 FDA）
 - [x] 其它 custom handler 无 degrade
 
+## 语义说明
+
+`SkipReason::TccDenied` 在本路径表示规则级「无法访问用户 Library / 安装扫描失败」（含 FDA 等权限问题），**不仅**表示既有 `EndpointSecurityCache` 路径校验失败。协议允许日后追加更细变体；本里程碑刻意复用。
+
 ## 验证
 
 - `cargo test -p vole-core --lib` 通过

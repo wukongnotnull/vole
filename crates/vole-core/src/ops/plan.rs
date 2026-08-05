@@ -145,6 +145,8 @@ impl Orchestrator {
                         self.orphan_deps.as_ref(),
                     );
                     if let Some(CustomDegrade::LibraryInaccessible) = result.degrade {
+                        // 语义外延：此处 TccDenied 表示规则级「Library/安装扫描不可访问」
+                        //（含 FDA），不仅限于 EndpointSecurityCache 路径校验失败。
                         self.emit(StreamEvent::Skipped {
                             rule_id: rule.id.clone(),
                             reason: SkipReason::TccDenied,
@@ -889,6 +891,10 @@ mod tests {
         assert_eq!(plan.entries[0].rule_id, "orphaned-app-data");
         assert!(plan.entries[0].label.contains("Orphaned Caches:"));
         assert!(plan.entries[0].path.ends_with("com.gone.app"));
+        assert!(
+            plan.notices.is_empty(),
+            "successful orphan select must not set degrade notices"
+        );
         std::env::remove_var("HOME");
         let _ = fs::remove_dir_all(&home);
     }
@@ -918,6 +924,7 @@ mod tests {
         assert_eq!(plan.entries.len(), 1);
         assert_eq!(plan.entries[0].rule_id, "specific-cache");
         assert_eq!(plan.entries[0].label, "Specific cache");
+        assert!(plan.notices.is_empty());
         std::env::remove_var("HOME");
         let _ = fs::remove_dir_all(&home);
     }

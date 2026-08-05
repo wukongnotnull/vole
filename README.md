@@ -54,14 +54,14 @@ brew install vole
 
 源码 HEAD：`brew install --HEAD wukongnotnull/vole/vole`
 
-**预编译包**（[v1.4.0](https://github.com/wukongnotnull/vole/releases/tag/v1.4.0)，Developer ID 签名 + 公证）
+**预编译包**（[v1.4.1](https://github.com/wukongnotnull/vole/releases/tag/v1.4.1)，Developer ID 签名 + 公证）
 
 ```bash
 # Apple Silicon；Intel 将 aarch64 换为 x86_64
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v1.4.0/vole-1.4.0-aarch64-apple-darwin.tar.gz
-tar xzf vole-1.4.0-aarch64-apple-darwin.tar.gz
-install -m 755 vole-1.4.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-mkdir -p ~/.local/share/vole && cp -R vole-1.4.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v1.4.1/vole-1.4.1-aarch64-apple-darwin.tar.gz
+tar xzf vole-1.4.1-aarch64-apple-darwin.tar.gz
+install -m 755 vole-1.4.1-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+mkdir -p ~/.local/share/vole && cp -R vole-1.4.1-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 ```
 
 保持 `bin` + `share/vole/rules` 相对布局即可；自定义规则目录时再设 `VOLE_RULES_DIR`。
@@ -225,7 +225,7 @@ $ vole completions zsh > ~/.zfunc/_vole
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | **1.4.0**：v2 CLI + orphaned（含 Claude VM） | 成熟、功能最全 |
+| 成熟度 | **1.4.1**：v2 CLI + orphaned（含 Claude VM）+ FDA 响亮提示 | 成熟、功能最全 |
 | 核心命令 | `status` / `analyze` / `clean` / `history` / `uninstall` / `optimize` | 另有 `purge` / `installer` 等 |
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓；orphaned 启发式 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |

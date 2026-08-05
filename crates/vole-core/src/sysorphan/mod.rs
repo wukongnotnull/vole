@@ -12,3 +12,25 @@ pub use select::{
     privileged_helper_bundle_id_from_binary, select_system_service_orphans, SysOrphanScanError,
     SystemServiceRoots,
 };
+
+pub const SYSTEM_SERVICES_RULE_ID: &str = "orphaned-system-services";
+
+/// Plan 条目 label：`Orphaned LaunchDaemon|LaunchAgent|PrivilegedHelper: <id>`。
+pub fn system_service_label(path: &std::path::Path) -> String {
+    let name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("unknown")
+        .trim_end_matches(".plist");
+    let kind = {
+        let s = path.to_string_lossy();
+        if s.contains("LaunchDaemons") {
+            "LaunchDaemon"
+        } else if s.contains("LaunchAgents") {
+            "LaunchAgent"
+        } else {
+            "PrivilegedHelper"
+        }
+    };
+    format!("Orphaned {kind}: {name}")
+}

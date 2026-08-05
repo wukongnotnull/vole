@@ -10,8 +10,11 @@ pub const MOLE_INVENTORY_TOTAL: u32 = 513;
 /// orphan Library 不可访问时追加到当次 coverage_note / 人读 stderr 的警告。
 pub const ORPHAN_LIBRARY_WARN: &str = "注意：orphaned-app-data 已跳过（无法读取 ~/Library/Caches 或安装扫描失败）。若为权限问题，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole 后重试。";
 
-/// uninstall / optimize apply 出现权限或保护跳过时的警告。
+/// uninstall / optimize / clean apply 出现权限或保护跳过时的警告。
 pub const APPLY_PERMISSION_WARN: &str = "注意：部分条目因权限或系统保护被跳过。若涉及用户库数据，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole；系统路径可能需 sudo，请改用 Mole 或具备相应权限的环境后重试。";
+
+/// system services 三树皆不可读时追加；不提 FDA。
+pub const SYSTEM_SERVICES_WARN: &str = "注意：orphaned-system-services 已跳过（无法读取 /Library/LaunchDaemons、LaunchAgents 或 PrivilegedHelperTools）。当前扫描不使用 sudo，结果为可读子集；完整清理请使用 Mole 或具备相应权限的环境。系统路径候选即使出现在 plan 中，当前 Vole 也无法删除（apply 会 NeedsPrivilege）。";
 
 /// 已启用、未 `disabled` 的规则数。
 pub fn enabled_rule_count(rules: &[Rule]) -> usize {
@@ -23,20 +26,24 @@ pub fn coverage_note(enabled_rules: usize) -> String {
     format!(
         "本版本启用 {enabled_rules} 条清理规则（Mole v1.48.1 库存约 {MOLE_INVENTORY_TOTAL} 条）。\
          产品 v2 CLI（clean / uninstall / optimize）已达；用户域 orphaned app data（Caches/Logs/Saved State）、\
-         Claude Desktop workspace VM orphan、Toolbox keep-N、Codex staging、not_running（精确名 + cmdline）、\
+         Claude Desktop workspace VM orphan、system services orphan（/Library LaunchDaemons/Agents/PHT 可读子集；发现优先，删除请用 Mole/sudo）、\
+         Toolbox keep-N、Codex staging、not_running（精确名 + cmdline）、\
          FCP / 剪映 generated、XCTestDevices 已落地。\
-         仍未移植：system services orphan、Containers stubs、sudo/系统路径（如 Rosetta `/Library`、claude pending-uploads）。\
+         仍未移植：真 sudo 删除、Containers stubs、其它 sudo/系统路径（如 Rosetta `/Library`、claude pending-uploads）。\
          如需完整清理，请继续使用 Mole：https://github.com/tw93/Mole"
     )
 }
 
-/// 当次 plan 若有 orphan degrade notice，追加固定警告（用于 json / plan-out）。
+/// 当次 plan 若有 orphan / system-services degrade notice，追加固定警告。
 pub fn coverage_with_orphan_notices(base: &str, notices: &[PlanNotice]) -> String {
+    let mut out = base.to_string();
     if notices.contains(&PlanNotice::OrphanLibraryInaccessible) {
-        format!("{base}\n{ORPHAN_LIBRARY_WARN}")
-    } else {
-        base.to_string()
+        out = format!("{out}\n{ORPHAN_LIBRARY_WARN}");
     }
+    if notices.contains(&PlanNotice::SystemServicesInaccessible) {
+        out = format!("{out}\n{SYSTEM_SERVICES_WARN}");
+    }
+    out
 }
 
 /// apply report 是否含权限/保护类 skip。
@@ -96,6 +103,7 @@ mod tests {
         assert!(note.contains("orphaned app data"));
         assert!(note.contains("Claude Desktop workspace VM orphan"));
         assert!(note.contains("system services orphan"));
+        assert!(note.contains("可读子集"));
         assert!(note.contains("仍未移植"));
         let unported = note.split("仍未移植：").nth(1).expect("unported section");
         assert!(
@@ -103,9 +111,15 @@ mod tests {
             "Claude VM must not remain in the unported list"
         );
         assert!(
+            !unported.contains("system services orphan"),
+            "system services orphan readable subset must not remain unported"
+        );
+        assert!(
             !note.contains("仍未移植：orphaned apps"),
             "must not claim user-domain orphaned is still unported"
         );
+        assert!(unported.contains("真 sudo 删除"));
+        assert!(unported.contains("Containers stubs"));
     }
 
     #[test]
@@ -122,6 +136,14 @@ mod tests {
         assert!(with.contains(&base));
         assert!(with.contains(ORPHAN_LIBRARY_WARN));
         assert!(with.contains("完全磁盘访问权限"));
+
+        let sys = coverage_with_orphan_notices(
+            &base,
+            &[crate::ops::PlanNotice::SystemServicesInaccessible],
+        );
+        assert!(sys.contains(SYSTEM_SERVICES_WARN));
+        assert!(!sys.contains("完全磁盘访问权限"));
+        assert!(sys.contains("NeedsPrivilege"));
     }
 
     #[test]

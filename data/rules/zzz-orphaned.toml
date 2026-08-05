@@ -18,3 +18,21 @@ last_verified = "2026-08"
 [rule.strategy]
 kind = "custom"
 handler = "orphaned_app_data"
+
+[[rule]]
+id = "orphaned-system-services"
+category = "orphaned"
+label = "Orphaned system services"
+platform = ["macos"]
+paths = [
+  "/Library/LaunchDaemons",
+  "/Library/LaunchAgents",
+  "/Library/PrivilegedHelperTools",
+]
+impact = "发现 /Library LaunchDaemons、LaunchAgents、PrivilegedHelperTools 可读子集中的 orphan；无 sudo，删除不承诺（apply 预期 NeedsPrivilege）——完整清理请用 Mole"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "custom"
+handler = "orphaned_system_services"

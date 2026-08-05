@@ -8,9 +8,10 @@ use crossbeam_channel::unbounded;
 use vole_core::cancel::CancelToken;
 use vole_core::mutex::{try_lock_clean, MutexError};
 use vole_core::ops::{
-    apply_proto_plan, coverage_note, coverage_with_orphan_notices, enabled_rule_count,
-    plan_to_proto, ApplyPlanError, ApplyPlanOptions, OpsError, Orchestrator, Plan, PlanNotice,
-    ProtoPlanError, ORPHAN_LIBRARY_WARN,
+    apply_proto_plan, coverage_note, coverage_with_apply_permission_hint,
+    coverage_with_orphan_notices, enabled_rule_count, plan_to_proto, report_has_permission_skips,
+    ApplyPlanError, ApplyPlanOptions, OpsError, Orchestrator, Plan, PlanNotice, ProtoPlanError,
+    APPLY_PERMISSION_WARN, ORPHAN_LIBRARY_WARN, SYSTEM_SERVICES_WARN,
 };
 use vole_core::protection::AppProtection;
 use vole_core::rules::{default_rules_dir, load_rules_from_dir, LoadError, PgrepProcessProbe};
@@ -180,7 +181,7 @@ fn run_apply(opts: &CleanOptions, plan_path: &PathBuf) -> io::Result<()> {
         .map_err(map_apply_error)?
     };
 
-    write_apply_output(opts, &report)?;
+    write_apply_output(opts, report)?;
     Ok(())
 }
 
@@ -233,18 +234,20 @@ fn write_plan_output(
     Ok(())
 }
 
-fn write_apply_output(opts: &CleanOptions, report: &Report) -> io::Result<()> {
+fn write_apply_output(opts: &CleanOptions, mut report: Report) -> io::Result<()> {
     if opts.json_stream {
         return Ok(());
     }
 
     if should_use_json(opts.json) {
-        let json = serde_json::to_string(report).map_err(io::Error::other)?;
+        report.coverage_note =
+            coverage_with_apply_permission_hint(report.coverage_note.as_deref(), &report);
+        let json = serde_json::to_string(&report).map_err(io::Error::other)?;
         println!("{json}");
         return Ok(());
     }
 
-    print_human_report(report);
+    print_human_report(&report);
     Ok(())
 }
 
@@ -277,6 +280,12 @@ fn print_human_plan(plan: &Plan, coverage: &str) {
     {
         eprintln!("{ORPHAN_LIBRARY_WARN}");
     }
+    if plan
+        .notices
+        .contains(&PlanNotice::SystemServicesInaccessible)
+    {
+        eprintln!("{SYSTEM_SERVICES_WARN}");
+    }
 }
 
 fn print_human_report(report: &Report) {
@@ -289,6 +298,9 @@ fn print_human_report(report: &Report) {
     }
     if report.deleted_bytes > 0 {
         println!("永久删除     {}", units::bytes_bin(report.deleted_bytes));
+    }
+    if report_has_permission_skips(report) {
+        eprintln!("{APPLY_PERMISSION_WARN}");
     }
 }
 

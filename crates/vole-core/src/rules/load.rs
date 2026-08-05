@@ -119,13 +119,26 @@ mod tests {
     }
 
     #[test]
-    fn orphaned_rule_loads_last_among_enabled() {
+    fn orphaned_rules_load_last_among_enabled() {
         let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/rules");
         let rules = load_rules_from_dir(dir).expect("load dir");
         let enabled: Vec<_> = rules.iter().filter(|r| !r.disabled).collect();
         let last = enabled.last().expect("rules");
-        assert_eq!(last.id, "orphaned-app-data");
-        assert_eq!(last.strategy.handler.as_deref(), Some("orphaned_app_data"));
+        assert_eq!(last.id, "orphaned-system-services");
+        assert_eq!(
+            last.strategy.handler.as_deref(),
+            Some("orphaned_system_services")
+        );
+        let orphan_idx = enabled
+            .iter()
+            .position(|r| r.id == "orphaned-app-data")
+            .expect("orphaned-app-data");
+        let sys_idx = enabled
+            .iter()
+            .position(|r| r.id == "orphaned-system-services")
+            .expect("orphaned-system-services");
+        assert!(orphan_idx < sys_idx);
+        assert_eq!(sys_idx, enabled.len() - 1);
     }
 
     #[test]

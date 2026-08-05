@@ -24,7 +24,7 @@ pub use apply_plan::{
 pub use coverage::{
     coverage_note, coverage_with_apply_permission_hint, coverage_with_orphan_notices,
     enabled_rule_count, report_has_permission_skips, APPLY_PERMISSION_WARN, MOLE_INVENTORY_TOTAL,
-    ORPHAN_LIBRARY_WARN,
+    ORPHAN_LIBRARY_WARN, SYSTEM_SERVICES_WARN,
 };
 pub use optimize_apply::{
     apply_optimize_plan, apply_optimize_proto_plan, OptimizeApplyContext, OptimizeApplyError,

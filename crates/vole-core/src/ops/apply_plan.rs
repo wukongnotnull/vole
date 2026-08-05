@@ -18,6 +18,7 @@ use crate::rules::{should_skip_for_guards, ProcessProbe, Rule};
 use crate::safety::{
     verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity, ValidationError,
 };
+use crate::sysorphan::SYSTEM_SERVICES_RULE_ID;
 use crate::vole_proto::{
     Plan as ProtoPlan, PlanEntry as ProtoPlanEntry, Report, SkipReason, SkipSummary, StreamEvent,
     SCHEMA_VERSION,
@@ -183,6 +184,20 @@ pub fn apply_plan(
                 });
             }
             skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+            continue;
+        }
+
+        // 发现优先：本期无真 sudo 删除；硬跳过 system-services，避免过期 plan /
+        // 高权限进程实际删掉 LaunchDaemon/PHT（security-review Medium）。
+        if entry.rule_id == SYSTEM_SERVICES_RULE_ID {
+            skipped += 1;
+            if let Some(event) = &ctx.on_event {
+                event(StreamEvent::Skipped {
+                    rule_id: entry.rule_id.clone(),
+                    reason: SkipReason::NeedsPrivilege,
+                });
+            }
+            skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
             continue;
         }
 
@@ -558,6 +573,44 @@ mod tests {
         assert_eq!(report.succeeded, 0);
         assert_eq!(report.skipped, 1);
         assert!(file.exists());
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_hard_skips_system_services_rule() {
+        use crate::sysorphan::SYSTEM_SERVICES_RULE_ID;
+
+        let _guard = test_env::lock();
+        let root = scratch("syssvc-skip");
+        let file = root.join("LaunchDaemons").join("com.example.orphan.plist");
+        fs::create_dir_all(file.parent().unwrap()).unwrap();
+        fs::write(&file, b"plist").unwrap();
+
+        let plan = fresh_plan(vec![plan_entry(&file, SYSTEM_SERVICES_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        std::env::set_var("MOLE_DELETE_LOG", root.join("deletions.log"));
+
+        let report = run_apply_defaults(
+            &plan,
+            &protection,
+            apply_opts(false),
+            &deletion_log,
+            &mut oplog,
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(file.exists());
+        assert!(report
+            .skipped_by_reason
+            .iter()
+            .any(|s| s.reason == SkipReason::NeedsPrivilege));
+
+        std::env::remove_var("MOLE_DELETE_LOG");
         fs::remove_dir_all(&root).ok();
     }
 

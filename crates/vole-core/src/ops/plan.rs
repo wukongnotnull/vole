@@ -47,6 +47,7 @@ pub struct Plan {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PlanNotice {
     OrphanLibraryInaccessible,
+    SystemServicesInaccessible,
 }
 
 /// plan 生成配置。
@@ -155,6 +156,15 @@ impl Orchestrator {
                             notices.push(PlanNotice::OrphanLibraryInaccessible);
                         }
                     }
+                    if let Some(CustomDegrade::SystemLibraryInaccessible) = result.degrade {
+                        self.emit(StreamEvent::Skipped {
+                            rule_id: rule.id.clone(),
+                            reason: SkipReason::NeedsPrivilege,
+                        });
+                        if !notices.contains(&PlanNotice::SystemServicesInaccessible) {
+                            notices.push(PlanNotice::SystemServicesInaccessible);
+                        }
+                    }
                     result.paths
                 }
                 other => other.select(&path_entries),
@@ -209,6 +219,8 @@ impl Orchestrator {
 
                 let label = if rule.id == crate::orphan::ORPHANED_RULE_ID {
                     crate::orphan::orphan_label(&path)
+                } else if rule.id == crate::sysorphan::SYSTEM_SERVICES_RULE_ID {
+                    crate::sysorphan::system_service_label(&path)
                 } else {
                     rule.label.clone()
                 };

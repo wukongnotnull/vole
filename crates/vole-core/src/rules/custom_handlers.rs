@@ -12,12 +12,15 @@ use crate::orphan::{
 use crate::protection::ProtectionCatalog;
 use crate::rules::schema::Rule;
 use crate::rules::strategy::PathEntry;
+use crate::sysorphan::{select_system_service_orphans, SysOrphanScanError, SystemServiceRoots};
 
 /// custom handler 级降级（整规则无候选）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CustomDegrade {
     /// orphaned：~/Library/Caches 不可读或安装扫描失败。
     LibraryInaccessible,
+    /// system services：三树皆不可列 / 权限导致零可读。
+    SystemLibraryInaccessible,
 }
 
 /// `select_custom` 的返回值。
@@ -59,6 +62,7 @@ pub fn select_custom(
             CustomSelectResult::ok(jetbrains_toolbox_old_versions(entries, rule))
         }
         "orphaned_app_data" => orphaned_app_data(entries, home, orphan_deps),
+        "orphaned_system_services" => orphaned_system_services(home, orphan_deps),
         _ => CustomSelectResult::ok(Vec::new()),
     }
 }
@@ -81,6 +85,16 @@ fn orphaned_app_data(
         Err(OrphanScanError::LibraryInaccessible) => CustomSelectResult {
             paths: Vec::new(),
             degrade: Some(CustomDegrade::LibraryInaccessible),
+        },
+    }
+}
+
+fn orphaned_system_services(home: &Path, orphan_deps: &dyn OrphanDeps) -> CustomSelectResult {
+    match select_system_service_orphans(&SystemServiceRoots::from_env(), home, orphan_deps) {
+        Ok(paths) => CustomSelectResult::ok(paths),
+        Err(SysOrphanScanError::AllRootsInaccessible) => CustomSelectResult {
+            paths: Vec::new(),
+            degrade: Some(CustomDegrade::SystemLibraryInaccessible),
         },
     }
 }
@@ -688,6 +702,55 @@ mod tests {
         let got = select_custom("orphaned_app_data", &[], home.path(), &rule, &deps);
         assert!(got.paths.is_empty());
         assert_eq!(got.degrade, Some(CustomDegrade::LibraryInaccessible));
+    }
+
+    #[test]
+    fn orphaned_system_services_degrades_when_all_roots_denied() {
+        use crate::orphan::FakeOrphanDeps;
+        use std::os::unix::fs::PermissionsExt;
+
+        let home = tempfile::tempdir().unwrap();
+        let lib = tempfile::tempdir().unwrap();
+        for d in ["LaunchDaemons", "LaunchAgents", "PrivilegedHelperTools"] {
+            let p = lib.path().join(d);
+            fs::create_dir_all(&p).unwrap();
+            fs::set_permissions(&p, fs::Permissions::from_mode(0o000)).unwrap();
+        }
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", lib.path());
+
+        let rule = Rule {
+            id: "orphaned-system-services".into(),
+            category: None,
+            label: "t".into(),
+            platform: vec![],
+            paths: vec![],
+            impact: None,
+            disabled: false,
+            last_verified: None,
+            strategy: crate::rules::schema::StrategyConfig {
+                kind: crate::rules::schema::StrategyKind::Custom,
+                keep: None,
+                env_override: None,
+                days: None,
+                names: None,
+                handler: Some("orphaned_system_services".into()),
+            },
+            guards: Default::default(),
+        };
+        let deps = FakeOrphanDeps {
+            spotlight: true,
+            ..Default::default()
+        };
+        let got = select_custom("orphaned_system_services", &[], home.path(), &rule, &deps);
+
+        for d in ["LaunchDaemons", "LaunchAgents", "PrivilegedHelperTools"] {
+            let p = lib.path().join(d);
+            fs::set_permissions(&p, fs::Permissions::from_mode(0o700)).unwrap();
+        }
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+
+        assert!(got.paths.is_empty());
+        assert_eq!(got.degrade, Some(CustomDegrade::SystemLibraryInaccessible));
     }
 
     #[test]

@@ -1,13 +1,17 @@
-//! Clean 规则覆盖说明（plan 阶段提示未移植 mole 类别）。
+//! Clean / apply 覆盖说明与权限响亮提示。
 
 use super::plan::PlanNotice;
 use crate::rules::Rule;
+use crate::vole_proto::{Report, SkipReason};
 
 /// Mole v1.48.1 库存总量（`scripts/inventory-mole-rules.py`）。
 pub const MOLE_INVENTORY_TOTAL: u32 = 513;
 
 /// orphan Library 不可访问时追加到当次 coverage_note / 人读 stderr 的警告。
 pub const ORPHAN_LIBRARY_WARN: &str = "注意：orphaned-app-data 已跳过（无法读取 ~/Library/Caches 或安装扫描失败）。若为权限问题，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole 后重试。";
+
+/// uninstall / optimize apply 出现权限或保护跳过时的警告。
+pub const APPLY_PERMISSION_WARN: &str = "注意：部分条目因权限或系统保护被跳过。若涉及用户库数据，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole；系统路径可能需 sudo，请改用 Mole 或具备相应权限的环境后重试。";
 
 /// 已启用、未 `disabled` 的规则数。
 pub fn enabled_rule_count(rules: &[Rule]) -> usize {
@@ -32,6 +36,25 @@ pub fn coverage_with_orphan_notices(base: &str, notices: &[PlanNotice]) -> Strin
         format!("{base}\n{ORPHAN_LIBRARY_WARN}")
     } else {
         base.to_string()
+    }
+}
+
+/// apply report 是否含权限/保护类 skip。
+pub fn report_has_permission_skips(report: &Report) -> bool {
+    report
+        .skipped_by_reason
+        .iter()
+        .any(|s| matches!(s.reason, SkipReason::TccDenied | SkipReason::NeedsPrivilege))
+}
+
+/// 有权限类 skip 时追加 `APPLY_PERMISSION_WARN`（用于 `--json` report）。
+pub fn coverage_with_apply_permission_hint(base: Option<&str>, report: &Report) -> Option<String> {
+    if !report_has_permission_skips(report) {
+        return base.map(str::to_string);
+    }
+    match base.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(b) => Some(format!("{b}\n{APPLY_PERMISSION_WARN}")),
+        None => Some(APPLY_PERMISSION_WARN.to_string()),
     }
 }
 
@@ -99,5 +122,55 @@ mod tests {
         assert!(with.contains(&base));
         assert!(with.contains(ORPHAN_LIBRARY_WARN));
         assert!(with.contains("完全磁盘访问权限"));
+    }
+
+    #[test]
+    fn apply_permission_hint_helpers() {
+        use crate::vole_proto::SkipSummary;
+
+        let empty = Report::default();
+        assert!(!report_has_permission_skips(&empty));
+        assert_eq!(coverage_with_apply_permission_hint(None, &empty), None);
+        assert_eq!(
+            coverage_with_apply_permission_hint(Some("base"), &empty).as_deref(),
+            Some("base")
+        );
+
+        let whitelist_only = Report {
+            skipped_by_reason: vec![SkipSummary {
+                reason: SkipReason::Whitelisted,
+                count: 1,
+                rule_ids: vec!["r".into()],
+            }],
+            ..Report::default()
+        };
+        assert!(!report_has_permission_skips(&whitelist_only));
+
+        let tcc = Report {
+            skipped_by_reason: vec![SkipSummary {
+                reason: SkipReason::TccDenied,
+                count: 2,
+                rule_ids: vec!["a".into()],
+            }],
+            ..Report::default()
+        };
+        assert!(report_has_permission_skips(&tcc));
+        let note = coverage_with_apply_permission_hint(Some("plan note"), &tcc).unwrap();
+        assert!(note.starts_with("plan note\n"));
+        assert!(note.contains(APPLY_PERMISSION_WARN));
+
+        let priv_only = Report {
+            skipped_by_reason: vec![SkipSummary {
+                reason: SkipReason::NeedsPrivilege,
+                count: 1,
+                rule_ids: vec!["b".into()],
+            }],
+            ..Report::default()
+        };
+        assert!(report_has_permission_skips(&priv_only));
+        assert_eq!(
+            coverage_with_apply_permission_hint(None, &priv_only).as_deref(),
+            Some(APPLY_PERMISSION_WARN)
+        );
     }
 }

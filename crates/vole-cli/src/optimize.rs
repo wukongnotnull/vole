@@ -8,8 +8,9 @@ use std::thread;
 use crossbeam_channel::unbounded;
 use vole_core::mutex::{try_lock_optimize, MutexError};
 use vole_core::ops::{
-    apply_optimize_plan, build_optimize_plan, OptimizeApplyError, OptimizeApplyOptions,
-    OptimizePlanOptions,
+    apply_optimize_plan, build_optimize_plan, coverage_with_apply_permission_hint,
+    report_has_permission_skips, OptimizeApplyError, OptimizeApplyOptions, OptimizePlanOptions,
+    APPLY_PERMISSION_WARN,
 };
 use vole_core::protection::{AppProtection, ProtectionCatalog};
 use vole_core::units;
@@ -108,7 +109,7 @@ fn run_apply(opts: &OptimizeOptions, plan_path: &Path) -> io::Result<()> {
         permanent: opts.permanent,
     };
 
-    let report = if opts.json_stream {
+    let mut report = if opts.json_stream {
         let (event_tx, event_rx) = unbounded();
         let writer = spawn_stream_writer(event_rx)?;
         let on_event = |event: StreamEvent| {
@@ -126,6 +127,8 @@ fn run_apply(opts: &OptimizeOptions, plan_path: &Path) -> io::Result<()> {
     };
 
     if should_use_json(opts.json) {
+        report.coverage_note =
+            coverage_with_apply_permission_hint(report.coverage_note.as_deref(), &report);
         println!(
             "{}",
             serde_json::to_string_pretty(&report).map_err(io::Error::other)?
@@ -179,6 +182,9 @@ fn print_human_report(report: &Report) {
     );
     if let Some(note) = &report.coverage_note {
         eprintln!("{note}");
+    }
+    if report_has_permission_skips(report) {
+        eprintln!("{APPLY_PERMISSION_WARN}");
     }
 }
 

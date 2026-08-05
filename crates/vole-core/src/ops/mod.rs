@@ -22,7 +22,8 @@ pub use apply_plan::{
     apply_plan, apply_proto_plan, ApplyPlanContext, ApplyPlanError, ApplyPlanOptions,
 };
 pub use coverage::{
-    coverage_note, coverage_with_orphan_notices, enabled_rule_count, MOLE_INVENTORY_TOTAL,
+    coverage_note, coverage_with_apply_permission_hint, coverage_with_orphan_notices,
+    enabled_rule_count, report_has_permission_skips, APPLY_PERMISSION_WARN, MOLE_INVENTORY_TOTAL,
     ORPHAN_LIBRARY_WARN,
 };
 pub use optimize_apply::{

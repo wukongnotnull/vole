@@ -72,6 +72,7 @@ mod tests {
                     mtime: 1_700_000_000,
                 }),
             }],
+            notices: vec![],
         }
     }
 

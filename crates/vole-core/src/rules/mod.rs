@@ -9,7 +9,7 @@ mod schema;
 mod strategy;
 
 pub use candidate::{Candidate, RuleCandidate};
-pub use custom_handlers::select_custom;
+pub use custom_handlers::{select_custom, CustomDegrade, CustomSelectResult};
 pub use glob::{collect_path_candidates, expand_rule_path, GlobError};
 pub use load::{
     default_rules_dir, load_rules_from_dir, load_rules_from_file, load_rules_from_str, LoadError,

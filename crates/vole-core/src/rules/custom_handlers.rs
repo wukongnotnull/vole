@@ -6,11 +6,35 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use crate::orphan::{
-    claude_vm_orphan_age_days_from_env, orphan_age_days_from_env, select_orphaned_paths, OrphanDeps,
+    claude_vm_orphan_age_days_from_env, orphan_age_days_from_env, select_orphaned_paths,
+    OrphanDeps, OrphanScanError,
 };
 use crate::protection::ProtectionCatalog;
 use crate::rules::schema::Rule;
 use crate::rules::strategy::PathEntry;
+
+/// custom handler 级降级（整规则无候选）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CustomDegrade {
+    /// orphaned：~/Library/Caches 不可读或安装扫描失败。
+    LibraryInaccessible,
+}
+
+/// `select_custom` 的返回值。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CustomSelectResult {
+    pub paths: Vec<PathBuf>,
+    pub degrade: Option<CustomDegrade>,
+}
+
+impl CustomSelectResult {
+    fn ok(paths: Vec<PathBuf>) -> Self {
+        Self {
+            paths,
+            degrade: None,
+        }
+    }
+}
 
 /// 按 handler id 执行自定义策略筛选。
 pub fn select_custom(
@@ -19,15 +43,23 @@ pub fn select_custom(
     home: &Path,
     rule: &Rule,
     orphan_deps: &dyn OrphanDeps,
-) -> Vec<PathBuf> {
+) -> CustomSelectResult {
     match handler {
-        "claude_desktop_bundled_versions" => claude_desktop_bundled_versions(entries, home, rule),
-        "codex_stale_runtimes" => codex_stale_runtimes(entries),
-        "final_cut_pro_generated_caches" => final_cut_pro_generated_caches(entries),
-        "jianyingpro_generated_caches" => jianyingpro_generated_caches(entries),
-        "jetbrains_toolbox_old_versions" => jetbrains_toolbox_old_versions(entries, rule),
+        "claude_desktop_bundled_versions" => {
+            CustomSelectResult::ok(claude_desktop_bundled_versions(entries, home, rule))
+        }
+        "codex_stale_runtimes" => CustomSelectResult::ok(codex_stale_runtimes(entries)),
+        "final_cut_pro_generated_caches" => {
+            CustomSelectResult::ok(final_cut_pro_generated_caches(entries))
+        }
+        "jianyingpro_generated_caches" => {
+            CustomSelectResult::ok(jianyingpro_generated_caches(entries))
+        }
+        "jetbrains_toolbox_old_versions" => {
+            CustomSelectResult::ok(jetbrains_toolbox_old_versions(entries, rule))
+        }
         "orphaned_app_data" => orphaned_app_data(entries, home, orphan_deps),
-        _ => Vec::new(),
+        _ => CustomSelectResult::ok(Vec::new()),
     }
 }
 
@@ -35,8 +67,8 @@ fn orphaned_app_data(
     entries: &[PathEntry],
     home: &Path,
     orphan_deps: &dyn OrphanDeps,
-) -> Vec<PathBuf> {
-    select_orphaned_paths(
+) -> CustomSelectResult {
+    match select_orphaned_paths(
         entries,
         home,
         &ProtectionCatalog::embedded(),
@@ -44,8 +76,13 @@ fn orphaned_app_data(
         orphan_age_days_from_env(),
         claude_vm_orphan_age_days_from_env(),
         SystemTime::now(),
-    )
-    .unwrap_or_default()
+    ) {
+        Ok(paths) => CustomSelectResult::ok(paths),
+        Err(OrphanScanError::LibraryInaccessible) => CustomSelectResult {
+            paths: Vec::new(),
+            degrade: Some(CustomDegrade::LibraryInaccessible),
+        },
+    }
 }
 
 /// JetBrains Toolbox: under each `apps/<product>/ch-*`, keep newest `keep` version
@@ -622,5 +659,67 @@ mod tests {
                 .any(|p| p.ends_with("2024.1") || p.ends_with("2025.1")),
             "must keep newest non-current and current: {selected:?}"
         );
+    }
+
+    #[test]
+    fn orphaned_degrades_when_library_inaccessible() {
+        use crate::orphan::FakeOrphanDeps;
+        let home = tempfile::tempdir().unwrap();
+        let rule = Rule {
+            id: "orphaned-app-data".into(),
+            category: None,
+            label: "t".into(),
+            platform: vec![],
+            paths: vec![],
+            impact: None,
+            disabled: false,
+            last_verified: None,
+            strategy: crate::rules::schema::StrategyConfig {
+                kind: crate::rules::schema::StrategyKind::Custom,
+                keep: None,
+                env_override: None,
+                days: None,
+                names: None,
+                handler: Some("orphaned_app_data".into()),
+            },
+            guards: Default::default(),
+        };
+        let deps = FakeOrphanDeps::default();
+        let got = select_custom("orphaned_app_data", &[], home.path(), &rule, &deps);
+        assert!(got.paths.is_empty());
+        assert_eq!(got.degrade, Some(CustomDegrade::LibraryInaccessible));
+    }
+
+    #[test]
+    fn jetbrains_handler_has_no_degrade() {
+        use crate::orphan::FakeOrphanDeps;
+        let rule = Rule {
+            id: "jb".into(),
+            category: None,
+            label: "jb".into(),
+            platform: vec![],
+            paths: vec![],
+            impact: None,
+            disabled: false,
+            last_verified: None,
+            strategy: crate::rules::schema::StrategyConfig {
+                kind: crate::rules::schema::StrategyKind::Custom,
+                keep: Some(1),
+                env_override: None,
+                days: None,
+                names: None,
+                handler: Some("jetbrains_toolbox_old_versions".into()),
+            },
+            guards: Default::default(),
+        };
+        let got = select_custom(
+            "jetbrains_toolbox_old_versions",
+            &[],
+            Path::new("/tmp"),
+            &rule,
+            &FakeOrphanDeps::default(),
+        );
+        assert!(got.degrade.is_none());
+        assert!(got.paths.is_empty());
     }
 }

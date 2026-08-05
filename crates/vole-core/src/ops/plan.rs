@@ -7,8 +7,8 @@ use std::time::{Duration, SystemTime};
 
 use crate::protection::AppProtection;
 use crate::rules::{
-    collect_path_candidates, resolve_strategy, select_custom, should_skip_for_guards, PathEntry,
-    ResolvedStrategy, Rule, Strategy,
+    collect_path_candidates, resolve_strategy, select_custom, should_skip_for_guards,
+    CustomDegrade, PathEntry, ResolvedStrategy, Rule, Strategy,
 };
 use crate::safety::{
     capture_plan_entry_identity, validate_path_for_deletion, PlanEntryIdentity, ValidationError,
@@ -39,6 +39,14 @@ pub struct Plan {
     pub generated_at: SystemTime,
     pub ttl: Duration,
     pub entries: Vec<PlanEntry>,
+    /// 规则级降级提示（人读 / 当次 coverage；不进 proto）。
+    pub notices: Vec<PlanNotice>,
+}
+
+/// plan 期间的规则级 notice（不进协议）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlanNotice {
+    OrphanLibraryInaccessible,
 }
 
 /// plan 生成配置。
@@ -103,6 +111,7 @@ impl Orchestrator {
         let mut seen_paths: HashSet<PathBuf> = HashSet::new();
         let mut scanned: u64 = 0;
         let mut next_id: u64 = 0;
+        let mut notices: Vec<PlanNotice> = Vec::new();
 
         for rule in rules {
             self.check_cancel()?;
@@ -127,13 +136,25 @@ impl Orchestrator {
             let expanded = collect_path_candidates(rule, &home);
             let path_entries = build_path_entries(&expanded);
             let selected = match &strategy {
-                ResolvedStrategy::Custom(custom) => select_custom(
-                    &custom.handler,
-                    &path_entries,
-                    &home,
-                    rule,
-                    self.orphan_deps.as_ref(),
-                ),
+                ResolvedStrategy::Custom(custom) => {
+                    let result = select_custom(
+                        &custom.handler,
+                        &path_entries,
+                        &home,
+                        rule,
+                        self.orphan_deps.as_ref(),
+                    );
+                    if let Some(CustomDegrade::LibraryInaccessible) = result.degrade {
+                        self.emit(StreamEvent::Skipped {
+                            rule_id: rule.id.clone(),
+                            reason: SkipReason::TccDenied,
+                        });
+                        if !notices.contains(&PlanNotice::OrphanLibraryInaccessible) {
+                            notices.push(PlanNotice::OrphanLibraryInaccessible);
+                        }
+                    }
+                    result.paths
+                }
                 other => other.select(&path_entries),
             };
 
@@ -220,6 +241,7 @@ impl Orchestrator {
             generated_at: SystemTime::now(),
             ttl,
             entries,
+            notices,
         })
     }
 
@@ -896,6 +918,43 @@ mod tests {
         assert_eq!(plan.entries.len(), 1);
         assert_eq!(plan.entries[0].rule_id, "specific-cache");
         assert_eq!(plan.entries[0].label, "Specific cache");
+        std::env::remove_var("HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn plan_orphaned_emits_tcc_denied_and_notice_when_degraded() {
+        let _guard = test_env::lock();
+        let home = scratch("orphan-fda");
+        // 无 Library/Caches → LibraryInaccessible
+        std::env::set_var("HOME", &home);
+
+        let (tx, rx) = unbounded();
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), Some(tx))
+            .with_orphan_deps(fake_orphan_deps_uninstalled("com.gone.app"));
+        let rule = orphaned_rule(vec!["~/Library/Caches/*".into()]);
+        let plan = orch
+            .build_plan(&[rule], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert!(plan.entries.is_empty());
+        assert!(plan
+            .notices
+            .contains(&PlanNotice::OrphanLibraryInaccessible));
+
+        let mut saw_tcc = false;
+        while let Ok(ev) = rx.try_recv() {
+            if let StreamEvent::Skipped {
+                rule_id,
+                reason: SkipReason::TccDenied,
+            } = ev
+            {
+                if rule_id == "orphaned-app-data" {
+                    saw_tcc = true;
+                }
+            }
+        }
+        assert!(saw_tcc, "expected Skipped TccDenied for orphaned-app-data");
         std::env::remove_var("HOME");
         let _ = fs::remove_dir_all(&home);
     }

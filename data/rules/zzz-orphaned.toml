@@ -29,7 +29,7 @@ paths = [
   "/Library/LaunchAgents",
   "/Library/PrivilegedHelperTools",
 ]
-impact = "发现 /Library LaunchDaemons、LaunchAgents、PrivilegedHelperTools 可读子集中的 orphan；无 sudo，删除不承诺（apply 预期 NeedsPrivilege）——完整清理请用 Mole"
+impact = "发现 /Library LaunchDaemons、LaunchAgents、PrivilegedHelperTools 可读子集中的 orphan；无 sudo；apply 硬跳过 NeedsPrivilege（发现优先）——完整清理请用 Mole"
 disabled = false
 last_verified = "2026-08"
 

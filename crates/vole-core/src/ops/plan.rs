@@ -127,15 +127,13 @@ impl Orchestrator {
             let expanded = collect_path_candidates(rule, &home);
             let path_entries = build_path_entries(&expanded);
             let selected = match &strategy {
-                ResolvedStrategy::Custom(custom) => {
-                    select_custom(
-                        &custom.handler,
-                        &path_entries,
-                        &home,
-                        rule,
-                        self.orphan_deps.as_ref(),
-                    )
-                }
+                ResolvedStrategy::Custom(custom) => select_custom(
+                    &custom.handler,
+                    &path_entries,
+                    &home,
+                    rule,
+                    self.orphan_deps.as_ref(),
+                ),
                 other => other.select(&path_entries),
             };
 

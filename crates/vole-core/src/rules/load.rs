@@ -125,10 +125,7 @@ mod tests {
         let enabled: Vec<_> = rules.iter().filter(|r| !r.disabled).collect();
         let last = enabled.last().expect("rules");
         assert_eq!(last.id, "orphaned-app-data");
-        assert_eq!(
-            last.strategy.handler.as_deref(),
-            Some("orphaned_app_data")
-        );
+        assert_eq!(last.strategy.handler.as_deref(), Some("orphaned_app_data"));
     }
 
     #[test]

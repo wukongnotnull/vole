@@ -8,9 +8,7 @@ use std::time::SystemTime;
 use crate::protection::ProtectionCatalog;
 use crate::rules::PathEntry;
 
-use super::judge::{
-    bundle_id_from_orphan_path, matches_orphan_name_prefix, OrphanJudge,
-};
+use super::judge::{bundle_id_from_orphan_path, matches_orphan_name_prefix, OrphanJudge};
 use super::{OrphanDeps, MAX_ORPHAN_ITERATIONS};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

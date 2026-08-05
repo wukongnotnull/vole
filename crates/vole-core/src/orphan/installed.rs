@@ -99,9 +99,7 @@ mod tests {
     #[test]
     fn scan_fixture_app_reads_bundle_id() {
         let tmp = tempfile::tempdir().unwrap();
-        let app = tmp
-            .path()
-            .join("Applications/Demo.app/Contents");
+        let app = tmp.path().join("Applications/Demo.app/Contents");
         fs::create_dir_all(&app).unwrap();
         fs::write(
             app.join("Info.plist"),

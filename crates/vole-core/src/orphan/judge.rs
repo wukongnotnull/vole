@@ -20,12 +20,7 @@ pub struct OrphanJudge<'a> {
 
 impl OrphanJudge<'_> {
     /// `true` = 可标为 orphan（候选删除）。
-    pub fn is_bundle_orphaned(
-        &self,
-        bundle_id: &str,
-        _path: &Path,
-        mtime: SystemTime,
-    ) -> bool {
+    pub fn is_bundle_orphaned(&self, bundle_id: &str, _path: &Path, mtime: SystemTime) -> bool {
         if should_protect_data(bundle_id, self.catalog) {
             return false;
         }

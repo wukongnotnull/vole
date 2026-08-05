@@ -6,8 +6,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use super::MAX_MDFIND_CALLS;
 use super::installed::{collect_launch_agent_ids, scan_app_dirs_for_bundle_ids};
+use super::MAX_MDFIND_CALLS;
 
 const PROBE_TIMEOUT: Duration = Duration::from_secs(10);
 

@@ -5,9 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use crate::orphan::{
-    orphan_age_days_from_env, select_orphaned_paths, OrphanDeps,
-};
+use crate::orphan::{orphan_age_days_from_env, select_orphaned_paths, OrphanDeps};
 use crate::protection::ProtectionCatalog;
 use crate::rules::schema::Rule;
 use crate::rules::strategy::PathEntry;

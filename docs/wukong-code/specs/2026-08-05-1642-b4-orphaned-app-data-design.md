@@ -99,13 +99,14 @@ crates/vole-core/src/orphan/          # NEW：扫描 + 判定（纯库，可单�
   installed.rs                        # scan_installed_apps + running + agents
   judge.rs                            # is_bundle_orphaned
   scan.rs                             # 三根目录枚举 → PathBuf 列表
-crates/vole-core/src/rules/custom_handlers.rs  # 注册 orphaned_app_data
-data/rules/.../orphaned-app-data.toml # NEW
-crates/vole-core/src/ops/coverage.rs  # 文案更新
-tests/fixtures/orphaned/              # NEW：假 HOME + 假安装树
+crates/vole-core/src/rules/custom_handlers.rs  # 注册 handler id `orphaned_app_data`
+data/rules/<category>/orphaned-app-data.toml   # NEW：strategy.custom = "orphaned_app_data"
+crates/vole-core/src/ops/coverage.rs           # 文案更新
+tests/fixtures/orphaned/                       # NEW：假 HOME + 假安装树
 ```
 
-编排：plan 阶段 custom handler（或等价钩子）调用 `orphan::scan`；apply **不**信任 plan 的 orphan 结论，必须对每条路径 **重新跑** judge + 路径闸口（与不可信 plan 原则一致）。若重判失败 → skip + 记入 report，不删。
+编排：plan 阶段由 `select_custom("orphaned_app_data", …)` 调用 `orphan::scan`（handler 可忽略常规 path glob，自行枚举三根）。  
+apply **不**信任 plan 的 orphan 结论：对 `rule_id == "orphaned-app-data"` 的每条路径 **重新跑** judge + 路径闸口（与不可信 plan 原则一致）。重判失败 → skip + 记入 report，不删。
 
 **不**复用 `uninstall` 的 `find_app_leftovers` 做 orphan 发现：uninstall 从「已知 .app」扩残留；orphan 从「Library 条目」反查「无 .app」。可共享：bundle id 校验、`should_protect_data`、删除漏斗、sibling 概念不用于 orphan 主路径（无 app 身份）。
 

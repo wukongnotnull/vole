@@ -1,7 +1,7 @@
 # B4：Orphaned App Data 设计
 
-- 日期：2026-08-05
-- 状态：草案（待审阅）
+- 日期：2026-08-05（同日审阅修订：apply 重判定位为新机制、Spotlight fail-closed、执行预算、注入要求、去重顺序、env 命名对齐）
+- 状态：草案（已修订，待终审）
 - 依据：`2026-07-30-v1-closeout-design.md` §5 B4；`2026-07-30-1900-v2-product-goals-design.md` §4.3；Mole `third_party/mole-1.48.1/lib/clean/apps.sh`（`clean_orphaned_app_data` / `is_bundle_orphaned` / `scan_installed_apps`）；`SECURITY_AUDIT.md` orphan 相关条款
 - 包版本意图：能力扩展 → **`1.3.0`**（SemVer MINOR；见 `2026-07-30-semver-policy-design.md`）
 
@@ -36,9 +36,9 @@ vole clean --apply <plan.json>    # 默认废纸篓；--permanent 仅与 --apply
 
 - 人读摘要：条目 label 形如 `Orphaned Caches: com.example.app`
 - `--json` / `--json-stream`：与现 clean 事件一致；`coverage_note` 更新为「orphaned 用户域主路径已落地；system services / Containers 等仍未移植」
-- 环境变量（对齐 Mole，可选覆盖）：
-  - `VOLE_ORPHAN_AGE_DAYS`（默认 **30**）
-  - 不引入 `VOLE_ORPHAN_ENABLE` 新开关；禁用走规则 `disabled = true`
+- 环境变量（沿用 Mole 原名，与既有 custom `MOLE_JETBRAINS_TOOLBOX_KEEP` 惯例一致）：
+  - `MOLE_ORPHAN_AGE_DAYS`（默认 **30**；解析失败或 **< 7** 一律回退 30——阈值下限防止 `0` 让当天数据过闸）
+  - 不引入 enable 新开关；禁用走规则 `disabled = true`
 
 ### 4.2 规则与 `rule_id`
 
@@ -56,6 +56,8 @@ vole clean --apply <plan.json>    # 默认废纸篓；--permanent 仅与 --apply
 | `$HOME/Library/Logs` | 同上 |
 | `$HOME/Library/Saved Application State` | `*.savedState`（strip 后缀得 bundle id） |
 
+前缀集合**刻意**只含 com/org/net/io（对齐 Mole `resource_types`）：`dev.*` / `app.*` / `co.*` 等孤儿数据不扫，属已知保守取舍，不是遗漏。零尺寸条目跳过（对齐 Mole `size_kb == 0` 分支）。
+
 **明确永不扫描（Mole CRITICAL 注释，本设计写死）**：
 
 - `~/Library/LaunchAgents` / LaunchDaemons
@@ -66,7 +68,7 @@ vole clean --apply <plan.json>    # 默认废纸篓；--permanent 仅与 --apply
 
 ### 4.4 B4.1（可选，不阻塞 1.3.0）
 
-- Claude Desktop workspace VM：`$HOME/Library/Application Support/Claude/**/*.bundle`，年龄默认 **7** 天（`VOLE_CLAUDE_VM_ORPHAN_AGE_DAYS`），且 Claude 进程 / bundle 安装检查对齐 Mole `is_claude_vm_bundle_orphaned`
+- Claude Desktop workspace VM：`$HOME/Library/Application Support/Claude/**/*.bundle`，年龄默认 **7** 天（`MOLE_CLAUDE_VM_ORPHAN_AGE_DAYS`，沿用 Mole 原名），且 Claude 进程 / bundle 安装检查对齐 Mole `is_claude_vm_bundle_orphaned`
 - 若 B4.1 未进同一发版：`coverage_note` 仍可提「Claude VM orphan 未做」
 
 ## 5. 判定流水线（`is_bundle_orphaned` 对齐）
@@ -81,15 +83,20 @@ vole clean --apply <plan.json>    # 默认废纸篓；--permanent 仅与 --apply
    - 运行中：优先 **`lsappinfo`**（避免 osascript TCC 弹窗）；可选补充既有 process probe；测试模式跳过 AppleScript
    - 用户域 + `/Library/LaunchAgents` 的 plist basename（仅作「仍活跃」证据，**不**作为删除目标）
 4. **系统组件 deny 名**（loginwindow / dock / finder / safari 等 Mole case）→ 否
-5. **年龄**：路径 mtime 距今 `< VOLE_ORPHAN_AGE_DAYS`（默认 30）→ 否
+5. **年龄**：路径 mtime 距今 `< MOLE_ORPHAN_AGE_DAYS`（默认 30，下限 7）→ 否
 6. **mdfind 回退**（仅 reverse-DNS bundle id）：`kMDItemCFBundleIdentifier == '<id>'`  
-   - 超时 / 非零退出 → **视为仍安装，跳过**，且不写入「未找到」缓存  
+   - **前置**：先探测 Spotlight 可用性（每次 plan 一次，如 `mdutil -s /` 或对已知存在 bundle 校准）；不可用 → 整个 mdfind 分支 fail-closed，**该 bundle 视为仍安装**（Mole 在 Spotlight 关闭时会把空结果当「未安装」，Vole 不复制这个弱点）
+   - 超时 / 非零退出 → 视为仍安装，跳过，且不写入「未找到」缓存  
    - 有命中 → 跳过  
-   - 明确空结果 → 才可继续
-7. **白名单** `is_path_whitelisted` → 否
+   - 明确空结果（且 Spotlight 可用）→ 才可继续
+7. **白名单**（`crate::whitelist`）→ 否
 8. **路径闸口**：`validate_path_for_deletion` + `ProtectionMode::Cleanup`；删除只经既有 `mole_delete_verified`（默认 Trash）
 
-安装扫描可做短 TTL 缓存（Mole 300s）；缓存失效必须宁可重扫，不可在权限失败时当成「零安装」。
+### 5.1 执行预算（写死）
+
+- mdfind / lsappinfo 子进程一律有超时（对齐 Mole medium probe ≈ 10s；vole-core 无通用 timeout helper，按 `scan/du.rs` 模式实现）
+- 每次 plan 的 mdfind 调用上限 **64** 次（进程内缓存去重后）；超限的 bundle 一律视为仍安装
+- 安装扫描**不做磁盘缓存**（砍掉 Mole 的 300s cache file）：进程内单次扫描，plan / apply 各自扫。目录权限失败 → 宁可整体跳过 orphan 判定，不可当成「零安装」
 
 ## 6. 架构落点
 
@@ -100,13 +107,31 @@ crates/vole-core/src/orphan/          # NEW：扫描 + 判定（纯库，可单�
   judge.rs                            # is_bundle_orphaned
   scan.rs                             # 三根目录枚举 → PathBuf 列表
 crates/vole-core/src/rules/custom_handlers.rs  # 注册 handler id `orphaned_app_data`
-data/rules/<category>/orphaned-app-data.toml   # NEW：strategy.custom = "orphaned_app_data"
+crates/vole-core/src/ops/apply_plan.rs         # NEW：orphaned 条目 apply 重判钩子（§6.2）
+data/rules/<category>/orphaned-app-data.toml   # NEW：[rule.strategy] kind="custom" handler="orphaned_app_data"
 crates/vole-core/src/ops/coverage.rs           # 文案更新
 tests/fixtures/orphaned/                       # NEW：假 HOME + 假安装树
+docs/releases/v1.3.0.md                        # 发版说明
+README.md                                      # 特性 / 与 Mole 对比更新
 ```
 
-编排：plan 阶段由 `select_custom("orphaned_app_data", …)` 调用 `orphan::scan`（handler 可忽略常规 path glob，自行枚举三根）。  
-apply **不**信任 plan 的 orphan 结论：对 `rule_id == "orphaned-app-data"` 的每条路径 **重新跑** judge + 路径闸口（与不可信 plan 原则一致）。重判失败 → skip + 记入 report，不删。
+`docs/protocol.md` 无需变更（零协议改动）。
+
+### 6.1 plan 接线（贴合现有 `select_custom` 流程）
+
+规则 `paths` 直接声明三根 glob（`~/Library/Caches/*` 等）；`select_custom("orphaned_app_data", entries, home, rule)` 收到 glob 展开后的 entries，对每条跑 judge 过滤——与 Toolbox / Codex handler 同模式，fixture 机制可直接复用。**不**引入「handler 自行枚举」新模式。
+
+**规则顺序**：orphaned-app-data 必须在全部具名规则**之后**评估（B3 同路径去重「先入选者胜」，具名规则的 label/策略优先）。加载序保证 + 单测锁定。
+
+### 6.2 apply 重判（新增机制，现状没有）
+
+现状 `apply_plan.rs` 只重查 guards + 路径闸口，**不会**重跑 custom handler。本设计新增：按 `rule_id == "orphaned-app-data"` 的条目在 apply 时重新跑完整 judge（含安装扫描 + mdfind fail-closed），重判失败 → skip + 记入 report。实现为 apply 侧的 handler-recheck 钩子（仅此规则注册，不改协议）。
+
+注：plan 条目若被篡改成其他 `rule_id`，走的是该规则的常规闸口（既有信任模型，Cleanup 模式保护路径仍挡）；本机制只保证「挂 orphaned 名义的删除必过 orphan 重判」。
+
+### 6.3 可注入性（测试与 CI 决定性）
+
+`orphan::scan` / `installed.rs` 的全部外部依赖必须可注入：扫描根、安装目录列表、运行中探针（复用既有 `ProcessProbe` 思路）、mdfind 探针、Spotlight 可用性。fixture / CI（含 conformance plan-stage）一律用注入的假环境，**不得**读真实 `/Applications`、不得起 mdfind / lsappinfo 子进程——否则 CI 结果随 runner 状态漂移。
 
 **不**复用 `uninstall` 的 `find_app_leftovers` 做 orphan 发现：uninstall 从「已知 .app」扩残留；orphan 从「Library 条目」反查「无 .app」。可共享：bundle id 校验、`should_protect_data`、删除漏斗、sibling 概念不用于 orphan 主路径（无 app 身份）。
 
@@ -114,13 +139,17 @@ apply **不**信任 plan 的 orphan 结论：对 `rule_id == "orphaned-app-data"
 
 - [ ] 扫描根集合与 §4.3 完全一致；代码注释复述 NEVER 列表
 - [ ] mdfind 超时 / 错误 fail-closed 有单测
+- [ ] **Spotlight 不可用（mdutil off）时不产生 orphan 误判**有单测
 - [ ] 敏感族 + `should_protect_data` 有单测（至少 1Password / com.apple.*）
 - [ ] apply 重判：plan 篡改「缩短年龄 / 伪造 rule」不能删过闸路径
+- [ ] 规则顺序单测：同路径下具名规则胜出 orphaned
+- [ ] `MOLE_ORPHAN_AGE_DAYS` 下限 clamp 有单测（0 / 负值 / 非数字 → 30）
 - [ ] 默认 Trash；`--permanent` 仅 apply
 - [ ] 无 sudo；无 `/Library` 删除
 - [ ] 无 Group Containers / Containers / LaunchAgents 删除
-- [ ] FDA 不可用时降级跳过并响亮提示（对齐 Mole「No permission」）
-- [ ] 迭代上限（对齐 `MOLE_MAX_ORPHAN_ITERATIONS` 精神），防止异常目录拖死
+- [ ] FDA 不可用时降级跳过并响亮提示（探测方式对齐 Mole：读 `~/Library/Caches` 失败即降级）
+- [ ] 迭代上限（对齐 `MOLE_MAX_ORPHAN_ITERATIONS` 精神）+ mdfind 调用上限 64，防止异常目录拖死
+- [ ] CI / conformance 全程注入假环境，无真机探针子进程
 - [ ] 独立 findings：`docs/findings/2026-08-b4-orphaned-security-review.md`
 
 ## 8. 测试策略

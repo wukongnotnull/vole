@@ -15,8 +15,9 @@ pub fn coverage_note(enabled_rules: usize) -> String {
     format!(
         "本版本启用 {enabled_rules} 条清理规则（Mole v1.48.1 库存约 {MOLE_INVENTORY_TOTAL} 条）。\
          产品 v2 CLI（clean / uninstall / optimize）已达；用户域 orphaned app data（Caches/Logs/Saved State）、\
-         Toolbox keep-N、Codex staging、not_running（精确名 + cmdline）、FCP / 剪映 generated、XCTestDevices 已落地。\
-         仍未移植：system services orphan、Containers stubs、Claude VM orphan、sudo/系统路径（如 Rosetta `/Library`、claude pending-uploads）。\
+         Claude Desktop workspace VM orphan、Toolbox keep-N、Codex staging、not_running（精确名 + cmdline）、\
+         FCP / 剪映 generated、XCTestDevices 已落地。\
+         仍未移植：system services orphan、Containers stubs、sudo/系统路径（如 Rosetta `/Library`、claude pending-uploads）。\
          如需完整清理，请继续使用 Mole：https://github.com/tw93/Mole"
     )
 }
@@ -57,8 +58,14 @@ mod tests {
         assert!(note.contains("Toolbox keep-N"));
         assert!(note.contains("已落地"));
         assert!(note.contains("orphaned app data"));
+        assert!(note.contains("Claude Desktop workspace VM orphan"));
         assert!(note.contains("system services orphan"));
         assert!(note.contains("仍未移植"));
+        let unported = note.split("仍未移植：").nth(1).expect("unported section");
+        assert!(
+            !unported.contains("Claude"),
+            "Claude VM must not remain in the unported list"
+        );
         assert!(
             !note.contains("仍未移植：orphaned apps"),
             "must not claim user-domain orphaned is still unported"

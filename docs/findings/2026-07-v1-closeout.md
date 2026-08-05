@@ -39,6 +39,7 @@
 | B2 | Codex Desktop stale staging（无 lsof） | ✅ |
 | B3 | plan 同路径去重 | ✅ |
 | B4 | orphaned apps（用户域） | ✅（1.3.0；见 `2026-08-b4-orphaned-security-review.md`） |
+| B4.1 | Claude VM orphan | ✅（1.4.0；见 `2026-08-b41-claude-vm-orphan.md`） |
 | C | SwiftUI 桌面 | 另仓：`vole-macos` Clean MVP 已开（见 `2026-08-cli-honesty-pass.md`） |
 
 ## 下一轨：产品 v2

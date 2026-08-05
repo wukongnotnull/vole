@@ -422,7 +422,7 @@ mod tests {
         let _ = make_claude_bundle(
             home.path(),
             "vm_bundles/claudevm.bundle",
-            SystemTime::now() - Duration::from_secs(1 * 86400),
+            SystemTime::now() - Duration::from_secs(86400),
         );
         let deps = claude_deps_ok();
         let got = select_orphaned_paths(

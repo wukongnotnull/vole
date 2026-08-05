@@ -428,7 +428,7 @@ mod tests {
         let catalog = ProtectionCatalog::embedded();
         let path = Path::new("/Users/t/Library/Application Support/Claude/vm_bundles/x.bundle");
         let old = SystemTime::now() - Duration::from_secs(10 * 86400);
-        let young = SystemTime::now() - Duration::from_secs(1 * 86400);
+        let young = SystemTime::now() - Duration::from_secs(86400);
         let id = CLAUDE_DESKTOP_BUNDLE_ID;
 
         let running = FakeOrphanDeps {

@@ -1,8 +1,64 @@
-//! Orphan 判定用的纯函数（年龄、敏感族、路径 → bundle id）。
+//! Orphan 判定用的纯函数（年龄、敏感族、路径 → bundle id）与完整 judge。
 
+use std::collections::HashSet;
 use std::path::Path;
+use std::time::{Duration, SystemTime};
 
+use crate::protection::{is_reverse_dns_bundle_id, should_protect_data, ProtectionCatalog};
+
+use super::deps::OrphanDeps;
 use super::{DEFAULT_ORPHAN_AGE_DAYS, MIN_ORPHAN_AGE_DAYS};
+
+/// 一次 orphan 判定上下文（安装集合已预计算）。
+pub struct OrphanJudge<'a> {
+    pub catalog: &'a ProtectionCatalog,
+    pub deps: &'a dyn OrphanDeps,
+    pub installed: &'a HashSet<String>,
+    pub age_days: u32,
+    pub now: SystemTime,
+}
+
+impl OrphanJudge<'_> {
+    /// `true` = 可标为 orphan（候选删除）。
+    pub fn is_bundle_orphaned(
+        &self,
+        bundle_id: &str,
+        _path: &Path,
+        mtime: SystemTime,
+    ) -> bool {
+        if should_protect_data(bundle_id, self.catalog) {
+            return false;
+        }
+        if is_sensitive_orphan_bundle(bundle_id) {
+            return false;
+        }
+        if self.installed.contains(bundle_id) {
+            return false;
+        }
+        if is_system_component_bundle(bundle_id) {
+            return false;
+        }
+        let age = match self.now.duration_since(mtime) {
+            Ok(d) => d,
+            Err(_) => return false, // 未来 mtime → 不删
+        };
+        let threshold = Duration::from_secs(u64::from(self.age_days) * 86400);
+        if age < threshold {
+            return false;
+        }
+        if is_reverse_dns_bundle_id(bundle_id) {
+            if !self.deps.spotlight_available() {
+                return false;
+            }
+            match self.deps.mdfind_bundle(bundle_id) {
+                Ok(true) => return false,
+                Ok(false) => {}
+                Err(()) => return false,
+            }
+        }
+        true
+    }
+}
 
 /// 读 `MOLE_ORPHAN_AGE_DAYS`；非法或低于下限则回退默认。
 pub fn orphan_age_days_from_env() -> u32 {
@@ -107,6 +163,8 @@ pub fn orphan_label(path: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::orphan::FakeOrphanDeps;
+    use std::collections::HashMap;
     use std::path::Path;
 
     #[test]
@@ -142,5 +200,105 @@ mod tests {
         let s = Path::new("/tmp/Library/Saved Application State/com.foo.savedState");
         assert_eq!(bundle_id_from_orphan_path(s).as_deref(), Some("com.foo"));
         assert_eq!(orphan_label(p), "Orphaned Caches: com.example.app");
+    }
+
+    #[test]
+    fn orphan_when_old_and_not_installed() {
+        let deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            mdfind: HashMap::from([("com.gone.app".into(), Ok(false))]),
+            scan_error: false,
+        };
+        let installed = HashSet::new();
+        let catalog = ProtectionCatalog::embedded();
+        let judge = OrphanJudge {
+            catalog: &catalog,
+            deps: &deps,
+            installed: &installed,
+            age_days: 30,
+            now: SystemTime::now(),
+        };
+        let mtime = SystemTime::now() - Duration::from_secs(40 * 86400);
+        assert!(judge.is_bundle_orphaned(
+            "com.gone.app",
+            Path::new("/tmp/Library/Caches/com.gone.app"),
+            mtime
+        ));
+    }
+
+    #[test]
+    fn not_orphan_when_spotlight_disabled() {
+        let deps = FakeOrphanDeps {
+            spotlight: false,
+            installed: HashSet::new(),
+            mdfind: HashMap::from([("com.gone.app".into(), Ok(false))]),
+            scan_error: false,
+        };
+        let installed = HashSet::new();
+        let catalog = ProtectionCatalog::embedded();
+        let judge = OrphanJudge {
+            catalog: &catalog,
+            deps: &deps,
+            installed: &installed,
+            age_days: 30,
+            now: SystemTime::now(),
+        };
+        let mtime = SystemTime::now() - Duration::from_secs(40 * 86400);
+        assert!(!judge.is_bundle_orphaned(
+            "com.gone.app",
+            Path::new("/tmp/Library/Caches/com.gone.app"),
+            mtime
+        ));
+    }
+
+    #[test]
+    fn not_orphan_when_mdfind_errors() {
+        let deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            mdfind: HashMap::from([("com.gone.app".into(), Err(()))]),
+            scan_error: false,
+        };
+        let installed = HashSet::new();
+        let catalog = ProtectionCatalog::embedded();
+        let judge = OrphanJudge {
+            catalog: &catalog,
+            deps: &deps,
+            installed: &installed,
+            age_days: 30,
+            now: SystemTime::now(),
+        };
+        let mtime = SystemTime::now() - Duration::from_secs(40 * 86400);
+        assert!(!judge.is_bundle_orphaned(
+            "com.gone.app",
+            Path::new("/tmp/Library/Caches/com.gone.app"),
+            mtime
+        ));
+    }
+
+    #[test]
+    fn not_orphan_when_installed() {
+        let deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::from(["com.keep.app".into()]),
+            mdfind: HashMap::new(),
+            scan_error: false,
+        };
+        let installed = deps.installed.clone();
+        let catalog = ProtectionCatalog::embedded();
+        let judge = OrphanJudge {
+            catalog: &catalog,
+            deps: &deps,
+            installed: &installed,
+            age_days: 30,
+            now: SystemTime::now(),
+        };
+        let mtime = SystemTime::now() - Duration::from_secs(40 * 86400);
+        assert!(!judge.is_bundle_orphaned(
+            "com.keep.app",
+            Path::new("/tmp/Library/Caches/com.keep.app"),
+            mtime
+        ));
     }
 }

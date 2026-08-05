@@ -5,14 +5,16 @@
 mod deps;
 mod installed;
 mod judge;
+mod select;
 
 pub use deps::{FakeOrphanDeps, LiveOrphanDeps, MdfindBudget, OrphanDeps};
 pub use installed::default_app_scan_roots;
 pub use judge::{
     bundle_id_from_orphan_path, is_sensitive_orphan_bundle, is_system_component_bundle,
     matches_orphan_name_prefix, orphan_age_days_from_env, orphan_age_days_from_raw, orphan_label,
-    resource_kind_label,
+    resource_kind_label, OrphanJudge,
 };
+pub use select::{select_orphaned_paths, OrphanScanError};
 
 pub const ORPHANED_RULE_ID: &str = "orphaned-app-data";
 pub const DEFAULT_ORPHAN_AGE_DAYS: u32 = 30;

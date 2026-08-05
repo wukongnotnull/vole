@@ -13,7 +13,8 @@
 - plan：`rule_id == orphaned-container-stubs` 时不调 `validate_path_for_deletion`，
   改为窄形状校验（路径必须恰为 `~/Library/Containers/<单层名>`）；失败按
   `NeedsPrivilege`（对齐 `ProtectedPath` 映射）skip。
-- apply：早分支专用 carve-out——`verify_plan_entry`（无 protect 的身份 TOCTOU）+
+- apply：早分支专用 carve-out——`recheck_container_stub_entry`（策略重验）+
+  `verify_plan_entry`（无 protect 的身份 TOCTOU）+
   `remove_verified_container_stub`（重验 stub 形状后 unlink metadata + rmdir）。
   绝不落入 trash / `mole_delete_verified`；`--permanent` 不改变行为。
 
@@ -38,7 +39,17 @@ carve-out 不做「先扫再删」的复杂锁：metadata unlink 后若目录长
   （证明未死于 validate），同时既有 property 测试保证其它路径保护不变。
 - apply 测试用 FakeTrash 断言 carve-out 全程不触碰废纸篓。
 
-## 5. 版本与规则
+## 5. Apply 策略重验（security-review Medium 修）
+
+PR review 指出：apply carve-out 曾只做身份 TOCTOU + stub 形状，缺少与
+`recheck_orphaned_entry` 对等的策略重验，篡改/过期 plan 可删出 Containers
+范围、allowlist 外 path，或在 app 重装后仍删 stub。
+
+修复：`recheck_container_stub_entry`（形状 → allowlist → stub 形状 → app 不存在）
+于 unlink 之前强制执行；失败 → `Skipped(PathVanished)`。单测覆盖路径在外 /
+非 allowlist / app 重装三种拒绝路径。
+
+## 6. 版本与规则
 
 - 规则数 513 → **514**；`zzz-orphaned.toml` 内顺序：orphaned-app-data →
   orphaned-container-stubs → orphaned-system-services（末位断言同步更新）。

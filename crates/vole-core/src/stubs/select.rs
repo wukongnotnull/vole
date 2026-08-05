@@ -83,6 +83,26 @@ fn allowlist_app_path(bundle_id: &str) -> Option<&'static str> {
         .map(|(_, app_path)| *app_path)
 }
 
+/// apply 对不可信 / 过期 plan 的策略重验（对齐 `recheck_orphaned_entry`）。
+///
+/// 必须全部通过才允许 carve-out 删除：路径形状（Containers 单层）→
+/// 硬编码 allowlist → stub 形状 → app 不存在（fail-closed）。
+pub fn recheck_container_stub_entry(path: &Path, home: &Path, deps: &dyn OrphanDeps) -> bool {
+    if !super::is_container_stub_candidate_path(path, home) {
+        return false;
+    }
+    let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+        return false;
+    };
+    let Some(app_path) = allowlist_app_path(name) else {
+        return false;
+    };
+    if !is_verified_stub_dir(path) {
+        return false;
+    }
+    !container_stub_app_exists(name, app_path, home, deps)
+}
+
 /// Mole `_container_stub_app_exists` 同形：canonical 路径 → `~/Applications` →
 /// Setapp 两处 → reverse-DNS 才 mdfind（fail-closed 视为仍安装）。
 fn container_stub_app_exists(
@@ -291,6 +311,26 @@ mod tests {
         let got = select_container_stubs(&home, &deps_spotlight_on());
         fs::set_permissions(&containers, fs::Permissions::from_mode(0o755)).unwrap();
         assert_eq!(got, Err(StubScanError::ContainersInaccessible));
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn recheck_rejects_outside_path_non_allowlist_and_app_present() {
+        let home = temp_home("recheck");
+        let stub = make_stub(&home, "com.macpaw.CleanMyMac4");
+        let deps = deps_spotlight_on();
+        assert!(recheck_container_stub_entry(&stub, &home, &deps));
+
+        let outside = home.join("Library/Preferences/com.macpaw.CleanMyMac4");
+        fs::create_dir_all(&outside).unwrap();
+        fs::write(outside.join(CONTAINER_STUB_METADATA), b"p").unwrap();
+        assert!(!recheck_container_stub_entry(&outside, &home, &deps));
+
+        let other = make_stub(&home, "com.example.app");
+        assert!(!recheck_container_stub_entry(&other, &home, &deps));
+
+        fs::create_dir_all(home.join("Applications/CleanMyMac X.app")).unwrap();
+        assert!(!recheck_container_stub_entry(&stub, &home, &deps));
         let _ = fs::remove_dir_all(&home);
     }
 

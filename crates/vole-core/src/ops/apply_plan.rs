@@ -19,7 +19,9 @@ use crate::safety::{
     verify_plan_entry, verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity,
     ValidationError,
 };
-use crate::stubs::{remove_verified_container_stub, CONTAINER_STUB_RULE_ID};
+use crate::stubs::{
+    recheck_container_stub_entry, remove_verified_container_stub, CONTAINER_STUB_RULE_ID,
+};
 use crate::sysorphan::SYSTEM_SERVICES_RULE_ID;
 use crate::vole_proto::{
     Plan as ProtoPlan, PlanEntry as ProtoPlanEntry, Report, SkipReason, SkipSummary, StreamEvent,
@@ -208,10 +210,12 @@ pub fn apply_plan(
 
         // Carve-out（设计 §6）：container stub 不走 mole_delete_verified /
         // verify_plan_entry_for_apply（后者内含 validate_path_for_deletion，
-        // com.macpaw.* data_protected 会再次拒绝）。只做无 protect 的身份
-        // TOCTOU 重验 + stub 形状重验，然后 unlink metadata + rmdir。
+        // com.macpaw.* data_protected 会再次拒绝）。对不可信 plan 先做策略
+        // 重验（形状 + allowlist + app 存在），再做身份 TOCTOU + stub 删除。
         if entry.rule_id == CONTAINER_STUB_RULE_ID {
-            let ok = verify_plan_entry(&path, &identity).is_ok()
+            let home = dirs_home();
+            let ok = recheck_container_stub_entry(&entry.path, &home, ctx.orphan_deps)
+                && verify_plan_entry(&path, &identity).is_ok()
                 && remove_verified_container_stub(&entry.path).is_ok();
             if ok {
                 succeeded += 1;
@@ -645,6 +649,7 @@ mod tests {
 
     #[test]
     fn apply_container_stub_carve_out_removes_without_trash() {
+        use crate::orphan::FakeOrphanDeps;
         use std::sync::Mutex;
 
         struct FakeTrash {
@@ -669,34 +674,36 @@ mod tests {
         }
 
         let _guard = test_env::lock();
-        let root = scratch("stub-carveout");
+        let home = scratch("stub-carveout");
         // com.macpaw.* 是 data_protected：走共享删除管线必被拒，
         // 本测试证明 carve-out 真删且 trash 未被调用。
-        let stub = root.join("Library/Containers/com.macpaw.CleanMyMac4");
+        let stub = home.join("Library/Containers/com.macpaw.CleanMyMac4");
         fs::create_dir_all(&stub).unwrap();
         fs::write(
             stub.join(".com.apple.containermanagerd.metadata.plist"),
             b"p",
         )
         .unwrap();
+        std::env::set_var("HOME", &home);
 
         let plan = fresh_plan(vec![plan_entry(&stub, CONTAINER_STUB_RULE_ID)]);
         let protection = AppProtection::new();
-        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let deletion_log = DeletionLogger::with_path(home.join("deletions.log"));
         let mut oplog = OperationLogger::new("clean");
-        let probe = crate::rules::FakeProcessProbe::default();
         let fake_trash = FakeTrash::default();
+        let deps = FakeOrphanDeps {
+            spotlight: true,
+            ..Default::default()
+        };
 
         // --permanent 与默认行为一致：都是 carve-out（unlink + rmdir）。
-        let report = run_apply(
+        let report = run_apply_with_orphan_deps(
             &plan,
             &protection,
             apply_opts(true),
             &deletion_log,
             &mut oplog,
-            None,
-            &[],
-            &probe,
+            &deps,
             &fake_trash,
         )
         .unwrap();
@@ -710,36 +717,68 @@ mod tests {
         );
         assert_eq!(report.trashed_bytes, 0);
         assert_eq!(report.deleted_bytes, 0);
-        fs::remove_dir_all(&root).ok();
+        std::env::remove_var("HOME");
+        fs::remove_dir_all(&home).ok();
     }
 
     #[test]
     fn apply_container_stub_skips_when_content_appears_after_plan() {
+        use crate::orphan::FakeOrphanDeps;
+        use std::sync::Mutex;
+
+        struct FakeTrash {
+            calls: Mutex<Vec<PathBuf>>,
+        }
+        impl Default for FakeTrash {
+            fn default() -> Self {
+                Self {
+                    calls: Mutex::new(Vec::new()),
+                }
+            }
+        }
+        impl Trash for FakeTrash {
+            fn trash_path(
+                &self,
+                path: &std::path::Path,
+                _timeout: Duration,
+            ) -> std::io::Result<()> {
+                self.calls.lock().unwrap().push(path.to_path_buf());
+                Ok(())
+            }
+        }
+
         let _guard = test_env::lock();
-        let root = scratch("stub-toctou");
-        let stub = root.join("Library/Containers/com.macpaw.CleanMyMac4");
+        let home = scratch("stub-toctou");
+        let stub = home.join("Library/Containers/com.macpaw.CleanMyMac4");
         fs::create_dir_all(&stub).unwrap();
         fs::write(
             stub.join(".com.apple.containermanagerd.metadata.plist"),
             b"p",
         )
         .unwrap();
+        std::env::set_var("HOME", &home);
 
         let plan = fresh_plan(vec![plan_entry(&stub, CONTAINER_STUB_RULE_ID)]);
         // plan 之后长出用户数据 → apply 重验必须拒绝并保留。
         fs::create_dir_all(stub.join("Data")).unwrap();
 
         let protection = AppProtection::new();
-        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let deletion_log = DeletionLogger::with_path(home.join("deletions.log"));
         let mut oplog = OperationLogger::new("clean");
+        let fake_trash = FakeTrash::default();
+        let deps = FakeOrphanDeps {
+            spotlight: true,
+            ..Default::default()
+        };
 
-        let report = run_apply_defaults(
+        let report = run_apply_with_orphan_deps(
             &plan,
             &protection,
             apply_opts(false),
             &deletion_log,
             &mut oplog,
-            None,
+            &deps,
+            &fake_trash,
         )
         .unwrap();
 
@@ -749,11 +788,214 @@ mod tests {
             .join(".com.apple.containermanagerd.metadata.plist")
             .exists());
         assert!(stub.join("Data").exists());
+        assert!(fake_trash.calls.lock().unwrap().is_empty());
         assert!(report
             .skipped_by_reason
             .iter()
             .any(|s| s.reason == SkipReason::PathVanished));
-        fs::remove_dir_all(&root).ok();
+        std::env::remove_var("HOME");
+        fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
+    fn apply_container_stub_recheck_rejects_path_outside_containers() {
+        use crate::orphan::FakeOrphanDeps;
+        use std::sync::Mutex;
+
+        struct FakeTrash {
+            calls: Mutex<Vec<PathBuf>>,
+        }
+        impl Default for FakeTrash {
+            fn default() -> Self {
+                Self {
+                    calls: Mutex::new(Vec::new()),
+                }
+            }
+        }
+        impl Trash for FakeTrash {
+            fn trash_path(
+                &self,
+                path: &std::path::Path,
+                _timeout: Duration,
+            ) -> std::io::Result<()> {
+                self.calls.lock().unwrap().push(path.to_path_buf());
+                Ok(())
+            }
+        }
+
+        let _guard = test_env::lock();
+        let home = scratch("stub-outside");
+        // 篡改 plan：path 在 Containers 外但凑成 stub 形。
+        let outside = home.join("Library/Preferences/com.macpaw.CleanMyMac4");
+        fs::create_dir_all(&outside).unwrap();
+        fs::write(
+            outside.join(".com.apple.containermanagerd.metadata.plist"),
+            b"p",
+        )
+        .unwrap();
+        std::env::set_var("HOME", &home);
+
+        let plan = fresh_plan(vec![plan_entry(&outside, CONTAINER_STUB_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(home.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let fake_trash = FakeTrash::default();
+        let deps = FakeOrphanDeps {
+            spotlight: true,
+            ..Default::default()
+        };
+
+        let report = run_apply_with_orphan_deps(
+            &plan,
+            &protection,
+            apply_opts(false),
+            &deletion_log,
+            &mut oplog,
+            &deps,
+            &fake_trash,
+        )
+        .unwrap();
+
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(outside.exists());
+        assert!(fake_trash.calls.lock().unwrap().is_empty());
+        std::env::remove_var("HOME");
+        fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
+    fn apply_container_stub_recheck_rejects_non_allowlist_bundle() {
+        use crate::orphan::FakeOrphanDeps;
+        use std::sync::Mutex;
+
+        struct FakeTrash {
+            calls: Mutex<Vec<PathBuf>>,
+        }
+        impl Default for FakeTrash {
+            fn default() -> Self {
+                Self {
+                    calls: Mutex::new(Vec::new()),
+                }
+            }
+        }
+        impl Trash for FakeTrash {
+            fn trash_path(
+                &self,
+                path: &std::path::Path,
+                _timeout: Duration,
+            ) -> std::io::Result<()> {
+                self.calls.lock().unwrap().push(path.to_path_buf());
+                Ok(())
+            }
+        }
+
+        let _guard = test_env::lock();
+        let home = scratch("stub-allowlist");
+        let stub = home.join("Library/Containers/com.example.app");
+        fs::create_dir_all(&stub).unwrap();
+        fs::write(
+            stub.join(".com.apple.containermanagerd.metadata.plist"),
+            b"p",
+        )
+        .unwrap();
+        std::env::set_var("HOME", &home);
+
+        let plan = fresh_plan(vec![plan_entry(&stub, CONTAINER_STUB_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(home.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let fake_trash = FakeTrash::default();
+        let deps = FakeOrphanDeps {
+            spotlight: true,
+            ..Default::default()
+        };
+
+        let report = run_apply_with_orphan_deps(
+            &plan,
+            &protection,
+            apply_opts(false),
+            &deletion_log,
+            &mut oplog,
+            &deps,
+            &fake_trash,
+        )
+        .unwrap();
+
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(stub.exists());
+        assert!(fake_trash.calls.lock().unwrap().is_empty());
+        std::env::remove_var("HOME");
+        fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
+    fn apply_container_stub_recheck_rejects_when_app_reinstalled() {
+        use crate::orphan::FakeOrphanDeps;
+        use std::sync::Mutex;
+
+        struct FakeTrash {
+            calls: Mutex<Vec<PathBuf>>,
+        }
+        impl Default for FakeTrash {
+            fn default() -> Self {
+                Self {
+                    calls: Mutex::new(Vec::new()),
+                }
+            }
+        }
+        impl Trash for FakeTrash {
+            fn trash_path(
+                &self,
+                path: &std::path::Path,
+                _timeout: Duration,
+            ) -> std::io::Result<()> {
+                self.calls.lock().unwrap().push(path.to_path_buf());
+                Ok(())
+            }
+        }
+
+        let _guard = test_env::lock();
+        let home = scratch("stub-reinstall");
+        let stub = home.join("Library/Containers/com.macpaw.CleanMyMac4");
+        fs::create_dir_all(&stub).unwrap();
+        fs::write(
+            stub.join(".com.apple.containermanagerd.metadata.plist"),
+            b"p",
+        )
+        .unwrap();
+        // plan 后 app 被重装到 ~/Applications。
+        fs::create_dir_all(home.join("Applications/CleanMyMac X.app")).unwrap();
+        std::env::set_var("HOME", &home);
+
+        let plan = fresh_plan(vec![plan_entry(&stub, CONTAINER_STUB_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(home.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let fake_trash = FakeTrash::default();
+        let deps = FakeOrphanDeps {
+            spotlight: true,
+            ..Default::default()
+        };
+
+        let report = run_apply_with_orphan_deps(
+            &plan,
+            &protection,
+            apply_opts(false),
+            &deletion_log,
+            &mut oplog,
+            &deps,
+            &fake_trash,
+        )
+        .unwrap();
+
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(stub.exists());
+        assert!(fake_trash.calls.lock().unwrap().is_empty());
+        std::env::remove_var("HOME");
+        fs::remove_dir_all(&home).ok();
     }
 
     #[test]

@@ -14,8 +14,9 @@ pub fn enabled_rule_count(rules: &[Rule]) -> usize {
 pub fn coverage_note(enabled_rules: usize) -> String {
     format!(
         "本版本启用 {enabled_rules} 条清理规则（Mole v1.48.1 库存约 {MOLE_INVENTORY_TOTAL} 条）。\
-         v1 CLI 已收口；sudo/系统路径与部分 custom（Toolbox keep-N、orphaned 等）仍未移植。\
+         产品 v2 CLI（clean / uninstall / optimize）已达；Toolbox keep-N、Codex staging、\
          not_running（精确名 + cmdline）、FCP / 剪映 generated、XCTestDevices 已落地。\
+         仍未移植：orphaned apps、sudo/系统路径（如 Rosetta `/Library`、claude pending-uploads）。\
          如需完整清理，请继续使用 Mole：https://github.com/tw93/Mole"
     )
 }
@@ -52,5 +53,10 @@ mod tests {
         assert!(note.contains("150"));
         assert!(note.contains("513"));
         assert!(note.contains("tw93/Mole"));
+        assert!(note.contains("产品 v2 CLI"));
+        assert!(note.contains("Toolbox keep-N"));
+        assert!(note.contains("已落地"));
+        assert!(note.contains("orphaned apps"));
+        assert!(note.contains("仍未移植"));
     }
 }

@@ -35,7 +35,7 @@
 - **冻结 NDJSON 协议**：CLI、脚本与未来桌面 app 共用同一编排层
 - **规则数据化**：**511** 条高价值清理规则以 TOML 声明，可 diff、可禁用、可 fixture 回归
 
-适合：想要更现代、更可脚本化、更偏「安全预览再执行」的日常清理与磁盘洞察。若你需要成熟全家桶（`purge` / `installer` 等），请继续用 [Mole](https://github.com/tw93/Mole)。
+适合：想要更现代、更可脚本化、更偏「安全预览再执行」的日常清理与磁盘洞察。若你需要成熟全家桶（`purge` / `installer` / orphaned apps / 真 sudo），请继续用 [Mole](https://github.com/tw93/Mole)。
 
 ---
 
@@ -231,7 +231,7 @@ $ vole completions zsh > ~/.zfunc/_vole
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |
 | 外部依赖 | 无第三方 CLI 依赖 | 部分场景推荐 `fd` 等 |
 | 规则规模 | **511** 条高价值规则 | 全量数百条 `safe_clean` 目标 |
-| 桌面端路线 | 协议已为 SwiftUI sidecar 预留 | 另有商业 [Mole for Mac](https://mole.fit) |
+| 桌面端路线 | [vole-macos](https://github.com/wukongnotnull/vole-macos) Clean MVP（内嵌 sidecar） | 另有商业 [Mole for Mac](https://mole.fit) |
 | 许可证 | GPL-3.0 | GPL-3.0 |
 
 ---
@@ -258,14 +258,15 @@ vole/
 
 ## 相关项目：vole-macos
 
-[vole-macos](https://github.com/wukongnotnull/vole-macos) 是配套的 macOS SwiftUI 图形客户端，定位为未来 Vole CLI 的桌面前端。项目特性与进度：
+[vole-macos](https://github.com/wukongnotnull/vole-macos) 是配套的 macOS SwiftUI 图形客户端，消费本仓冻结协议，内嵌 `vole` sidecar。
 
-- 使用 Apple 原生 Swift/SwiftUI 框架开发，完全本地运行
-- 与本仓库 Rust CLI 采用同一协议、同数据模型与操作日志格式
-- 已支持基础任务编排、操作历史、推荐规则可视化
-- 紧密配合 Vole CLI 演进，保持协议兼容和安全沙箱（非 root 模式）
+当前里程碑：**Clean MVP**（plan → 勾选 → apply，默认废纸篓）。尚未覆盖 `uninstall` / `optimize` / `status` 等命令的完整桌面流。
 
-详细介绍与安装说明请参见 [vole-macos 仓库](https://github.com/wukongnotnull/vole-macos)。
+- 原生 SwiftUI，本地运行；需授予完全磁盘访问（FDA）
+- 与本仓共用 Plan / Report / NDJSON 事件与操作日志口径
+- 非 App Sandbox（开发期）；不宣称 root / sudo 能力
+
+详细说明见 [vole-macos 仓库](https://github.com/wukongnotnull/vole-macos)。
 
 ---
 

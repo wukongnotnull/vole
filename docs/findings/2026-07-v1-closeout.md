@@ -39,7 +39,7 @@
 | B2 | Codex Desktop stale staging（无 lsof） | ✅ |
 | B3 | plan 同路径去重 | ✅ |
 | B4 | orphaned apps | 延后（≥1w + 安全评审） |
-| C | SwiftUI 桌面 | 另仓（**产品 v2 CLI 成熟后**再开；见下节） |
+| C | SwiftUI 桌面 | 另仓：`vole-macos` Clean MVP 已开（见 `2026-08-cli-honesty-pass.md`） |
 
 ## 下一轨：产品 v2
 

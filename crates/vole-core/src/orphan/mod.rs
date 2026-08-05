@@ -1,0 +1,17 @@
+//! 用户域 orphaned app data（对齐 Mole `clean_orphaned_app_data`）。
+//!
+//! NEVER 扫描：Containers / Group Containers / LaunchAgents / Application Scripts / `/Library/**`。
+
+mod judge;
+
+pub use judge::{
+    bundle_id_from_orphan_path, is_sensitive_orphan_bundle, is_system_component_bundle,
+    matches_orphan_name_prefix, orphan_age_days_from_env, orphan_age_days_from_raw, orphan_label,
+    resource_kind_label,
+};
+
+pub const ORPHANED_RULE_ID: &str = "orphaned-app-data";
+pub const DEFAULT_ORPHAN_AGE_DAYS: u32 = 30;
+pub const MIN_ORPHAN_AGE_DAYS: u32 = 7;
+pub const MAX_ORPHAN_ITERATIONS: usize = 100;
+pub const MAX_MDFIND_CALLS: usize = 64;

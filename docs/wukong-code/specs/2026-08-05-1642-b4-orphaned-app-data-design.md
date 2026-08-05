@@ -190,4 +190,4 @@ README.md                                      # 特性 / 与 Mole 对比更新
 
 ## 12. 下一步
 
-设计审阅通过后 → `writing-plans` 产出 `docs/wukong-code/plans/2026-08-05-*-b4-orphaned-app-data.md`，再按 task 实现。
+实现计划已就绪：[`../plans/2026-08-05-1701-b4-orphaned-app-data.md`](../plans/2026-08-05-1701-b4-orphaned-app-data.md)（Task 1–9 → 包 **1.3.0**）。

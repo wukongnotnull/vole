@@ -7,8 +7,17 @@ use plist::Value;
 
 /// 先 `ProgramArguments[0]`，后 `Program`；非绝对路径或读失败 → `None`。
 pub fn read_launchd_program(plist_path: &Path) -> Option<PathBuf> {
-    let _ = plist_path;
-    todo!("Task 1")
+    let data = fs::read(plist_path).ok()?;
+    let value = Value::from_reader(std::io::Cursor::new(data)).ok()?;
+    let dict = value.as_dictionary()?;
+
+    if let Some(args) = dict.get("ProgramArguments").and_then(Value::as_array) {
+        if let Some(path) = absolute_program(args.first()) {
+            return Some(path);
+        }
+    }
+
+    absolute_program(dict.get("Program"))
 }
 
 fn absolute_program(value: Option<&Value>) -> Option<PathBuf> {

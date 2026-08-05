@@ -2,7 +2,7 @@
 
 mod bundle;
 mod data;
-mod glob_match;
+pub(crate) mod glob_match;
 mod leftovers;
 mod path;
 mod uninstall;

@@ -33,9 +33,9 @@
 - **磁盘洞察**：目录体积下钻，硬链接去重、折叠目录、`jwalk` 并行遍历
 - **实时监控**：CPU / 内存 / 磁盘等健康面板；`--json` / `--json-stream` 可脚本化
 - **冻结 NDJSON 协议**：CLI、脚本与未来桌面 app 共用同一编排层
-- **规则数据化**：**511** 条高价值清理规则以 TOML 声明，可 diff、可禁用、可 fixture 回归
+- **规则数据化**：**512** 条高价值清理规则以 TOML 声明，可 diff、可禁用、可 fixture 回归（含用户域 orphaned app data）
 
-适合：想要更现代、更可脚本化、更偏「安全预览再执行」的日常清理与磁盘洞察。若你需要成熟全家桶（`purge` / `installer` 等），请继续用 [Mole](https://github.com/tw93/Mole)。
+适合：想要更现代、更可脚本化、更偏「安全预览再执行」的日常清理与磁盘洞察。若你需要成熟全家桶（`purge` / `installer` / system-services orphan / 真 sudo），请继续用 [Mole](https://github.com/tw93/Mole)。
 
 ---
 
@@ -54,14 +54,14 @@ brew install vole
 
 源码 HEAD：`brew install --HEAD wukongnotnull/vole/vole`
 
-**预编译包**（[v1.2.0](https://github.com/wukongnotnull/vole/releases/tag/v1.2.0)，Developer ID 签名 + 公证）
+**预编译包**（[v1.3.0](https://github.com/wukongnotnull/vole/releases/tag/v1.3.0)，Developer ID 签名 + 公证）
 
 ```bash
 # Apple Silicon；Intel 将 aarch64 换为 x86_64
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v1.2.0/vole-1.2.0-aarch64-apple-darwin.tar.gz
-tar xzf vole-1.2.0-aarch64-apple-darwin.tar.gz
-install -m 755 vole-1.2.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-mkdir -p ~/.local/share/vole && cp -R vole-1.2.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v1.3.0/vole-1.3.0-aarch64-apple-darwin.tar.gz
+tar xzf vole-1.3.0-aarch64-apple-darwin.tar.gz
+install -m 755 vole-1.3.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+mkdir -p ~/.local/share/vole && cp -R vole-1.3.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 ```
 
 保持 `bin` + `share/vole/rules` 相对布局即可；自定义规则目录时再设 `VOLE_RULES_DIR`。
@@ -165,7 +165,7 @@ $ vole clean --apply plan.json
 # 报告区分 trashed_bytes / deleted_bytes
 ```
 
-**511** 条高价值规则以 TOML 声明，覆盖浏览器缓存、开发工具、应用残留等常见目标。
+**512** 条高价值规则以 TOML 声明，覆盖浏览器缓存、开发工具、应用残留与用户域 orphaned 数据等常见目标。
 
 ### 智能卸载
 
@@ -225,13 +225,13 @@ $ vole completions zsh > ~/.zfunc/_vole
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | **1.2.0**：产品 v2 CLI（`uninstall` + `optimize`）已达 | 成熟、功能最全 |
+| 成熟度 | **1.3.0**：v2 CLI + 用户域 orphaned | 成熟、功能最全 |
 | 核心命令 | `status` / `analyze` / `clean` / `history` / `uninstall` / `optimize` | 另有 `purge` / `installer` 等 |
-| 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓 | `--dry-run` 预览 + 深度清理流水线 |
+| 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓；orphaned 启发式 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |
 | 外部依赖 | 无第三方 CLI 依赖 | 部分场景推荐 `fd` 等 |
-| 规则规模 | **511** 条高价值规则 | 全量数百条 `safe_clean` 目标 |
-| 桌面端路线 | 协议已为 SwiftUI sidecar 预留 | 另有商业 [Mole for Mac](https://mole.fit) |
+| 规则规模 | **512** 条高价值规则 | 全量数百条 `safe_clean` 目标 |
+| 桌面端路线 | [vole-macos](https://github.com/wukongnotnull/vole-macos) Clean MVP（内嵌 sidecar） | 另有商业 [Mole for Mac](https://mole.fit) |
 | 许可证 | GPL-3.0 | GPL-3.0 |
 
 ---
@@ -245,7 +245,7 @@ vole/
 │   ├── vole-core/         # 清理 / 卸载 / 优化编排
 │   ├── vole-sys/          # macOS 系统调用（仅 darwin）
 │   └── vole-proto/        # 冻结 NDJSON / Plan / Report
-├── data/rules/            # 511 条 TOML 清理规则
+├── data/rules/            # 512 条 TOML 清理规则
 ├── conformance/           # mole ↔ vole 对照 harness
 ├── Formula/               # Homebrew tap formula
 ├── scripts/               # 校验、发布、本地 verify
@@ -258,14 +258,15 @@ vole/
 
 ## 相关项目：vole-macos
 
-[vole-macos](https://github.com/wukongnotnull/vole-macos) 是配套的 macOS SwiftUI 图形客户端，定位为未来 Vole CLI 的桌面前端。项目特性与进度：
+[vole-macos](https://github.com/wukongnotnull/vole-macos) 是配套的 macOS SwiftUI 图形客户端，消费本仓冻结协议，内嵌 `vole` sidecar。
 
-- 使用 Apple 原生 Swift/SwiftUI 框架开发，完全本地运行
-- 与本仓库 Rust CLI 采用同一协议、同数据模型与操作日志格式
-- 已支持基础任务编排、操作历史、推荐规则可视化
-- 紧密配合 Vole CLI 演进，保持协议兼容和安全沙箱（非 root 模式）
+当前里程碑：**Clean MVP**（plan → 勾选 → apply，默认废纸篓）。尚未覆盖 `uninstall` / `optimize` / `status` 等命令的完整桌面流。
 
-详细介绍与安装说明请参见 [vole-macos 仓库](https://github.com/wukongnotnull/vole-macos)。
+- 原生 SwiftUI，本地运行；需授予完全磁盘访问（FDA）
+- 与本仓共用 Plan / Report / NDJSON 事件与操作日志口径
+- 非 App Sandbox（开发期）；不宣称 root / sudo 能力
+
+详细说明见 [vole-macos 仓库](https://github.com/wukongnotnull/vole-macos)。
 
 ---
 

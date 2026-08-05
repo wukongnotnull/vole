@@ -119,6 +119,16 @@ mod tests {
     }
 
     #[test]
+    fn orphaned_rule_loads_last_among_enabled() {
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/rules");
+        let rules = load_rules_from_dir(dir).expect("load dir");
+        let enabled: Vec<_> = rules.iter().filter(|r| !r.disabled).collect();
+        let last = enabled.last().expect("rules");
+        assert_eq!(last.id, "orphaned-app-data");
+        assert_eq!(last.strategy.handler.as_deref(), Some("orphaned_app_data"));
+    }
+
+    #[test]
     fn default_rules_dir_finds_share_layout_relative_to_exe() {
         let tmp = tempfile::tempdir().expect("tempdir");
         let bin = tmp.path().join("bin");

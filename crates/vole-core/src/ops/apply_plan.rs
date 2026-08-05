@@ -10,8 +10,8 @@ use crate::delete::{
 };
 use crate::oplog::OperationLogger;
 use crate::orphan::{
-    bundle_id_from_orphan_path, orphan_age_days_from_env, LiveOrphanDeps, OrphanDeps, OrphanJudge,
-    ORPHANED_RULE_ID,
+    bundle_id_from_orphan_path, claude_vm_orphan_age_days_from_env, is_claude_vm_bundle_path,
+    orphan_age_days_from_env, LiveOrphanDeps, OrphanDeps, OrphanJudge, ORPHANED_RULE_ID,
 };
 use crate::protection::AppProtection;
 use crate::rules::{should_skip_for_guards, ProcessProbe, Rule};
@@ -288,13 +288,10 @@ fn recheck_orphaned_entry(
     protection: &AppProtection,
     now: SystemTime,
 ) -> bool {
-    let Some(bundle_id) = bundle_id_from_orphan_path(&entry.path) else {
+    let home = dirs_home();
+    let Ok(installed) = deps.scan_installed_bundle_ids(home.as_path()) else {
         return false;
     };
-    let Ok(installed) = deps.scan_installed_bundle_ids(dirs_home().as_path()) else {
-        return false;
-    };
-    let mtime = entry.mtime;
     let judge = OrphanJudge {
         catalog: protection.catalog(),
         deps,
@@ -302,7 +299,17 @@ fn recheck_orphaned_entry(
         age_days: orphan_age_days_from_env(),
         now,
     };
-    judge.is_bundle_orphaned(&bundle_id, &entry.path, mtime)
+    if is_claude_vm_bundle_path(&entry.path, home.as_path()) {
+        return judge.is_claude_vm_bundle_orphaned(
+            &entry.path,
+            entry.mtime,
+            claude_vm_orphan_age_days_from_env(),
+        );
+    }
+    let Some(bundle_id) = bundle_id_from_orphan_path(&entry.path) else {
+        return false;
+    };
+    judge.is_bundle_orphaned(&bundle_id, &entry.path, entry.mtime)
 }
 
 fn dirs_home() -> std::path::PathBuf {
@@ -805,6 +812,7 @@ mod tests {
             installed: HashSet::from(["com.gone.app".into()]),
             mdfind: HashMap::new(),
             scan_error: false,
+            ..Default::default()
         };
 
         let report = run_apply_with_orphan_deps(
@@ -822,6 +830,141 @@ mod tests {
         assert_eq!(report.skipped, 1);
         assert!(cache.exists());
         assert!(fake_trash.calls.lock().unwrap().is_empty());
+        std::env::remove_var("HOME");
+        fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
+    fn apply_skips_claude_vm_when_rejudge_sees_installed() {
+        use crate::orphan::{FakeOrphanDeps, CLAUDE_DESKTOP_BUNDLE_ID};
+        use std::collections::{HashMap, HashSet};
+        use std::sync::Mutex;
+
+        struct FakeTrash {
+            calls: Mutex<Vec<PathBuf>>,
+        }
+        impl Default for FakeTrash {
+            fn default() -> Self {
+                Self {
+                    calls: Mutex::new(Vec::new()),
+                }
+            }
+        }
+        impl Trash for FakeTrash {
+            fn trash_path(
+                &self,
+                path: &std::path::Path,
+                _timeout: Duration,
+            ) -> std::io::Result<()> {
+                self.calls.lock().unwrap().push(path.to_path_buf());
+                Ok(())
+            }
+        }
+
+        let _guard = test_env::lock();
+        let home = scratch("claude-vm-recheck-skip");
+        let bundle = home.join("Library/Application Support/Claude/vm_bundles/claudevm.bundle");
+        fs::create_dir_all(&bundle).unwrap();
+        fs::write(bundle.join("rootfs.img"), b"vm").unwrap();
+        std::env::set_var("HOME", &home);
+
+        let mut entry = plan_entry(&bundle, ORPHANED_RULE_ID);
+        entry.mtime = SystemTime::now() - Duration::from_secs(10 * 86400);
+        let plan = fresh_plan(vec![entry]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(home.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let fake_trash = FakeTrash::default();
+        let deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::from([CLAUDE_DESKTOP_BUNDLE_ID.into()]),
+            mdfind: HashMap::from([(CLAUDE_DESKTOP_BUNDLE_ID.into(), Ok(false))]),
+            ..Default::default()
+        };
+
+        let report = run_apply_with_orphan_deps(
+            &plan,
+            &protection,
+            apply_opts(false),
+            &deletion_log,
+            &mut oplog,
+            &deps,
+            &fake_trash,
+        )
+        .unwrap();
+
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(bundle.exists());
+        assert!(fake_trash.calls.lock().unwrap().is_empty());
+        std::env::remove_var("HOME");
+        fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
+    fn apply_trashes_claude_vm_when_rejudge_passes() {
+        use crate::orphan::{FakeOrphanDeps, CLAUDE_DESKTOP_BUNDLE_ID};
+        use std::collections::{HashMap, HashSet};
+        use std::sync::Mutex;
+
+        struct FakeTrash {
+            calls: Mutex<Vec<PathBuf>>,
+        }
+        impl Default for FakeTrash {
+            fn default() -> Self {
+                Self {
+                    calls: Mutex::new(Vec::new()),
+                }
+            }
+        }
+        impl Trash for FakeTrash {
+            fn trash_path(
+                &self,
+                path: &std::path::Path,
+                _timeout: Duration,
+            ) -> std::io::Result<()> {
+                self.calls.lock().unwrap().push(path.to_path_buf());
+                fs::remove_dir_all(path).ok();
+                Ok(())
+            }
+        }
+
+        let _guard = test_env::lock();
+        let home = scratch("claude-vm-recheck-ok");
+        let bundle = home.join("Library/Application Support/Claude/vm_bundles/claudevm.bundle");
+        fs::create_dir_all(&bundle).unwrap();
+        fs::write(bundle.join("rootfs.img"), b"vm").unwrap();
+        let old = SystemTime::now() - Duration::from_secs(10 * 86400);
+        fs::File::open(&bundle).unwrap().set_modified(old).unwrap();
+        std::env::set_var("HOME", &home);
+
+        let plan = fresh_plan(vec![plan_entry(&bundle, ORPHANED_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(home.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let fake_trash = FakeTrash::default();
+        let deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            mdfind: HashMap::from([(CLAUDE_DESKTOP_BUNDLE_ID.into(), Ok(false))]),
+            ..Default::default()
+        };
+
+        let report = run_apply_with_orphan_deps(
+            &plan,
+            &protection,
+            apply_opts(false),
+            &deletion_log,
+            &mut oplog,
+            &deps,
+            &fake_trash,
+        )
+        .unwrap();
+
+        assert_eq!(report.succeeded, 1);
+        assert_eq!(report.skipped, 0);
+        assert!(!bundle.exists());
+        assert_eq!(fake_trash.calls.lock().unwrap().len(), 1);
         std::env::remove_var("HOME");
         fs::remove_dir_all(&home).ok();
     }

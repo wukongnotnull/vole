@@ -841,6 +841,7 @@ mod tests {
             installed: HashSet::new(),
             mdfind: HashMap::from([(bundle.to_string(), Ok(false))]),
             scan_error: false,
+            ..Default::default()
         })
     }
 

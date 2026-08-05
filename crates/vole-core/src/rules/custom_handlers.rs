@@ -5,7 +5,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use crate::orphan::{orphan_age_days_from_env, select_orphaned_paths, OrphanDeps};
+use crate::orphan::{
+    claude_vm_orphan_age_days_from_env, orphan_age_days_from_env, select_orphaned_paths, OrphanDeps,
+};
 use crate::protection::ProtectionCatalog;
 use crate::rules::schema::Rule;
 use crate::rules::strategy::PathEntry;
@@ -40,6 +42,7 @@ fn orphaned_app_data(
         &ProtectionCatalog::embedded(),
         orphan_deps,
         orphan_age_days_from_env(),
+        claude_vm_orphan_age_days_from_env(),
         SystemTime::now(),
     )
     .unwrap_or_default()

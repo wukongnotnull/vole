@@ -11,7 +11,7 @@ paths = [
   "~/Library/Logs/*",
   "~/Library/Saved Application State/*",
 ]
-impact = "卸载后残留且 ≥30 天未改动的用户域缓存/日志/Saved State（启发式；com/org/net/io 前缀）"
+impact = "卸载后残留：Caches/Logs/Saved State（≥30 天）与 Claude Desktop workspace VM bundle（≥7 天，MOLE_CLAUDE_VM_ORPHAN_AGE_DAYS）"
 disabled = false
 last_verified = "2026-08"
 

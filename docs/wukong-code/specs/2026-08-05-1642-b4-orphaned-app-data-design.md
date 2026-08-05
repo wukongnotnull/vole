@@ -1,7 +1,7 @@
 # B4：Orphaned App Data 设计
 
 - 日期：2026-08-05（同日审阅修订：apply 重判定位为新机制、Spotlight fail-closed、执行预算、注入要求、去重顺序、env 命名对齐）
-- 状态：已实现（2026-08-05；包 **1.3.0**）
+- 状态：已实现（2026-08-05；包 **1.3.0**）；B4.1 Claude VM orphan 另见计划 [`../plans/2026-08-05-1829-b41-claude-vm-orphan.md`](../plans/2026-08-05-1829-b41-claude-vm-orphan.md) → 包 **1.4.0**
 - 实现计划：[`../plans/2026-08-05-1701-b4-orphaned-app-data.md`](../plans/2026-08-05-1701-b4-orphaned-app-data.md)
 - 安全评审：[`../../../findings/2026-08-b4-orphaned-security-review.md`](../../../findings/2026-08-b4-orphaned-security-review.md)
 - 依据：`2026-07-30-v1-closeout-design.md` §5 B4；`2026-07-30-1900-v2-product-goals-design.md` §4.3；Mole `third_party/mole-1.48.1/lib/clean/apps.sh`（`clean_orphaned_app_data` / `is_bundle_orphaned` / `scan_installed_apps`）；`SECURITY_AUDIT.md` orphan 相关条款
@@ -179,7 +179,7 @@ README.md                                      # 特性 / 与 Mole 对比更新
 | 步 | 内容 | 版本 |
 |---|---|---|
 | B4.0 | 本设计 + 实现 + 安全 findings + 发版 | **1.3.0** |
-| B4.1 | Claude VM orphan（可选） | 1.3.x 或 1.4.0 |
+| B4.1 | Claude VM orphan（可选） | **1.4.0**（已实现） |
 | 另轨 | system services orphan | 需单独 sudo/提权设计，不挂 B4 |
 
 ## 11. 验收

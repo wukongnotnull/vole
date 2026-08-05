@@ -9,6 +9,10 @@ use crate::delete::{
     mole_delete_verified, DeleteMode, DeletionLogger, MoleDeleteError, MoleDeleteOptions,
 };
 use crate::oplog::OperationLogger;
+use crate::orphan::{
+    bundle_id_from_orphan_path, orphan_age_days_from_env, LiveOrphanDeps, OrphanDeps, OrphanJudge,
+    ORPHANED_RULE_ID,
+};
 use crate::protection::AppProtection;
 use crate::rules::{should_skip_for_guards, ProcessProbe, Rule};
 use crate::safety::{
@@ -41,6 +45,7 @@ pub struct ApplyPlanContext<'a> {
     pub oplog: &'a mut OperationLogger,
     pub rules: &'a [Rule],
     pub process_probe: &'a dyn ProcessProbe,
+    pub orphan_deps: &'a dyn OrphanDeps,
     pub on_event: Option<&'a dyn Fn(StreamEvent)>,
     pub now: SystemTime,
 }
@@ -56,6 +61,7 @@ impl<'a> ApplyPlanContext<'a> {
         oplog: &'a mut OperationLogger,
         rules: &'a [Rule],
         process_probe: &'a dyn ProcessProbe,
+        orphan_deps: &'a dyn OrphanDeps,
         on_event: Option<&'a dyn Fn(StreamEvent)>,
     ) -> Self {
         Self {
@@ -67,6 +73,7 @@ impl<'a> ApplyPlanContext<'a> {
             oplog,
             rules,
             process_probe,
+            orphan_deps,
             on_event,
             now: SystemTime::now(),
         }
@@ -84,6 +91,7 @@ pub fn apply_proto_plan(
 ) -> Result<Report, ApplyPlanError> {
     let deletion_log = DeletionLogger::with_path(crate::delete::deletion_log_path());
     let mut oplog = OperationLogger::new("clean");
+    let orphan_deps = LiveOrphanDeps::new();
     let mut ctx = ApplyPlanContext::new(
         protection,
         whitelist_patterns,
@@ -93,6 +101,7 @@ pub fn apply_proto_plan(
         &mut oplog,
         rules,
         process_probe,
+        &orphan_deps,
         on_event,
     );
     apply_plan(plan, &mut ctx)
@@ -161,6 +170,20 @@ pub fn apply_plan(
                 skip_tracker.record(SkipReason::AppRunning, &entry.rule_id);
                 continue;
             }
+        }
+
+        if entry.rule_id == ORPHANED_RULE_ID
+            && !recheck_orphaned_entry(entry, ctx.orphan_deps, ctx.protection, ctx.now)
+        {
+            skipped += 1;
+            if let Some(event) = &ctx.on_event {
+                event(StreamEvent::Skipped {
+                    rule_id: entry.rule_id.clone(),
+                    reason: SkipReason::PathVanished,
+                });
+            }
+            skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+            continue;
         }
 
         let path = entry.path.display().to_string();
@@ -256,6 +279,36 @@ pub fn apply_plan(
     }
 
     Ok(report)
+}
+
+/// apply 时重新跑完整 orphan judge；失败则不得删除。
+fn recheck_orphaned_entry(
+    entry: &ProtoPlanEntry,
+    deps: &dyn OrphanDeps,
+    protection: &AppProtection,
+    now: SystemTime,
+) -> bool {
+    let Some(bundle_id) = bundle_id_from_orphan_path(&entry.path) else {
+        return false;
+    };
+    let Ok(installed) = deps.scan_installed_bundle_ids(dirs_home().as_path()) else {
+        return false;
+    };
+    let mtime = entry.mtime;
+    let judge = OrphanJudge {
+        catalog: protection.catalog(),
+        deps,
+        installed: &installed,
+        age_days: orphan_age_days_from_env(),
+        now,
+    };
+    judge.is_bundle_orphaned(&bundle_id, &entry.path, mtime)
+}
+
+fn dirs_home() -> std::path::PathBuf {
+    std::env::var_os("HOME")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::PathBuf::from("/"))
 }
 
 fn plan_is_expired(plan: &ProtoPlan, now: SystemTime) -> bool {
@@ -375,6 +428,7 @@ mod tests {
         process_probe: &dyn crate::rules::ProcessProbe,
         trash: &dyn Trash,
     ) -> Result<Report, ApplyPlanError> {
+        let orphan_deps = LiveOrphanDeps::new();
         let mut ctx = ApplyPlanContext::new(
             protection,
             &[],
@@ -384,11 +438,37 @@ mod tests {
             oplog,
             rules,
             process_probe,
+            &orphan_deps,
             None,
         );
         if let Some(now) = now {
             ctx.now = now;
         }
+        apply_plan(plan, &mut ctx)
+    }
+
+    fn run_apply_with_orphan_deps(
+        plan: &ProtoPlan,
+        protection: &AppProtection,
+        options: ApplyPlanOptions,
+        deletion_log: &DeletionLogger,
+        oplog: &mut OperationLogger,
+        orphan_deps: &dyn OrphanDeps,
+        trash: &dyn Trash,
+    ) -> Result<Report, ApplyPlanError> {
+        let probe = crate::rules::FakeProcessProbe::default();
+        let mut ctx = ApplyPlanContext::new(
+            protection,
+            &[],
+            options,
+            trash,
+            deletion_log,
+            oplog,
+            &[],
+            &probe,
+            orphan_deps,
+            None,
+        );
         apply_plan(plan, &mut ctx)
     }
 
@@ -675,5 +755,74 @@ mod tests {
         std::env::remove_var("MOLE_TEST_TRASH_DIR");
         std::env::remove_var("MOLE_DELETE_LOG");
         fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_skips_orphaned_when_rejudge_fails_after_plan() {
+        use crate::orphan::FakeOrphanDeps;
+        use std::collections::{HashMap, HashSet};
+        use std::sync::Mutex;
+
+        struct FakeTrash {
+            calls: Mutex<Vec<PathBuf>>,
+        }
+
+        impl Default for FakeTrash {
+            fn default() -> Self {
+                Self {
+                    calls: Mutex::new(Vec::new()),
+                }
+            }
+        }
+
+        impl Trash for FakeTrash {
+            fn trash_path(
+                &self,
+                path: &std::path::Path,
+                _timeout: Duration,
+            ) -> std::io::Result<()> {
+                self.calls.lock().unwrap().push(path.to_path_buf());
+                Ok(())
+            }
+        }
+
+        let _guard = test_env::lock();
+        let home = scratch("orphan-recheck");
+        let cache = home.join("Library/Caches/com.gone.app");
+        fs::create_dir_all(&cache).unwrap();
+        fs::write(cache.join("x"), b"data").unwrap();
+        std::env::set_var("HOME", &home);
+
+        let plan = fresh_plan(vec![plan_entry(&cache, ORPHANED_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(home.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let fake_trash = FakeTrash::default();
+
+        // Plan 时可能判为 orphan；apply 时该 bundle「又装回来了」。
+        let deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::from(["com.gone.app".into()]),
+            mdfind: HashMap::new(),
+            scan_error: false,
+        };
+
+        let report = run_apply_with_orphan_deps(
+            &plan,
+            &protection,
+            apply_opts(false),
+            &deletion_log,
+            &mut oplog,
+            &deps,
+            &fake_trash,
+        )
+        .unwrap();
+
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(cache.exists());
+        assert!(fake_trash.calls.lock().unwrap().is_empty());
+        std::env::remove_var("HOME");
+        fs::remove_dir_all(&home).ok();
     }
 }

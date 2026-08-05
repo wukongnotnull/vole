@@ -142,6 +142,7 @@ mod tests {
             installed: HashSet::new(),
             mdfind: HashMap::from([("com.gone.app".into(), Ok(false))]),
             scan_error: false,
+            ..Default::default()
         };
         let entries = vec![PathEntry::new(cache.clone(), old_mtime())];
         let got = select_orphaned_paths(
@@ -169,6 +170,7 @@ mod tests {
             installed: HashSet::new(),
             mdfind: HashMap::new(),
             scan_error: false,
+            ..Default::default()
         };
         let entries = vec![PathEntry::new(cache, old_mtime())];
         let got = select_orphaned_paths(
@@ -195,6 +197,7 @@ mod tests {
             installed: HashSet::new(),
             mdfind: HashMap::from([("com.fresh.app".into(), Ok(false))]),
             scan_error: false,
+            ..Default::default()
         };
         let entries = vec![PathEntry::new(cache, fresh_mtime())];
         let got = select_orphaned_paths(

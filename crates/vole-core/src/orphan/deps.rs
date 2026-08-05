@@ -24,6 +24,9 @@ pub trait OrphanDeps: Send + Sync {
     fn mdfind_bundle(&self, bundle_id: &str) -> Result<bool, OrphanProbeError>;
     /// `Err` = 扫描失败（不可当成零安装）。
     fn scan_installed_bundle_ids(&self, home: &Path) -> Result<HashSet<String>, OrphanProbeError>;
+    /// Claude Desktop 进程是否在跑（对齐 Mole `pgrep -x Claude`）。
+    /// 探针失败时应返回 `true`（fail-closed，避免误删）。
+    fn claude_desktop_running(&self) -> bool;
 }
 
 /// 可单测的 mdfind 调用预算。
@@ -106,6 +109,10 @@ impl OrphanDeps for LiveOrphanDeps {
         set.extend(live_running_bundle_ids());
         Ok(set)
     }
+
+    fn claude_desktop_running(&self) -> bool {
+        live_claude_desktop_running()
+    }
 }
 
 /// 测试用假依赖。
@@ -115,6 +122,7 @@ pub struct FakeOrphanDeps {
     pub installed: HashSet<String>,
     pub mdfind: HashMap<String, Result<bool, OrphanProbeError>>,
     pub scan_error: bool,
+    pub claude_running: bool,
 }
 
 impl OrphanDeps for FakeOrphanDeps {
@@ -131,6 +139,10 @@ impl OrphanDeps for FakeOrphanDeps {
             return Err(OrphanProbeError::Unavailable);
         }
         Ok(self.installed.clone())
+    }
+
+    fn claude_desktop_running(&self) -> bool {
+        self.claude_running
     }
 }
 
@@ -167,6 +179,16 @@ fn live_mdfind_bundle(bundle_id: &str) -> Result<bool, OrphanProbeError> {
     }
     let stdout = String::from_utf8_lossy(&output.stdout);
     Ok(stdout.lines().any(|l| !l.trim().is_empty()))
+}
+
+/// 对齐 Mole `pgrep -x Claude`；超时/失败 → 视为 running（fail-closed）。
+fn live_claude_desktop_running() -> bool {
+    let mut cmd = std::process::Command::new("pgrep");
+    cmd.args(["-x", "Claude"]);
+    match run_command_timeout(cmd, PROBE_TIMEOUT) {
+        Ok(out) => out.status.success(),
+        Err(_) => true,
+    }
 }
 
 fn live_running_bundle_ids() -> HashSet<String> {
@@ -226,6 +248,7 @@ mod tests {
             installed,
             mdfind: HashMap::new(),
             scan_error: false,
+            ..Default::default()
         };
         assert!(deps
             .scan_installed_bundle_ids(Path::new("/tmp"))

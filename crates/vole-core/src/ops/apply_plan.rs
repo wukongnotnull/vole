@@ -805,6 +805,7 @@ mod tests {
             installed: HashSet::from(["com.gone.app".into()]),
             mdfind: HashMap::new(),
             scan_error: false,
+            ..Default::default()
         };
 
         let report = run_apply_with_orphan_deps(

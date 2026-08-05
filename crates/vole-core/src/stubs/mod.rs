@@ -1,7 +1,9 @@
 //! Container stubs orphan（CleanMyMac allowlist，Mole `clean_orphaned_container_stubs` 同形）。
 
+mod remove;
 mod select;
 
+pub use remove::{remove_verified_container_stub, StubRemoveError};
 pub use select::{is_verified_stub_dir, select_container_stubs, StubScanError};
 
 pub const CONTAINER_STUB_RULE_ID: &str = "orphaned-container-stubs";

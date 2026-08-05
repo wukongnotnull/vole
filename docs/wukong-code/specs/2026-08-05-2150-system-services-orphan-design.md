@@ -11,7 +11,7 @@
 
 Apply **不**实现真提权删除；命中系统路径闸口时走既有 `NeedsPrivilege`，并复用 / 补齐 clean apply 上的权限响亮提示（与 1.4.2 uninstall/optimize 同风格）。
 
-**硬契约（发现优先，删除不承诺）**：本期产品价值 = **发现 + 指引**。系统路径候选进入 plan 即视为「预期 apply 会 `NeedsPrivilege` 跳过」；人读 plan 摘要与 coverage 文案必须明说「这些条目当前无法由 Vole 删除，删除请用 Mole 或未来提权能力」。禁止任何让用户误以为 trash 能清系统服务的措辞。
+**硬契约（发现优先，删除不承诺）**：本期产品价值 = **发现 + 指引**。系统路径候选进入 plan 后，apply **硬跳过**（`NeedsPrivilege`），**不**调用删除管线。人读 plan 摘要与 coverage 文案必须明说。禁止任何让用户误以为 trash 能清系统服务的措辞。
 
 **采纳路径**：clean 内建 custom 规则（对齐 B4），非独立子命令。
 

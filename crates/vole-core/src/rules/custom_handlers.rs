@@ -34,17 +34,15 @@ fn orphaned_app_data(
     home: &Path,
     orphan_deps: &dyn OrphanDeps,
 ) -> Vec<PathBuf> {
-    match select_orphaned_paths(
+    select_orphaned_paths(
         entries,
         home,
         &ProtectionCatalog::embedded(),
         orphan_deps,
         orphan_age_days_from_env(),
         SystemTime::now(),
-    ) {
-        Ok(paths) => paths,
-        Err(_) => Vec::new(),
-    }
+    )
+    .unwrap_or_default()
 }
 
 /// JetBrains Toolbox: under each `apps/<product>/ch-*`, keep newest `keep` version

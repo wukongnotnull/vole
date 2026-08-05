@@ -48,7 +48,7 @@ impl OrphanJudge<'_> {
             match self.deps.mdfind_bundle(bundle_id) {
                 Ok(true) => return false,
                 Ok(false) => {}
-                Err(()) => return false,
+                Err(_) => return false,
             }
         }
         true
@@ -252,7 +252,10 @@ mod tests {
         let deps = FakeOrphanDeps {
             spotlight: true,
             installed: HashSet::new(),
-            mdfind: HashMap::from([("com.gone.app".into(), Err(()))]),
+            mdfind: HashMap::from([(
+                "com.gone.app".into(),
+                Err(crate::orphan::OrphanProbeError::Unavailable),
+            )]),
             scan_error: false,
         };
         let installed = HashSet::new();

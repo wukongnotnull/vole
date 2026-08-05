@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use super::OrphanProbeError;
 use crate::protection::read_bundle_id;
 
 /// 默认扫描根（对齐 Mole `scan_installed_apps`）。
@@ -20,7 +21,7 @@ pub fn default_app_scan_roots(home: &Path) -> Vec<PathBuf> {
 
 /// 扫描各根下 `*.app` 的 CFBundleIdentifier。任一可读根成功即 Ok；全部不可访问仍 Ok(空)——
 /// 调用方应结合 Library/Caches 可读性决定是否整体跳过 orphan。
-pub fn scan_app_dirs_for_bundle_ids(home: &Path) -> Result<HashSet<String>, ()> {
+pub fn scan_app_dirs_for_bundle_ids(home: &Path) -> Result<HashSet<String>, OrphanProbeError> {
     let mut set = HashSet::new();
     for root in default_app_scan_roots(home) {
         if !root.is_dir() {

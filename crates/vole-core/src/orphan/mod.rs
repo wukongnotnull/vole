@@ -7,7 +7,7 @@ mod installed;
 mod judge;
 mod select;
 
-pub use deps::{FakeOrphanDeps, LiveOrphanDeps, MdfindBudget, OrphanDeps};
+pub use deps::{FakeOrphanDeps, LiveOrphanDeps, MdfindBudget, OrphanDeps, OrphanProbeError};
 pub use installed::default_app_scan_roots;
 pub use judge::{
     bundle_id_from_orphan_path, is_sensitive_orphan_bundle, is_system_component_bundle,

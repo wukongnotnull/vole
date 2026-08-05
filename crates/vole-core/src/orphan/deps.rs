@@ -11,13 +11,19 @@ use super::MAX_MDFIND_CALLS;
 
 const PROBE_TIMEOUT: Duration = Duration::from_secs(10);
 
+/// 探针失败（超时 / 不可用 / 预算耗尽）→ fail-closed。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OrphanProbeError {
+    Unavailable,
+}
+
 /// Orphan 判定所需的外部探针。
 pub trait OrphanDeps: Send + Sync {
     fn spotlight_available(&self) -> bool;
     /// `Ok(true)` = 找到安装；`Ok(false)` = Spotlight 可用且明确空；`Err` = 超时/失败/预算耗尽 → fail-closed。
-    fn mdfind_bundle(&self, bundle_id: &str) -> Result<bool, ()>;
+    fn mdfind_bundle(&self, bundle_id: &str) -> Result<bool, OrphanProbeError>;
     /// `Err` = 扫描失败（不可当成零安装）。
-    fn scan_installed_bundle_ids(&self, home: &Path) -> Result<HashSet<String>, ()>;
+    fn scan_installed_bundle_ids(&self, home: &Path) -> Result<HashSet<String>, OrphanProbeError>;
 }
 
 /// 可单测的 mdfind 调用预算。
@@ -48,7 +54,7 @@ impl MdfindBudget {
 /// 生产实现：真机扫描 + mdfind/mdutil/lsappinfo。
 pub struct LiveOrphanDeps {
     budget: MdfindBudget,
-    mdfind_cache: Mutex<HashMap<String, Result<bool, ()>>>,
+    mdfind_cache: Mutex<HashMap<String, Result<bool, OrphanProbeError>>>,
 }
 
 impl Default for LiveOrphanDeps {
@@ -75,14 +81,14 @@ impl OrphanDeps for LiveOrphanDeps {
         live_spotlight_available()
     }
 
-    fn mdfind_bundle(&self, bundle_id: &str) -> Result<bool, ()> {
+    fn mdfind_bundle(&self, bundle_id: &str) -> Result<bool, OrphanProbeError> {
         if let Ok(guard) = self.mdfind_cache.lock() {
             if let Some(cached) = guard.get(bundle_id) {
-                return cached.clone();
+                return *cached;
             }
         }
         if !self.budget.try_consume() {
-            return Err(());
+            return Err(OrphanProbeError::Unavailable);
         }
         let result = live_mdfind_bundle(bundle_id);
         if let Ok(mut guard) = self.mdfind_cache.lock() {
@@ -94,7 +100,7 @@ impl OrphanDeps for LiveOrphanDeps {
         result
     }
 
-    fn scan_installed_bundle_ids(&self, home: &Path) -> Result<HashSet<String>, ()> {
+    fn scan_installed_bundle_ids(&self, home: &Path) -> Result<HashSet<String>, OrphanProbeError> {
         let mut set = scan_app_dirs_for_bundle_ids(home)?;
         set.extend(collect_launch_agent_ids(home));
         set.extend(live_running_bundle_ids());
@@ -107,7 +113,7 @@ impl OrphanDeps for LiveOrphanDeps {
 pub struct FakeOrphanDeps {
     pub spotlight: bool,
     pub installed: HashSet<String>,
-    pub mdfind: HashMap<String, Result<bool, ()>>,
+    pub mdfind: HashMap<String, Result<bool, OrphanProbeError>>,
     pub scan_error: bool,
 }
 
@@ -116,13 +122,13 @@ impl OrphanDeps for FakeOrphanDeps {
         self.spotlight
     }
 
-    fn mdfind_bundle(&self, bundle_id: &str) -> Result<bool, ()> {
+    fn mdfind_bundle(&self, bundle_id: &str) -> Result<bool, OrphanProbeError> {
         self.mdfind.get(bundle_id).copied().unwrap_or(Ok(false))
     }
 
-    fn scan_installed_bundle_ids(&self, _home: &Path) -> Result<HashSet<String>, ()> {
+    fn scan_installed_bundle_ids(&self, _home: &Path) -> Result<HashSet<String>, OrphanProbeError> {
         if self.scan_error {
-            return Err(());
+            return Err(OrphanProbeError::Unavailable);
         }
         Ok(self.installed.clone())
     }
@@ -143,20 +149,21 @@ fn live_spotlight_available() -> bool {
     }
 }
 
-fn live_mdfind_bundle(bundle_id: &str) -> Result<bool, ()> {
+fn live_mdfind_bundle(bundle_id: &str) -> Result<bool, OrphanProbeError> {
     // 仅允许相对安全的 reverse-DNS 字符，避免 query 注入。
     if !bundle_id
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_')
     {
-        return Err(());
+        return Err(OrphanProbeError::Unavailable);
     }
     let query = format!("kMDItemCFBundleIdentifier == '{bundle_id}'");
     let mut cmd = std::process::Command::new("mdfind");
     cmd.arg(query);
-    let output = run_command_timeout(cmd, PROBE_TIMEOUT).map_err(|_| ())?;
+    let output =
+        run_command_timeout(cmd, PROBE_TIMEOUT).map_err(|_| OrphanProbeError::Unavailable)?;
     if !output.status.success() {
-        return Err(());
+        return Err(OrphanProbeError::Unavailable);
     }
     let stdout = String::from_utf8_lossy(&output.stdout);
     Ok(stdout.lines().any(|l| !l.trim().is_empty()))

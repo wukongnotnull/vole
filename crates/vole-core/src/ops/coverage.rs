@@ -14,7 +14,7 @@ pub const ORPHAN_LIBRARY_WARN: &str = "注意：orphaned-app-data 已跳过（�
 pub const APPLY_PERMISSION_WARN: &str = "注意：部分条目因权限或系统保护被跳过。若涉及用户库数据，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole；系统路径可能需 sudo，请改用 Mole 或具备相应权限的环境后重试。";
 
 /// system services 三树皆不可读时追加；不提 FDA。
-pub const SYSTEM_SERVICES_WARN: &str = "注意：orphaned-system-services 已跳过（无法读取 /Library/LaunchDaemons、LaunchAgents 或 PrivilegedHelperTools）。当前扫描不使用 sudo，结果为可读子集；完整清理请使用 Mole 或具备相应权限的环境。系统路径候选即使出现在 plan 中，当前 Vole 也无法删除（apply 会 NeedsPrivilege）。";
+pub const SYSTEM_SERVICES_WARN: &str = "注意：orphaned-system-services 已跳过（无法读取 /Library/LaunchDaemons、LaunchAgents 或 PrivilegedHelperTools）。当前扫描不使用 sudo，结果为可读子集；完整清理请使用 Mole 或具备相应权限的环境。系统路径候选即使出现在 plan 中，apply 也会 NeedsPrivilege 硬跳过（发现优先，Vole 不删除）。";
 
 /// 已启用、未 `disabled` 的规则数。
 pub fn enabled_rule_count(rules: &[Rule]) -> usize {

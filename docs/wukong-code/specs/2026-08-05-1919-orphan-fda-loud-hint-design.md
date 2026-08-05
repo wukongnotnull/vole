@@ -1,7 +1,8 @@
 # FDA / Library 不可访问的响亮提示设计
 
 - 日期：2026-08-05（同日：设计评审修订）
-- 状态：待审阅（修订稿）
+- 状态：已批准（2026-08-05 评审修订后）
+- 实现计划：[`../plans/2026-08-05-1923-orphan-fda-loud-hint.md`](../plans/2026-08-05-1923-orphan-fda-loud-hint.md)
 - 依据：CLI 打磨轨（v1.4.0 后）；B4 设计 §7「FDA 不可用时降级跳过并响亮提示」；Mole `clean_orphaned_app_data`（`Skipped: No permission to access Library folders`）；`docs/protocol.md`（允许追加 `SkipReason` 变体；本设计**不**追加）
 - 包版本意图：行为增强、零协议破坏 → 建议随下一次发版进 **PATCH `1.4.1`**（或与其它打磨合并为 MINOR）；本设计不阻塞独立发版时机
 

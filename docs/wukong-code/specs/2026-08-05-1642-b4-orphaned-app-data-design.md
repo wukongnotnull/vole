@@ -1,7 +1,8 @@
 # B4：Orphaned App Data 设计
 
 - 日期：2026-08-05（同日审阅修订：apply 重判定位为新机制、Spotlight fail-closed、执行预算、注入要求、去重顺序、env 命名对齐）
-- 状态：草案（已修订，待终审）
+- 状态：已批准（2026-08-05）
+- 实现计划：[`../plans/2026-08-05-1701-b4-orphaned-app-data.md`](../plans/2026-08-05-1701-b4-orphaned-app-data.md)
 - 依据：`2026-07-30-v1-closeout-design.md` §5 B4；`2026-07-30-1900-v2-product-goals-design.md` §4.3；Mole `third_party/mole-1.48.1/lib/clean/apps.sh`（`clean_orphaned_app_data` / `is_bundle_orphaned` / `scan_installed_apps`）；`SECURITY_AUDIT.md` orphan 相关条款
 - 包版本意图：能力扩展 → **`1.3.0`**（SemVer MINOR；见 `2026-07-30-semver-policy-design.md`）
 

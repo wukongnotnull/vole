@@ -22,6 +22,7 @@ pub mod rules;
 pub mod safety;
 pub mod scan;
 pub mod status;
+pub mod stubs;
 pub mod sysorphan;
 pub mod units;
 pub mod whitelist;

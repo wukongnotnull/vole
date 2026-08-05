@@ -145,7 +145,7 @@ fn run_apply(opts: &CleanOptions, plan_path: &PathBuf) -> io::Result<()> {
     };
     let process_probe = PgrepProcessProbe;
 
-    let mut report = if opts.json_stream {
+    let report = if opts.json_stream {
         let (event_tx, event_rx) = unbounded();
         let writer = spawn_stream_writer(event_rx)?;
         let on_event = |event: StreamEvent| {

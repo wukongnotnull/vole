@@ -216,7 +216,12 @@ pub fn resource_kind_label(path: &Path) -> &'static str {
 
 pub fn orphan_label(path: &Path) -> String {
     let s = path.to_string_lossy();
-    if s.contains("/Application Support/Claude/") && s.contains(".bundle") {
+    let is_claude_vm = s.contains("/Application Support/Claude/")
+        && path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.ends_with(".bundle"));
+    if is_claude_vm {
         return "Orphaned Claude workspace VM".into();
     }
     let kind = resource_kind_label(path);
@@ -407,6 +412,8 @@ mod tests {
     fn orphan_label_for_claude_vm() {
         let p = Path::new("/Users/t/Library/Application Support/Claude/vm_bundles/x.bundle");
         assert_eq!(orphan_label(p), "Orphaned Claude workspace VM");
+        let not_suffix = Path::new("/Users/t/Library/Application Support/Claude/notes.bundle.bak");
+        assert_ne!(orphan_label(not_suffix), "Orphaned Claude workspace VM");
     }
 
     fn claude_judge<'a>(

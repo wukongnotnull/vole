@@ -2,8 +2,12 @@
 //!
 //! NEVER 扫描：Containers / Group Containers / LaunchAgents / Application Scripts / `/Library/**`。
 
+mod deps;
+mod installed;
 mod judge;
 
+pub use deps::{FakeOrphanDeps, LiveOrphanDeps, MdfindBudget, OrphanDeps};
+pub use installed::default_app_scan_roots;
 pub use judge::{
     bundle_id_from_orphan_path, is_sensitive_orphan_bundle, is_system_component_bundle,
     matches_orphan_name_prefix, orphan_age_days_from_env, orphan_age_days_from_raw, orphan_label,

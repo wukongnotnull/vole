@@ -1218,34 +1218,50 @@ mod tests {
     }
 
     #[test]
-    fn plan_protected_macpaw_logs_skipped_by_protection_gate() {
+    fn plan_protected_macpaw_logs_enter_plan() {
         let _guard = test_env::lock();
-        let home = scratch("gcc-prot-skip");
+        let home = scratch("gcc-prot-enter");
         let logs = home.join("Library/Group Containers/com.macpaw.CleanMyMac/Logs");
         fs::create_dir_all(&logs).unwrap();
         fs::write(logs.join("x.log"), b"x").unwrap();
+        // Caches 叶：handler 因 protected 不提；即便存在也不得入 plan
+        let caches = home.join("Library/Group Containers/com.macpaw.CleanMyMac/Library/Caches");
+        fs::create_dir_all(&caches).unwrap();
+        fs::write(caches.join("y"), b"y").unwrap();
         std::env::set_var("HOME", &home);
 
-        let (tx, rx) = unbounded();
+        let (tx, _rx) = unbounded();
         let orch = Orchestrator::new(crate::cancel::CancelToken::new(), Some(tx));
         let plan = orch
             .build_plan(&[group_container_cache_rule()], &AppProtection::new(), &[])
             .unwrap();
 
-        assert!(
-            plan.entries.is_empty(),
-            "protected id Logs must not enter plan: {:?}",
-            plan.entries
-        );
-        let mut saw_skip = false;
-        while let Ok(ev) = rx.try_recv() {
-            if let StreamEvent::Skipped { rule_id, .. } = ev {
-                if rule_id == "group-container-caches" {
-                    saw_skip = true;
-                }
-            }
-        }
-        assert!(saw_skip);
+        assert_eq!(plan.entries.len(), 1);
+        assert!(plan.entries[0].path.ends_with("Logs/x.log"));
+        assert_eq!(plan.entries[0].rule_id, "group-container-caches");
+        std::env::remove_var("HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn plan_bundle_named_group_container_log_enters() {
+        let _guard = test_env::lock();
+        let home = scratch("gcc-bundle-log");
+        let logs = home.join("Library/Group Containers/group.com.docker.docker/Logs");
+        fs::create_dir_all(&logs).unwrap();
+        fs::write(logs.join("com.docker.helper.log"), b"x").unwrap();
+        std::env::set_var("HOME", &home);
+
+        let (tx, _rx) = unbounded();
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), Some(tx));
+        let plan = orch
+            .build_plan(&[group_container_cache_rule()], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert_eq!(plan.entries.len(), 1);
+        assert!(plan.entries[0]
+            .path
+            .ends_with("Logs/com.docker.helper.log"));
         std::env::remove_var("HOME");
         let _ = fs::remove_dir_all(&home);
     }

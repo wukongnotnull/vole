@@ -272,6 +272,7 @@ pub fn apply_plan(
             mode: delete_mode,
             dry_run: false,
             needs_sudo: false,
+            privilege: None,
         };
 
         match mole_delete_verified(

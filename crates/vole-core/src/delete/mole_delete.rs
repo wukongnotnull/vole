@@ -8,6 +8,7 @@ use thiserror::Error;
 use vole_sys::Trash;
 
 use crate::oplog::OperationLogger;
+use crate::privilege::{NoPrivilege, PrivilegeBackend, PrivilegeError};
 use crate::safety::{
     validate_path_for_deletion, verify_plan_entry, PathProtection, PlanEntryIdentity,
     PlanVerifyError,
@@ -38,6 +39,8 @@ pub enum MoleDeleteError {
     Vanished,
     #[error("sudo required but blocked in test mode")]
     SudoBlockedTestMode,
+    #[error("sudo unavailable (noninteractive probe failed)")]
+    SudoUnavailable,
     #[error("trash unavailable")]
     TrashUnavailable,
     #[error("safe remove failed")]
@@ -50,28 +53,31 @@ pub struct DeleteOutcome {
     pub bytes: u64,
 }
 
-pub struct MoleDeleteOptions {
+pub struct MoleDeleteOptions<'a> {
     pub mode: DeleteMode,
     pub dry_run: bool,
     pub needs_sudo: bool,
+    pub privilege: Option<&'a dyn PrivilegeBackend>,
 }
 
-impl Default for MoleDeleteOptions {
+impl Default for MoleDeleteOptions<'static> {
     fn default() -> Self {
         Self {
             mode: DeleteMode::Permanent,
             dry_run: dry_run_enabled(),
             needs_sudo: false,
+            privilege: None,
         }
     }
 }
 
-impl MoleDeleteOptions {
+impl MoleDeleteOptions<'static> {
     pub fn from_env() -> Result<Self, DeleteModeParseError> {
         Ok(Self {
             mode: super::config::delete_mode_from_env()?,
             dry_run: dry_run_enabled(),
             needs_sudo: false,
+            privilege: None,
         })
     }
 }
@@ -80,7 +86,7 @@ pub fn mole_delete(
     path: &str,
     protection: &dyn PathProtection,
     whitelist_patterns: &[String],
-    options: MoleDeleteOptions,
+    options: MoleDeleteOptions<'_>,
     trash: &dyn Trash,
     deletion_log: &DeletionLogger,
     oplog: &mut OperationLogger,
@@ -105,7 +111,7 @@ pub fn mole_delete_verified(
     expect: &PlanEntryIdentity,
     protection: &dyn PathProtection,
     whitelist_patterns: &[String],
-    options: MoleDeleteOptions,
+    options: MoleDeleteOptions<'_>,
     trash: &dyn Trash,
     deletion_log: &DeletionLogger,
     oplog: &mut OperationLogger,
@@ -128,7 +134,7 @@ fn mole_delete_inner(
     expect: Option<&PlanEntryIdentity>,
     protection: &dyn PathProtection,
     whitelist_patterns: &[String],
-    options: MoleDeleteOptions,
+    options: MoleDeleteOptions<'_>,
     trash: &dyn Trash,
     deletion_log: &DeletionLogger,
     oplog: &mut OperationLogger,
@@ -141,6 +147,42 @@ fn mole_delete_inner(
         DeleteMode::Permanent => "permanent",
         DeleteMode::Trash => "trash",
     };
+
+    // 提权路径：可能对当前用户不可见，须先于 existence 检查。
+    if options.needs_sudo {
+        if test_no_auth() {
+            let size = size_kb_field(measure_path_size_kb(path));
+            deletion_log.log(mode_label, &size, "sudo-blocked-test-mode", path);
+            return Err(MoleDeleteError::SudoBlockedTestMode);
+        }
+        let fallback = NoPrivilege;
+        let backend = options.privilege.unwrap_or(&fallback);
+        if !backend.probe_noninteractive() {
+            deletion_log.log(mode_label, "unknown", "sudo-unavailable", path);
+            return Err(MoleDeleteError::SudoUnavailable);
+        }
+        let size = measure_path_size_kb(path);
+        let size_field = size_kb_field(size);
+        let bytes = measure_path_size_bytes(path).unwrap_or(0);
+        if options.dry_run {
+            deletion_log.log(mode_label, &size_field, "dry-run-sudo", path);
+            return Ok(DeleteOutcome { bytes });
+        }
+        if let Some(identity) = expect {
+            if let Err(err) = verify_plan_entry(path, identity) {
+                deletion_log.log(mode_label, &size_field, "identity-mismatch", path);
+                return Err(map_verify_error(err));
+            }
+        }
+        backend
+            .remove_permanent(Path::new(path))
+            .map_err(map_privilege_error)?;
+        deletion_log.log(mode_label, &size_field, "ok-sudo", path);
+        oplog
+            .log("REMOVED", Path::new(path), Some("sudo-permanent"))
+            .ok();
+        return Ok(DeleteOutcome { bytes });
+    }
 
     if !path_exists_for_mole_delete(path) {
         // 无身份约束时保持 mole 兼容 no-op；apply 身份路径必须报 vanished。
@@ -162,16 +204,6 @@ fn mole_delete_inner(
             deletion_log.log(mode_label, "0", "identity-mismatch", path);
             return Err(map_verify_error(err));
         }
-    }
-
-    if options.needs_sudo {
-        if test_no_auth() {
-            let size = size_kb_field(measure_path_size_kb(path));
-            deletion_log.log(mode_label, &size, "sudo-blocked-test-mode", path);
-            return Err(MoleDeleteError::SudoBlockedTestMode);
-        }
-        deletion_log.log(mode_label, "unknown", "sudo-not-implemented", path);
-        return Err(MoleDeleteError::SudoBlockedTestMode);
     }
 
     let size = measure_path_size_kb(path);
@@ -216,6 +248,14 @@ fn map_verify_error(err: PlanVerifyError) -> MoleDeleteError {
         | PlanVerifyError::CrossDevice
         | PlanVerifyError::SegmentOpen(_) => MoleDeleteError::IdentityMismatch,
         _ => MoleDeleteError::IdentityMismatch,
+    }
+}
+
+fn map_privilege_error(err: PrivilegeError) -> MoleDeleteError {
+    match err {
+        PrivilegeError::Unavailable => MoleDeleteError::SudoUnavailable,
+        PrivilegeError::Refused => MoleDeleteError::Rejected,
+        PrivilegeError::CommandFailed(_) => MoleDeleteError::Rejected,
     }
 }
 
@@ -371,6 +411,7 @@ mod tests {
             mode: DeleteMode::Permanent,
             dry_run: false,
             needs_sudo: false,
+            privilege: None,
         };
 
         mole_delete(
@@ -414,6 +455,7 @@ mod tests {
             mode: DeleteMode::Trash,
             dry_run: false,
             needs_sudo: false,
+            privilege: None,
         };
 
         mole_delete(
@@ -481,6 +523,7 @@ mod tests {
             mode: DeleteMode::Permanent,
             dry_run: true,
             needs_sudo: false,
+            privilege: None,
         };
 
         mole_delete(
@@ -498,6 +541,77 @@ mod tests {
         assert!(text.contains("\tdry-run\t"));
 
         std::env::remove_var("MOLE_DELETE_LOG");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn needs_sudo_with_no_privilege_errors_unavailable() {
+        let _guard = test_env::lock();
+        let root = scratch("sudo-unavail");
+        let log_path = root.join("deletions.log");
+        std::env::set_var("MOLE_DELETE_LOG", &log_path);
+        std::env::remove_var("MOLE_TEST_NO_AUTH");
+
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(log_path);
+        let mut oplog = OperationLogger::new("clean");
+        let backend = crate::privilege::NoPrivilege;
+        let options = MoleDeleteOptions {
+            mode: DeleteMode::Permanent,
+            dry_run: false,
+            needs_sudo: true,
+            privilege: Some(&backend),
+        };
+
+        let err = mole_delete(
+            "/Library/LaunchDaemons/com.example.plist",
+            &protection,
+            &[],
+            options,
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+        )
+        .unwrap_err();
+        assert_eq!(err, MoleDeleteError::SudoUnavailable);
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn needs_sudo_with_recording_backend_calls_remove() {
+        let _guard = test_env::lock();
+        let root = scratch("sudo-record");
+        let log_path = root.join("deletions.log");
+        std::env::set_var("MOLE_DELETE_LOG", &log_path);
+        std::env::remove_var("MOLE_TEST_NO_AUTH");
+
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(log_path);
+        let mut oplog = OperationLogger::new("clean");
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let path = "/Library/LaunchDaemons/com.x.plist";
+        let options = MoleDeleteOptions {
+            mode: DeleteMode::Permanent,
+            dry_run: false,
+            needs_sudo: true,
+            privilege: Some(&backend),
+        };
+
+        mole_delete(
+            path,
+            &protection,
+            &[],
+            options,
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+        )
+        .unwrap();
+        assert_eq!(backend.removed.lock().unwrap().len(), 1);
+        assert_eq!(
+            backend.removed.lock().unwrap()[0].as_os_str(),
+            std::ffi::OsStr::new(path)
+        );
         fs::remove_dir_all(&root).ok();
     }
 }

@@ -19,9 +19,8 @@ class Vole < Formula
 
   on_macos do
     on_arm do
-      # sha256 filled by scripts/update-homebrew-formula.sh after release assets exist
       url "https://github.com/wukongnotnull/vole/releases/download/v1.7.0/vole-1.7.0-aarch64-apple-darwin.tar.gz"
-      sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+      sha256 "c4fd50628e5095957ab4669b321402c2b76f6451a4649b4c02fbc5648b34af23"
     end
     on_intel do
       url "https://github.com/wukongnotnull/vole/releases/download/v1.7.0/vole-1.7.0-x86_64-apple-darwin.tar.gz"

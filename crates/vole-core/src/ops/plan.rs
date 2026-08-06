@@ -1259,9 +1259,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(plan.entries.len(), 1);
-        assert!(plan.entries[0]
-            .path
-            .ends_with("Logs/com.docker.helper.log"));
+        assert!(plan.entries[0].path.ends_with("Logs/com.docker.helper.log"));
         std::env::remove_var("HOME");
         let _ = fs::remove_dir_all(&home);
     }

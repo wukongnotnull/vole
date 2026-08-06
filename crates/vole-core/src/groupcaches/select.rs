@@ -271,12 +271,7 @@ mod tests {
     #[test]
     fn safari_extension_container_skipped_fail_closed() {
         let home = temp_home("safari");
-        mk_leaves(
-            &home,
-            "group.com.example.ext",
-            "Library/Caches",
-            &["c"],
-        );
+        mk_leaves(&home, "group.com.example.ext", "Library/Caches", &["c"]);
         let cdir = home.join("Library/Containers/group.com.example.ext");
         fs::create_dir_all(&cdir).unwrap();
         fs::write(cdir.join("SomethingSafariWebExtension"), b"x").unwrap();
@@ -289,12 +284,7 @@ mod tests {
     #[test]
     fn safari_probe_unreadable_containers_fail_closed() {
         let home = temp_home("safari-deny");
-        mk_leaves(
-            &home,
-            "group.com.example.ext",
-            "Library/Caches",
-            &["c"],
-        );
+        mk_leaves(&home, "group.com.example.ext", "Library/Caches", &["c"]);
         let cdir = home.join("Library/Containers/group.com.example.ext");
         fs::create_dir_all(&cdir).unwrap();
         fs::set_permissions(&cdir, fs::Permissions::from_mode(0o000)).unwrap();

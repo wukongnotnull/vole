@@ -293,10 +293,7 @@ fn print_human_plan(plan: &Plan, coverage: &str) {
     {
         eprintln!("{GROUP_CONTAINERS_WARN}");
     }
-    if plan
-        .notices
-        .contains(&PlanNotice::GroupContainersTruncated)
-    {
+    if plan.notices.contains(&PlanNotice::GroupContainersTruncated) {
         eprintln!("{GROUP_CONTAINERS_TRUNCATED_WARN}");
     }
 }

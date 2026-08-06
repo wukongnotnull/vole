@@ -186,8 +186,7 @@ impl Orchestrator {
                             notices.push(PlanNotice::GroupContainersInaccessible);
                         }
                     }
-                    if result.truncated
-                        && !notices.contains(&PlanNotice::GroupContainersTruncated)
+                    if result.truncated && !notices.contains(&PlanNotice::GroupContainersTruncated)
                     {
                         notices.push(PlanNotice::GroupContainersTruncated);
                     }

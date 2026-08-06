@@ -3,9 +3,7 @@
 
 mod select;
 
-pub use select::{
-    select_group_container_caches, GroupCacheScanError, GroupCacheSelectResult,
-};
+pub use select::{select_group_container_caches, GroupCacheScanError, GroupCacheSelectResult};
 
 use std::path::Path;
 
@@ -85,7 +83,10 @@ mod tests {
             strip_team_id_prefix("S8EX82NJP6.com.tencent.xinWeChat"),
             "com.tencent.xinWeChat"
         );
-        assert_eq!(strip_team_id_prefix("group.com.example"), "group.com.example");
+        assert_eq!(
+            strip_team_id_prefix("group.com.example"),
+            "group.com.example"
+        );
         assert_eq!(strip_team_id_prefix("ABCDEFGHIJ.com.x"), "com.x");
         assert_eq!(strip_team_id_prefix("short.com.x"), "short.com.x");
         // 小写不匹配 ^[A-Z0-9]{10}
@@ -126,9 +127,8 @@ mod tests {
     #[test]
     fn label_uses_relative_under_group_containers() {
         let home = Path::new("/Users/t");
-        let p = Path::new(
-            "/Users/t/Library/Group Containers/group.com.example.app/Library/Caches/foo",
-        );
+        let p =
+            Path::new("/Users/t/Library/Group Containers/group.com.example.app/Library/Caches/foo");
         assert_eq!(
             group_container_cache_label(p, home),
             "Group container cache: group.com.example.app/Library/Caches/foo"

@@ -12,6 +12,7 @@ pub mod analyze;
 pub mod cancel;
 pub mod delete;
 pub mod groupcaches;
+pub mod handoff;
 pub mod history;
 pub mod mutex;
 pub mod oplog;

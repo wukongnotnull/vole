@@ -32,10 +32,7 @@ pub fn path_allowed_for_privilege(path: &Path) -> bool {
     if !path.is_absolute() {
         return false;
     }
-    if path
-        .components()
-        .any(|c| matches!(c, Component::ParentDir))
-    {
+    if path.components().any(|c| matches!(c, Component::ParentDir)) {
         return false;
     }
     let Some(s) = path.to_str() else {
@@ -60,7 +57,9 @@ mod tests {
         assert!(path_allowed_for_privilege(Path::new(
             "/Library/PrivilegedHelperTools/com.example.helper"
         )));
-        assert!(!path_allowed_for_privilege(Path::new("/Library/Caches/foo")));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/Library/Caches/foo"
+        )));
         assert!(!path_allowed_for_privilege(Path::new(
             "/Library/LaunchDaemons/../Preferences/com.apple.plist"
         )));

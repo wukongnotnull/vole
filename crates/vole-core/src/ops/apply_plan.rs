@@ -19,6 +19,7 @@ use crate::safety::{
     verify_plan_entry, verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity,
     ValidationError,
 };
+use crate::handoff::{recheck_handoff_pasteboard_entry, HANDOFF_PASTEBOARD_RULE_ID};
 use crate::stubs::{
     recheck_container_stub_entry, remove_verified_container_stub, CONTAINER_STUB_RULE_ID,
 };
@@ -189,6 +190,22 @@ pub fn apply_plan(
             }
             skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
             continue;
+        }
+
+        // 政策重验（非 protect 豁免）：根形状 + mtime>60min，防过期/篡改 plan。
+        if entry.rule_id == HANDOFF_PASTEBOARD_RULE_ID {
+            let home = dirs_home();
+            if !recheck_handoff_pasteboard_entry(&entry.path, &home, ctx.now) {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
         }
 
         // 发现优先：本期无真 sudo 删除；硬跳过 system-services，避免过期 plan /
@@ -1075,6 +1092,131 @@ mod tests {
         std::env::remove_var("HOME");
         std::env::remove_var("MOLE_TEST_TRASH_DIR");
         std::env::remove_var("MOLE_DELETE_LOG");
+        fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
+    fn apply_handoff_old_leaf_trashes() {
+        use crate::handoff::HANDOFF_PASTEBOARD_RULE_ID;
+
+        let _guard = test_env::lock();
+        let home = scratch("handoff-apply");
+        let root = home.join(
+            "Library/Group Containers/group.com.apple.coreservices.useractivityd/shared-pasteboard",
+        );
+        fs::create_dir_all(&root).unwrap();
+        let leaf = root.join("old");
+        fs::write(&leaf, b"clip").unwrap();
+        let ancient = SystemTime::now() - Duration::from_secs(2 * 3600);
+        filetime::set_file_mtime(&leaf, filetime::FileTime::from_system_time(ancient)).unwrap();
+        std::env::set_var("HOME", &home);
+
+        let trash_dir = home.join("Trash");
+        fs::create_dir_all(&trash_dir).unwrap();
+        std::env::set_var("MOLE_TEST_TRASH_DIR", &trash_dir);
+        std::env::set_var("MOLE_DELETE_LOG", home.join("deletions.log"));
+
+        let plan = fresh_plan(vec![plan_entry(&leaf, HANDOFF_PASTEBOARD_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(home.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+
+        let report = run_apply_defaults(
+            &plan,
+            &protection,
+            apply_opts(false),
+            &deletion_log,
+            &mut oplog,
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(report.succeeded, 1);
+        assert!(!leaf.exists());
+        assert_eq!(report.trashed_bytes, 4);
+
+        std::env::remove_var("HOME");
+        std::env::remove_var("MOLE_TEST_TRASH_DIR");
+        std::env::remove_var("MOLE_DELETE_LOG");
+        fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
+    fn apply_handoff_fresh_mtime_skips() {
+        use crate::handoff::HANDOFF_PASTEBOARD_RULE_ID;
+
+        let _guard = test_env::lock();
+        let home = scratch("handoff-fresh-apply");
+        let root = home.join(
+            "Library/Group Containers/group.com.apple.coreservices.useractivityd/shared-pasteboard",
+        );
+        fs::create_dir_all(&root).unwrap();
+        let leaf = root.join("was-old");
+        fs::write(&leaf, b"clip").unwrap();
+        let ancient = SystemTime::now() - Duration::from_secs(2 * 3600);
+        filetime::set_file_mtime(&leaf, filetime::FileTime::from_system_time(ancient)).unwrap();
+        std::env::set_var("HOME", &home);
+
+        let plan = fresh_plan(vec![plan_entry(&leaf, HANDOFF_PASTEBOARD_RULE_ID)]);
+        // apply 前变「新鲜」
+        filetime::set_file_mtime(&leaf, filetime::FileTime::from_system_time(SystemTime::now()))
+            .unwrap();
+
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(home.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let report = run_apply_defaults(
+            &plan,
+            &protection,
+            apply_opts(false),
+            &deletion_log,
+            &mut oplog,
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(leaf.exists());
+
+        std::env::remove_var("HOME");
+        fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
+    fn apply_handoff_outside_root_skips() {
+        use crate::handoff::HANDOFF_PASTEBOARD_RULE_ID;
+
+        let _guard = test_env::lock();
+        let home = scratch("handoff-outside");
+        let outside = home.join(
+            "Library/Group Containers/group.com.apple.coreservices.useractivityd/other",
+        );
+        fs::create_dir_all(outside.parent().unwrap()).unwrap();
+        fs::write(&outside, b"nope").unwrap();
+        let ancient = SystemTime::now() - Duration::from_secs(2 * 3600);
+        filetime::set_file_mtime(&outside, filetime::FileTime::from_system_time(ancient)).unwrap();
+        std::env::set_var("HOME", &home);
+
+        let plan = fresh_plan(vec![plan_entry(&outside, HANDOFF_PASTEBOARD_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(home.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let report = run_apply_defaults(
+            &plan,
+            &protection,
+            apply_opts(false),
+            &deletion_log,
+            &mut oplog,
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(outside.exists());
+
+        std::env::remove_var("HOME");
         fs::remove_dir_all(&home).ok();
     }
 

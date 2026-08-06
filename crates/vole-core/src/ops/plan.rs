@@ -51,6 +51,8 @@ pub enum PlanNotice {
     ContainersInaccessible,
     GroupContainersInaccessible,
     GroupContainersTruncated,
+    HandoffPasteboardInaccessible,
+    HandoffPasteboardTruncated,
 }
 
 /// plan 生成配置。
@@ -186,9 +188,26 @@ impl Orchestrator {
                             notices.push(PlanNotice::GroupContainersInaccessible);
                         }
                     }
-                    if result.truncated && !notices.contains(&PlanNotice::GroupContainersTruncated)
-                    {
-                        notices.push(PlanNotice::GroupContainersTruncated);
+                    if let Some(CustomDegrade::HandoffPasteboardInaccessible) = result.degrade {
+                        self.emit(StreamEvent::Skipped {
+                            rule_id: rule.id.clone(),
+                            reason: SkipReason::TccDenied,
+                        });
+                        if !notices.contains(&PlanNotice::HandoffPasteboardInaccessible) {
+                            notices.push(PlanNotice::HandoffPasteboardInaccessible);
+                        }
+                    }
+                    if result.truncated {
+                        if rule.id == crate::groupcaches::GROUP_CONTAINER_CACHE_RULE_ID
+                            && !notices.contains(&PlanNotice::GroupContainersTruncated)
+                        {
+                            notices.push(PlanNotice::GroupContainersTruncated);
+                        }
+                        if rule.id == crate::handoff::HANDOFF_PASTEBOARD_RULE_ID
+                            && !notices.contains(&PlanNotice::HandoffPasteboardTruncated)
+                        {
+                            notices.push(PlanNotice::HandoffPasteboardTruncated);
+                        }
                     }
                     result.paths
                 }
@@ -262,6 +281,8 @@ impl Orchestrator {
                     crate::stubs::container_stub_label(&path)
                 } else if rule.id == crate::groupcaches::GROUP_CONTAINER_CACHE_RULE_ID {
                     crate::groupcaches::group_container_cache_label(&path, &home)
+                } else if rule.id == crate::handoff::HANDOFF_PASTEBOARD_RULE_ID {
+                    crate::handoff::handoff_pasteboard_label(&path)
                 } else {
                     rule.label.clone()
                 };
@@ -1225,6 +1246,119 @@ mod tests {
             }
         }
         assert!(saw_skip);
+        std::env::remove_var("HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    fn handoff_pasteboard_rule() -> Rule {
+        Rule {
+            id: "handoff-pasteboard-cache".into(),
+            category: Some("app-caches".into()),
+            label: "Handoff pasteboard cache".into(),
+            platform: vec!["macos".into()],
+            paths: vec![
+                "~/Library/Group Containers/group.com.apple.coreservices.useractivityd/shared-pasteboard"
+                    .into(),
+            ],
+            impact: None,
+            disabled: false,
+            last_verified: None,
+            strategy: StrategyConfig {
+                kind: crate::rules::StrategyKind::Custom,
+                keep: None,
+                env_override: None,
+                days: None,
+                names: None,
+                handler: Some("handoff_pasteboard_cache".into()),
+            },
+            guards: Default::default(),
+        }
+    }
+
+    #[test]
+    fn plan_handoff_selects_old_leaf_with_label() {
+        let _guard = test_env::lock();
+        let home = scratch("handoff-plan");
+        let root = home.join(
+            "Library/Group Containers/group.com.apple.coreservices.useractivityd/shared-pasteboard",
+        );
+        fs::create_dir_all(&root).unwrap();
+        let old = root.join("old-item");
+        fs::write(&old, b"x").unwrap();
+        let ancient = SystemTime::now() - Duration::from_secs(2 * 3600);
+        filetime::set_file_mtime(&old, filetime::FileTime::from_system_time(ancient)).unwrap();
+        std::env::set_var("HOME", &home);
+
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), None);
+        let plan = orch
+            .build_plan(&[handoff_pasteboard_rule()], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert_eq!(plan.entries.len(), 1);
+        assert_eq!(plan.entries[0].rule_id, "handoff-pasteboard-cache");
+        assert_eq!(plan.entries[0].label, "Handoff pasteboard: old-item");
+        assert!(plan.notices.is_empty());
+        std::env::remove_var("HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn plan_handoff_degrades_when_root_unreadable() {
+        use std::os::unix::fs::PermissionsExt;
+        let _guard = test_env::lock();
+        let home = scratch("handoff-degrade");
+        let root = home.join(
+            "Library/Group Containers/group.com.apple.coreservices.useractivityd/shared-pasteboard",
+        );
+        fs::create_dir_all(&root).unwrap();
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o000)).unwrap();
+        std::env::set_var("HOME", &home);
+
+        let (tx, rx) = unbounded();
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), Some(tx));
+        let plan = orch
+            .build_plan(&[handoff_pasteboard_rule()], &AppProtection::new(), &[])
+            .unwrap();
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o755)).unwrap();
+
+        assert!(plan.entries.is_empty());
+        assert!(plan
+            .notices
+            .contains(&PlanNotice::HandoffPasteboardInaccessible));
+        let mut saw = false;
+        while let Ok(ev) = rx.try_recv() {
+            if let StreamEvent::Skipped {
+                rule_id,
+                reason: SkipReason::TccDenied,
+            } = ev
+            {
+                if rule_id == "handoff-pasteboard-cache" {
+                    saw = true;
+                }
+            }
+        }
+        assert!(saw);
+        std::env::remove_var("HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn plan_handoff_skips_fresh_leaf() {
+        let _guard = test_env::lock();
+        let home = scratch("handoff-fresh");
+        let root = home.join(
+            "Library/Group Containers/group.com.apple.coreservices.useractivityd/shared-pasteboard",
+        );
+        fs::create_dir_all(&root).unwrap();
+        fs::write(root.join("fresh"), b"x").unwrap();
+        // mtime ≈ now → should not select
+        std::env::set_var("HOME", &home);
+
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), None);
+        let plan = orch
+            .build_plan(&[handoff_pasteboard_rule()], &AppProtection::new(), &[])
+            .unwrap();
+        assert!(plan.entries.is_empty());
         std::env::remove_var("HOME");
         let _ = fs::remove_dir_all(&home);
     }

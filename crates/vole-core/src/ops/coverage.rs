@@ -25,6 +25,13 @@ pub const GROUP_CONTAINERS_WARN: &str = "注意：group-container-caches 已跳�
 /// 候选规模上限触发时追加（非整规则 degrade）。
 pub const GROUP_CONTAINERS_TRUNCATED_WARN: &str = "注意：group-container-caches 部分候选子树因条目过多已跳过（单树 >200 或整规则 >2000）。可用 Mole 清理或缩小范围后重试。";
 
+/// Handoff pasteboard 根不可列时追加。
+pub const HANDOFF_PASTEBOARD_WARN: &str = "注意：handoff-pasteboard-cache 已跳过（无法读取 Handoff shared-pasteboard）。若为权限问题，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole 后重试。";
+
+/// Handoff 条目过多截断提示。
+pub const HANDOFF_PASTEBOARD_TRUNCATED_WARN: &str =
+    "注意：handoff-pasteboard-cache 因条目过多已截断（整规则 >2000）。可用 Mole 清理或稍后再试。";
+
 /// 已启用、未 `disabled` 的规则数。
 pub fn enabled_rule_count(rules: &[Rule]) -> usize {
     rules.iter().filter(|r| !r.disabled).count()
@@ -38,6 +45,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          Claude Desktop workspace VM orphan、system services orphan（/Library LaunchDaemons/Agents/PHT 可读子集；发现优先，删除请用 Mole/sudo）、\
          container stubs（CleanMyMac allowlist）、\
          Group Containers logs/caches（Mole 同形，受保护容器与 bundle 命名文件除外）、\
+         Handoff pasteboard（mtime>60min）、\
          Toolbox keep-N、Codex staging、not_running（精确名 + cmdline）、\
          FCP / 剪映 generated、XCTestDevices 已落地。\
          仍未移植：真 sudo 删除、受保护容器的组容器缓存、其它 sudo/系统路径（如 Rosetta `/Library`、claude pending-uploads）。\
@@ -45,7 +53,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
     )
 }
 
-/// 当次 plan 若有 orphan / system-services / stubs / group-containers degrade notice，追加固定警告。
+/// 当次 plan 若有 orphan / system-services / stubs / group-containers / handoff degrade notice，追加固定警告。
 pub fn coverage_with_orphan_notices(base: &str, notices: &[PlanNotice]) -> String {
     let mut out = base.to_string();
     if notices.contains(&PlanNotice::OrphanLibraryInaccessible) {
@@ -62,6 +70,12 @@ pub fn coverage_with_orphan_notices(base: &str, notices: &[PlanNotice]) -> Strin
     }
     if notices.contains(&PlanNotice::GroupContainersTruncated) {
         out = format!("{out}\n{GROUP_CONTAINERS_TRUNCATED_WARN}");
+    }
+    if notices.contains(&PlanNotice::HandoffPasteboardInaccessible) {
+        out = format!("{out}\n{HANDOFF_PASTEBOARD_WARN}");
+    }
+    if notices.contains(&PlanNotice::HandoffPasteboardTruncated) {
+        out = format!("{out}\n{HANDOFF_PASTEBOARD_TRUNCATED_WARN}");
     }
     out
 }
@@ -144,6 +158,7 @@ mod tests {
             "group container caches partial coverage is shipped"
         );
         assert!(note.contains("Group Containers logs/caches"));
+        assert!(note.contains("Handoff pasteboard"));
         assert!(unported.contains("受保护容器的组容器缓存"));
         assert!(
             !unported.contains("Containers stubs"),
@@ -193,6 +208,19 @@ mod tests {
         );
         assert!(trunc.contains(GROUP_CONTAINERS_TRUNCATED_WARN));
         assert!(trunc.contains("条目过多"));
+
+        let handoff = coverage_with_orphan_notices(
+            &base,
+            &[crate::ops::PlanNotice::HandoffPasteboardInaccessible],
+        );
+        assert!(handoff.contains(HANDOFF_PASTEBOARD_WARN));
+        assert!(handoff.contains("完全磁盘访问权限"));
+
+        let handoff_trunc = coverage_with_orphan_notices(
+            &base,
+            &[crate::ops::PlanNotice::HandoffPasteboardTruncated],
+        );
+        assert!(handoff_trunc.contains(HANDOFF_PASTEBOARD_TRUNCATED_WARN));
     }
 
     #[test]

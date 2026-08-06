@@ -8,6 +8,7 @@ use vole_sys::Trash;
 use crate::delete::{
     mole_delete_verified, DeleteMode, DeletionLogger, MoleDeleteError, MoleDeleteOptions,
 };
+use crate::handoff::{recheck_handoff_pasteboard_entry, HANDOFF_PASTEBOARD_RULE_ID};
 use crate::oplog::OperationLogger;
 use crate::orphan::{
     bundle_id_from_orphan_path, claude_vm_orphan_age_days_from_env, is_claude_vm_bundle_path,
@@ -19,7 +20,6 @@ use crate::safety::{
     verify_plan_entry, verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity,
     ValidationError,
 };
-use crate::handoff::{recheck_handoff_pasteboard_entry, HANDOFF_PASTEBOARD_RULE_ID};
 use crate::stubs::{
     recheck_container_stub_entry, remove_verified_container_stub, CONTAINER_STUB_RULE_ID,
 };
@@ -1159,8 +1159,11 @@ mod tests {
 
         let plan = fresh_plan(vec![plan_entry(&leaf, HANDOFF_PASTEBOARD_RULE_ID)]);
         // apply 前变「新鲜」
-        filetime::set_file_mtime(&leaf, filetime::FileTime::from_system_time(SystemTime::now()))
-            .unwrap();
+        filetime::set_file_mtime(
+            &leaf,
+            filetime::FileTime::from_system_time(SystemTime::now()),
+        )
+        .unwrap();
 
         let protection = AppProtection::new();
         let deletion_log = DeletionLogger::with_path(home.join("deletions.log"));
@@ -1189,9 +1192,8 @@ mod tests {
 
         let _guard = test_env::lock();
         let home = scratch("handoff-outside");
-        let outside = home.join(
-            "Library/Group Containers/group.com.apple.coreservices.useractivityd/other",
-        );
+        let outside =
+            home.join("Library/Group Containers/group.com.apple.coreservices.useractivityd/other");
         fs::create_dir_all(outside.parent().unwrap()).unwrap();
         fs::write(&outside, b"nope").unwrap();
         let ancient = SystemTime::now() - Duration::from_secs(2 * 3600);

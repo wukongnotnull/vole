@@ -29,7 +29,8 @@ pub const GROUP_CONTAINERS_TRUNCATED_WARN: &str = "注意：group-container-cach
 pub const HANDOFF_PASTEBOARD_WARN: &str = "注意：handoff-pasteboard-cache 已跳过（无法读取 Handoff shared-pasteboard）。若为权限问题，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole 后重试。";
 
 /// Handoff 条目过多截断提示。
-pub const HANDOFF_PASTEBOARD_TRUNCATED_WARN: &str = "注意：handoff-pasteboard-cache 因条目过多已截断（整规则 >2000）。可用 Mole 清理或稍后再试。";
+pub const HANDOFF_PASTEBOARD_TRUNCATED_WARN: &str =
+    "注意：handoff-pasteboard-cache 因条目过多已截断（整规则 >2000）。可用 Mole 清理或稍后再试。";
 
 /// 已启用、未 `disabled` 的规则数。
 pub fn enabled_rule_count(rules: &[Rule]) -> usize {

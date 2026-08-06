@@ -58,9 +58,7 @@ mod tests {
             home
         ));
         assert!(!is_handoff_pasteboard_leaf_path(
-            &home.join(
-                "Library/Group Containers/group.com.apple.coreservices.useractivityd/other"
-            ),
+            &home.join("Library/Group Containers/group.com.apple.coreservices.useractivityd/other"),
             home
         ));
         assert!(!is_handoff_pasteboard_leaf_path(

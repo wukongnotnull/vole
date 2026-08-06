@@ -213,8 +213,8 @@ mod tests {
         set_mtime(&old, now - Duration::from_secs(10 * 60));
         assert!(!recheck_handoff_pasteboard_entry(&old, &home, now));
 
-        let outside = home
-            .join("Library/Group Containers/group.com.apple.coreservices.useractivityd/other");
+        let outside =
+            home.join("Library/Group Containers/group.com.apple.coreservices.useractivityd/other");
         fs::create_dir_all(outside.parent().unwrap()).unwrap();
         fs::write(&outside, b"x").unwrap();
         set_mtime(&outside, now - Duration::from_secs(61 * 60));

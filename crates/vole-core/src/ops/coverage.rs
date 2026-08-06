@@ -44,11 +44,11 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          产品 v2 CLI（clean / uninstall / optimize）已达；用户域 orphaned app data（Caches/Logs/Saved State）、\
          Claude Desktop workspace VM orphan、system services orphan（/Library LaunchDaemons/Agents/PHT 可读子集；发现优先，删除请用 Mole/sudo）、\
          container stubs（CleanMyMac allowlist）、\
-         Group Containers logs/caches（Mole 同形，受保护容器与 bundle 命名文件除外）、\
+         Group Containers logs/caches（含受保护容器 Logs / bundle 命名日志）、\
          Handoff pasteboard（mtime>60min）、\
          Toolbox keep-N、Codex staging、not_running（精确名 + cmdline）、\
          FCP / 剪映 generated、XCTestDevices 已落地。\
-         仍未移植：真 sudo 删除、受保护容器的组容器缓存、其它 sudo/系统路径（如 Rosetta `/Library`、claude pending-uploads）。\
+         仍未移植：真 sudo 删除、其它 sudo/系统路径（如 Rosetta `/Library`、claude pending-uploads）。\
          如需完整清理，请继续使用 Mole：https://github.com/tw93/Mole"
     )
 }
@@ -155,11 +155,19 @@ mod tests {
         assert!(unported.contains("真 sudo 删除"));
         assert!(
             !unported.contains("Group Containers 泛清理"),
-            "group container caches partial coverage is shipped"
+            "group container caches coverage is shipped"
         );
         assert!(note.contains("Group Containers logs/caches"));
+        assert!(note.contains("含受保护容器 Logs"));
         assert!(note.contains("Handoff pasteboard"));
-        assert!(unported.contains("受保护容器的组容器缓存"));
+        assert!(
+            !unported.contains("受保护容器的组容器缓存"),
+            "protected group container caches must not remain unported"
+        );
+        assert!(
+            !note.contains("受保护容器与 bundle 命名文件除外"),
+            "partial Group Containers caveat must be removed"
+        );
         assert!(
             !unported.contains("Containers stubs"),
             "container stubs allowlist must not remain unported"

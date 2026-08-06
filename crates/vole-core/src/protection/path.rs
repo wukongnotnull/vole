@@ -41,6 +41,29 @@ fn is_container_cache_or_tmp(path: &str) -> bool {
     path.contains("/Data/Library/Caches/") || path.contains("/Data/tmp/")
 }
 
+/// Group Containers 下可再生 Logs 路径（1.9.0 Cleanup 形状豁免）。
+/// 仅相对容器根的 `Logs/<leaf>` 或 `Library/Logs/<leaf>`。
+fn is_group_container_logs_path(path: &str) -> bool {
+    const MARKER: &str = "/Library/Group Containers/";
+    let Some(rest) = path.split(MARKER).nth(1) else {
+        return false;
+    };
+    let mut parts = rest.split('/');
+    let Some(id) = parts.next() else {
+        return false;
+    };
+    if id.is_empty() {
+        return false;
+    }
+    match (parts.next(), parts.next()) {
+        (Some("Logs"), Some(leaf)) if !leaf.is_empty() => true,
+        (Some("Library"), Some("Logs")) => {
+            matches!(parts.next(), Some(leaf) if !leaf.is_empty())
+        }
+        _ => false,
+    }
+}
+
 /// 路径保护。`Cleanup` 对齐现网；`Uninstall` 对齐 mole `MOLE_UNINSTALL_MODE=1`
 ///（不因 data-protected 拦截；仍拦 system-critical / EDR / 关键路径）。
 pub fn should_protect_path(path: &str, catalog: &ProtectionCatalog, mode: ProtectionMode) -> bool {
@@ -84,7 +107,7 @@ pub fn should_protect_path(path: &str, catalog: &ProtectionCatalog, mode: Protec
     // 3. Sandbox bundle IDs
     let mut container_cache = false;
     if let Some(bundle_id) = extract_container_bundle_id(path) {
-        if is_container_cache_or_tmp(path) {
+        if is_container_cache_or_tmp(path) || is_group_container_logs_path(path) {
             container_cache = true;
         } else if mode == ProtectionMode::Cleanup && should_protect_data(&bundle_id, catalog) {
             return true;
@@ -149,6 +172,10 @@ fn is_explicit_clean_cache_path(path: &str) -> bool {
     if (path.contains("/Library/Caches/") && !path.starts_with("/Library/Caches/"))
         || (path.contains("/Library/Logs/") && !path.starts_with("/Library/Logs/"))
     {
+        return true;
+    }
+    // Group Containers 顶层 Logs（现网只认 /Library/Logs/，顶层 /Logs/ 否则会被步骤 7 拦）。
+    if is_group_container_logs_path(path) {
         return true;
     }
     // mole user.sh `_clean_recent_items`: fixed Recent*.sfl(2) + recentitems.plist.
@@ -422,6 +449,76 @@ mod tests {
             &path,
             &catalog,
             ProtectionMode::Uninstall
+        ));
+    }
+
+    #[test]
+    fn group_container_logs_allows_data_protected_leaves() {
+        let c = cat();
+        let home = "/Users/t";
+        assert!(!should_protect_path(
+            &format!("{home}/Library/Group Containers/com.macpaw.CleanMyMac/Logs/x.log"),
+            &c,
+            ProtectionMode::Cleanup
+        ));
+        assert!(!should_protect_path(
+            &format!("{home}/Library/Group Containers/com.macpaw.CleanMyMac/Library/Logs/x.log"),
+            &c,
+            ProtectionMode::Cleanup
+        ));
+    }
+
+    #[test]
+    fn group_container_logs_still_protects_caches_tmp_for_data_protected() {
+        let c = cat();
+        let home = "/Users/t";
+        let base = format!("{home}/Library/Group Containers/com.macpaw.CleanMyMac");
+        for rel in ["Caches/x", "Library/Caches/x", "tmp/x", "Library/tmp/x"] {
+            assert!(
+                should_protect_path(&format!("{base}/{rel}"), &c, ProtectionMode::Cleanup),
+                "must still protect {rel}"
+            );
+        }
+    }
+
+    #[test]
+    fn group_container_logs_allows_bundle_named_leaf() {
+        let c = cat();
+        let home = "/Users/t";
+        assert!(!should_protect_path(
+            &format!(
+                "{home}/Library/Group Containers/group.com.docker.docker/Logs/com.docker.helper.log"
+            ),
+            &c,
+            ProtectionMode::Cleanup
+        ));
+    }
+
+    #[test]
+    fn group_container_logs_notes_and_illegal_depth_stay_protected() {
+        let c = cat();
+        let home = "/Users/t";
+        assert!(should_protect_path(
+            &format!("{home}/Library/Group Containers/group.com.apple.notes/Logs/x.log"),
+            &c,
+            ProtectionMode::Cleanup
+        ));
+        assert!(should_protect_path(
+            &format!("{home}/Library/Group Containers/com.macpaw.CleanMyMac/Other/Logs/x.log"),
+            &c,
+            ProtectionMode::Cleanup
+        ));
+    }
+
+    #[test]
+    fn group_container_logs_does_not_weaken_non_group_container_paths() {
+        let c = cat();
+        let home = "/Users/t";
+        // Application Support + data_protected bundle（非 Group Containers Logs 形状）须仍受保护
+        assert!(should_protect_path(
+            &format!("{home}/Library/Application Support/com.freemacsoft.AppCleaner"),
+            &c,
+            ProtectionMode::Cleanup
         ));
     }
 

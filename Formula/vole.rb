@@ -25,7 +25,7 @@ class Vole < Formula
     end
     on_intel do
       url "https://github.com/wukongnotnull/vole/releases/download/v1.7.0/vole-1.7.0-x86_64-apple-darwin.tar.gz"
-      sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+      sha256 "8a08cbbef20ba9aa94bc4f5d9834cac7d5eaf67aa6ad36484cca7da7abeacfc5"
     end
   end
 

@@ -19,6 +19,7 @@ pub mod oplog;
 pub mod ops;
 pub mod optimize;
 pub mod orphan;
+pub mod privilege;
 pub mod protection;
 pub mod rules;
 pub mod safety;

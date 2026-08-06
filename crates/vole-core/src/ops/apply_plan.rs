@@ -14,6 +14,9 @@ use crate::orphan::{
     bundle_id_from_orphan_path, claude_vm_orphan_age_days_from_env, is_claude_vm_bundle_path,
     orphan_age_days_from_env, LiveOrphanDeps, OrphanDeps, OrphanJudge, ORPHANED_RULE_ID,
 };
+use crate::privilege::{
+    path_allowed_for_privilege, NoPrivilege, PrivilegeBackend, SudoNoninteractive,
+};
 use crate::protection::AppProtection;
 use crate::rules::{should_skip_for_guards, ProcessProbe, Rule};
 use crate::safety::{
@@ -23,7 +26,7 @@ use crate::safety::{
 use crate::stubs::{
     recheck_container_stub_entry, remove_verified_container_stub, CONTAINER_STUB_RULE_ID,
 };
-use crate::sysorphan::SYSTEM_SERVICES_RULE_ID;
+use crate::sysorphan::{recheck_system_service_entry, SYSTEM_SERVICES_RULE_ID};
 use crate::vole_proto::{
     Plan as ProtoPlan, PlanEntry as ProtoPlanEntry, Report, SkipReason, SkipSummary, StreamEvent,
     SCHEMA_VERSION,
@@ -54,6 +57,8 @@ pub struct ApplyPlanContext<'a> {
     pub orphan_deps: &'a dyn OrphanDeps,
     pub on_event: Option<&'a dyn Fn(StreamEvent)>,
     pub now: SystemTime,
+    /// 缺省 `None` → `NoPrivilege`；CLI apply 注入 `SudoNoninteractive`。
+    pub privilege: Option<&'a dyn PrivilegeBackend>,
 }
 
 impl<'a> ApplyPlanContext<'a> {
@@ -82,6 +87,7 @@ impl<'a> ApplyPlanContext<'a> {
             orphan_deps,
             on_event,
             now: SystemTime::now(),
+            privilege: None,
         }
     }
 }
@@ -98,6 +104,7 @@ pub fn apply_proto_plan(
     let deletion_log = DeletionLogger::with_path(crate::delete::deletion_log_path());
     let mut oplog = OperationLogger::new("clean");
     let orphan_deps = LiveOrphanDeps::new();
+    let sudo = SudoNoninteractive;
     let mut ctx = ApplyPlanContext::new(
         protection,
         whitelist_patterns,
@@ -110,6 +117,7 @@ pub fn apply_proto_plan(
         &orphan_deps,
         on_event,
     );
+    ctx.privilege = Some(&sudo);
     apply_plan(plan, &mut ctx)
 }
 
@@ -208,17 +216,103 @@ pub fn apply_plan(
             }
         }
 
-        // 发现优先：本期无真 sudo 删除；硬跳过 system-services，避免过期 plan /
-        // 高权限进程实际删掉 LaunchDaemon/PHT（security-review Medium）。
+        // system-services：allowlist → probe → unload 尽力而为 → sudo permanent。
         if entry.rule_id == SYSTEM_SERVICES_RULE_ID {
-            skipped += 1;
-            if let Some(event) = &ctx.on_event {
-                event(StreamEvent::Skipped {
-                    rule_id: entry.rule_id.clone(),
-                    reason: SkipReason::NeedsPrivilege,
-                });
+            let fallback = NoPrivilege;
+            let backend = ctx.privilege.unwrap_or(&fallback);
+            if !path_allowed_for_privilege(&entry.path) {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
             }
-            skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+            let home = dirs_home();
+            if !recheck_system_service_entry(&entry.path, &home, ctx.orphan_deps) {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            if !backend.probe_noninteractive() {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::NeedsPrivilege,
+                    });
+                }
+                skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+                continue;
+            }
+            let path = entry.path.display().to_string();
+            let identity = proto_identity(entry);
+            if verify_plan_entry(&path, &identity).is_err() {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            if entry.path.extension().and_then(|e| e.to_str()) == Some("plist") {
+                let _ = backend.launchctl_unload(&entry.path);
+            }
+            let delete_opts = MoleDeleteOptions {
+                mode: DeleteMode::Permanent,
+                dry_run: false,
+                needs_sudo: true,
+                privilege: Some(backend),
+            };
+            match mole_delete_verified(
+                &path,
+                &identity,
+                ctx.protection,
+                ctx.whitelist_patterns,
+                delete_opts,
+                ctx.trash,
+                ctx.deletion_log,
+                ctx.oplog,
+            ) {
+                Ok(outcome) => {
+                    succeeded += 1;
+                    deleted_bytes += outcome.bytes;
+                }
+                Err(MoleDeleteError::SudoUnavailable)
+                | Err(MoleDeleteError::SudoBlockedTestMode) => {
+                    skipped += 1;
+                    if let Some(event) = &ctx.on_event {
+                        event(StreamEvent::Skipped {
+                            rule_id: entry.rule_id.clone(),
+                            reason: SkipReason::NeedsPrivilege,
+                        });
+                    }
+                    skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+                }
+                Err(MoleDeleteError::Whitelisted) => {
+                    skipped += 1;
+                    skip_tracker.record(SkipReason::Whitelisted, &entry.rule_id);
+                }
+                Err(MoleDeleteError::Rejected)
+                | Err(MoleDeleteError::IdentityMismatch)
+                | Err(MoleDeleteError::Vanished) => {
+                    skipped += 1;
+                    skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                }
+                Err(_) => failed += 1,
+            }
             continue;
         }
 
@@ -272,6 +366,7 @@ pub fn apply_plan(
             mode: delete_mode,
             dry_run: false,
             needs_sudo: false,
+            privilege: None,
         };
 
         match mole_delete_verified(
@@ -627,40 +722,125 @@ mod tests {
     }
 
     #[test]
-    fn apply_hard_skips_system_services_rule() {
+    fn apply_system_services_skips_when_probe_fails() {
+        use crate::orphan::FakeOrphanDeps;
         use crate::sysorphan::SYSTEM_SERVICES_RULE_ID;
+        use std::collections::HashSet;
 
         let _guard = test_env::lock();
-        let root = scratch("syssvc-skip");
-        let file = root.join("LaunchDaemons").join("com.example.orphan.plist");
-        fs::create_dir_all(file.parent().unwrap()).unwrap();
-        fs::write(&file, b"plist").unwrap();
+        let root = scratch("syssvc-noprobe");
+        let lib = root.join("Library");
+        for d in ["LaunchDaemons", "LaunchAgents", "PrivilegedHelperTools"] {
+            fs::create_dir_all(lib.join(d)).unwrap();
+        }
+        let missing = root.join("nowhere/bin/gone");
+        let plist = lib.join("LaunchDaemons/com.example.orphan.plist");
+        fs::write(
+            &plist,
+            format!(
+                r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict><key>Program</key><string>{}</string></dict></plist>
+"#,
+                missing.display()
+            ),
+        )
+        .unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
 
-        let plan = fresh_plan(vec![plan_entry(&file, SYSTEM_SERVICES_RULE_ID)]);
+        let plan = fresh_plan(vec![plan_entry(&plist, SYSTEM_SERVICES_RULE_ID)]);
         let protection = AppProtection::new();
         let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
         let mut oplog = OperationLogger::new("clean");
-        std::env::set_var("MOLE_DELETE_LOG", root.join("deletions.log"));
-
-        let report = run_apply_defaults(
-            &plan,
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::NoPrivilege;
+        let mut ctx = ApplyPlanContext::new(
             &protection,
+            &[],
             apply_opts(false),
+            &MacTrash,
             &deletion_log,
             &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
             None,
-        )
-        .unwrap();
+        );
+        ctx.privilege = Some(&backend);
 
+        let report = apply_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 0);
         assert_eq!(report.skipped, 1);
-        assert!(file.exists());
         assert!(report
             .skipped_by_reason
             .iter()
             .any(|s| s.reason == SkipReason::NeedsPrivilege));
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        fs::remove_dir_all(&root).ok();
+    }
 
-        std::env::remove_var("MOLE_DELETE_LOG");
+    #[test]
+    fn apply_system_services_records_remove_when_probe_ok() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::sysorphan::SYSTEM_SERVICES_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("syssvc-probe-ok");
+        let lib = root.join("Library");
+        for d in ["LaunchDaemons", "LaunchAgents", "PrivilegedHelperTools"] {
+            fs::create_dir_all(lib.join(d)).unwrap();
+        }
+        let missing = root.join("nowhere/bin/gone");
+        let plist = lib.join("LaunchDaemons/com.example.orphan.plist");
+        fs::write(
+            &plist,
+            format!(
+                r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict><key>Program</key><string>{}</string></dict></plist>
+"#,
+                missing.display()
+            ),
+        )
+        .unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let plan = fresh_plan(vec![plan_entry(&plist, SYSTEM_SERVICES_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 1);
+        assert_eq!(backend.removed.lock().unwrap().len(), 1);
+        assert!(!plist.exists());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
         fs::remove_dir_all(&root).ok();
     }
 

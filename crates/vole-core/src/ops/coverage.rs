@@ -14,7 +14,7 @@ pub const ORPHAN_LIBRARY_WARN: &str = "注意：orphaned-app-data 已跳过（�
 pub const APPLY_PERMISSION_WARN: &str = "注意：部分条目因权限或系统保护被跳过。若涉及用户库数据，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole；系统路径可能需 sudo，请改用 Mole 或具备相应权限的环境后重试。";
 
 /// system services 三树皆不可读时追加；不提 FDA。
-pub const SYSTEM_SERVICES_WARN: &str = "注意：orphaned-system-services 已跳过（无法读取 /Library/LaunchDaemons、LaunchAgents 或 PrivilegedHelperTools）。当前扫描不使用 sudo，结果为可读子集；完整清理请使用 Mole 或具备相应权限的环境。系统路径候选即使出现在 plan 中，apply 也会 NeedsPrivilege 硬跳过（发现优先，Vole 不删除）。";
+pub const SYSTEM_SERVICES_WARN: &str = "注意：orphaned-system-services 已跳过（无法读取 /Library/LaunchDaemons、LaunchAgents 或 PrivilegedHelperTools）。当前扫描不使用 sudo（可读子集）；apply 在非交互 sudo 可用时永久删除，无凭证则 NeedsPrivilege（可先执行 sudo -v）。";
 
 /// `~/Library/Containers` 不可列时追加（container stubs 规则降级）。
 pub const CONTAINER_STUBS_WARN: &str = "注意：orphaned-container-stubs 已跳过（无法读取 ~/Library/Containers）。若为权限问题，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole 后重试。";
@@ -42,13 +42,13 @@ pub fn coverage_note(enabled_rules: usize) -> String {
     format!(
         "本版本启用 {enabled_rules} 条清理规则（Mole v1.48.1 库存约 {MOLE_INVENTORY_TOTAL} 条）。\
          产品 v2 CLI（clean / uninstall / optimize）已达；用户域 orphaned app data（Caches/Logs/Saved State）、\
-         Claude Desktop workspace VM orphan、system services orphan（/Library LaunchDaemons/Agents/PHT 可读子集；发现优先，删除请用 Mole/sudo）、\
+         Claude Desktop workspace VM orphan、system services orphan（/Library LaunchDaemons/Agents/PHT 可读子集 plan + sudo -n apply 真删）、\
          container stubs（CleanMyMac allowlist）、\
          Group Containers logs/caches（含受保护容器 Logs / bundle 命名日志）、\
          Handoff pasteboard（mtime>60min）、\
          Toolbox keep-N、Codex staging、not_running（精确名 + cmdline）、\
          FCP / 剪映 generated、XCTestDevices 已落地。\
-         仍未移植：真 sudo 删除、其它 sudo/系统路径（如 Rosetta `/Library`、claude pending-uploads）。\
+         仍未移植：其它 sudo/系统路径（如 Rosetta `/Library`、claude pending-uploads）、交互提权 / 桌面特权助手。\
          如需完整清理，请继续使用 Mole：https://github.com/tw93/Mole"
     )
 }
@@ -152,7 +152,11 @@ mod tests {
             !note.contains("仍未移植：orphaned apps"),
             "must not claim user-domain orphaned is still unported"
         );
-        assert!(unported.contains("真 sudo 删除"));
+        assert!(unported.contains("Rosetta"));
+        assert!(
+            !unported.contains("真 sudo 删除"),
+            "system-services sudo -n apply must not leave '真 sudo 删除' as wholesale unported"
+        );
         assert!(
             !unported.contains("Group Containers 泛清理"),
             "group container caches coverage is shipped"

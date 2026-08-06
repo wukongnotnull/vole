@@ -11,7 +11,8 @@ use vole_core::ops::{
     apply_proto_plan, coverage_note, coverage_with_apply_permission_hint,
     coverage_with_orphan_notices, enabled_rule_count, plan_to_proto, report_has_permission_skips,
     ApplyPlanError, ApplyPlanOptions, OpsError, Orchestrator, Plan, PlanNotice, ProtoPlanError,
-    APPLY_PERMISSION_WARN, ORPHAN_LIBRARY_WARN, SYSTEM_SERVICES_WARN,
+    APPLY_PERMISSION_WARN, GROUP_CONTAINERS_TRUNCATED_WARN, GROUP_CONTAINERS_WARN,
+    ORPHAN_LIBRARY_WARN, SYSTEM_SERVICES_WARN,
 };
 use vole_core::protection::AppProtection;
 use vole_core::rules::{default_rules_dir, load_rules_from_dir, LoadError, PgrepProcessProbe};
@@ -285,6 +286,18 @@ fn print_human_plan(plan: &Plan, coverage: &str) {
         .contains(&PlanNotice::SystemServicesInaccessible)
     {
         eprintln!("{SYSTEM_SERVICES_WARN}");
+    }
+    if plan
+        .notices
+        .contains(&PlanNotice::GroupContainersInaccessible)
+    {
+        eprintln!("{GROUP_CONTAINERS_WARN}");
+    }
+    if plan
+        .notices
+        .contains(&PlanNotice::GroupContainersTruncated)
+    {
+        eprintln!("{GROUP_CONTAINERS_TRUNCATED_WARN}");
     }
 }
 

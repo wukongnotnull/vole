@@ -19,6 +19,12 @@ pub const SYSTEM_SERVICES_WARN: &str = "注意：orphaned-system-services 已跳
 /// `~/Library/Containers` 不可列时追加（container stubs 规则降级）。
 pub const CONTAINER_STUBS_WARN: &str = "注意：orphaned-container-stubs 已跳过（无法读取 ~/Library/Containers）。若为权限问题，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole 后重试。";
 
+/// `~/Library/Group Containers` 不可列时追加。
+pub const GROUP_CONTAINERS_WARN: &str = "注意：group-container-caches 已跳过（无法读取 ~/Library/Group Containers）。若为权限问题，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole 后重试。";
+
+/// 候选规模上限触发时追加（非整规则 degrade）。
+pub const GROUP_CONTAINERS_TRUNCATED_WARN: &str = "注意：group-container-caches 部分候选子树因条目过多已跳过（单树 >200 或整规则 >2000）。可用 Mole 清理或缩小范围后重试。";
+
 /// 已启用、未 `disabled` 的规则数。
 pub fn enabled_rule_count(rules: &[Rule]) -> usize {
     rules.iter().filter(|r| !r.disabled).count()
@@ -31,14 +37,15 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          产品 v2 CLI（clean / uninstall / optimize）已达；用户域 orphaned app data（Caches/Logs/Saved State）、\
          Claude Desktop workspace VM orphan、system services orphan（/Library LaunchDaemons/Agents/PHT 可读子集；发现优先，删除请用 Mole/sudo）、\
          container stubs（CleanMyMac allowlist）、\
+         Group Containers logs/caches（Mole 同形，受保护容器与 bundle 命名文件除外）、\
          Toolbox keep-N、Codex staging、not_running（精确名 + cmdline）、\
          FCP / 剪映 generated、XCTestDevices 已落地。\
-         仍未移植：真 sudo 删除、Group Containers 泛清理、其它 sudo/系统路径（如 Rosetta `/Library`、claude pending-uploads）。\
+         仍未移植：真 sudo 删除、受保护容器的组容器缓存、其它 sudo/系统路径（如 Rosetta `/Library`、claude pending-uploads）。\
          如需完整清理，请继续使用 Mole：https://github.com/tw93/Mole"
     )
 }
 
-/// 当次 plan 若有 orphan / system-services degrade notice，追加固定警告。
+/// 当次 plan 若有 orphan / system-services / stubs / group-containers degrade notice，追加固定警告。
 pub fn coverage_with_orphan_notices(base: &str, notices: &[PlanNotice]) -> String {
     let mut out = base.to_string();
     if notices.contains(&PlanNotice::OrphanLibraryInaccessible) {
@@ -49,6 +56,12 @@ pub fn coverage_with_orphan_notices(base: &str, notices: &[PlanNotice]) -> Strin
     }
     if notices.contains(&PlanNotice::ContainersInaccessible) {
         out = format!("{out}\n{CONTAINER_STUBS_WARN}");
+    }
+    if notices.contains(&PlanNotice::GroupContainersInaccessible) {
+        out = format!("{out}\n{GROUP_CONTAINERS_WARN}");
+    }
+    if notices.contains(&PlanNotice::GroupContainersTruncated) {
+        out = format!("{out}\n{GROUP_CONTAINERS_TRUNCATED_WARN}");
     }
     out
 }
@@ -126,7 +139,12 @@ mod tests {
             "must not claim user-domain orphaned is still unported"
         );
         assert!(unported.contains("真 sudo 删除"));
-        assert!(unported.contains("Group Containers 泛清理"));
+        assert!(
+            !unported.contains("Group Containers 泛清理"),
+            "group container caches partial coverage is shipped"
+        );
+        assert!(note.contains("Group Containers logs/caches"));
+        assert!(unported.contains("受保护容器的组容器缓存"));
         assert!(
             !unported.contains("Containers stubs"),
             "container stubs allowlist must not remain unported"
@@ -161,6 +179,20 @@ mod tests {
             coverage_with_orphan_notices(&base, &[crate::ops::PlanNotice::ContainersInaccessible]);
         assert!(stubs.contains(CONTAINER_STUBS_WARN));
         assert!(stubs.contains("完全磁盘访问权限"));
+
+        let gcc = coverage_with_orphan_notices(
+            &base,
+            &[crate::ops::PlanNotice::GroupContainersInaccessible],
+        );
+        assert!(gcc.contains(GROUP_CONTAINERS_WARN));
+        assert!(gcc.contains("完全磁盘访问权限"));
+
+        let trunc = coverage_with_orphan_notices(
+            &base,
+            &[crate::ops::PlanNotice::GroupContainersTruncated],
+        );
+        assert!(trunc.contains(GROUP_CONTAINERS_TRUNCATED_WARN));
+        assert!(trunc.contains("条目过多"));
     }
 
     #[test]

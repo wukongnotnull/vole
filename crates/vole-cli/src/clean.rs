@@ -12,7 +12,8 @@ use vole_core::ops::{
     coverage_with_orphan_notices, enabled_rule_count, plan_to_proto, report_has_permission_skips,
     ApplyPlanError, ApplyPlanOptions, OpsError, Orchestrator, Plan, PlanNotice, ProtoPlanError,
     APPLY_PERMISSION_WARN, GROUP_CONTAINERS_TRUNCATED_WARN, GROUP_CONTAINERS_WARN,
-    ORPHAN_LIBRARY_WARN, SYSTEM_SERVICES_WARN,
+    HANDOFF_PASTEBOARD_TRUNCATED_WARN, HANDOFF_PASTEBOARD_WARN, ORPHAN_LIBRARY_WARN,
+    SYSTEM_SERVICES_WARN,
 };
 use vole_core::protection::AppProtection;
 use vole_core::rules::{default_rules_dir, load_rules_from_dir, LoadError, PgrepProcessProbe};
@@ -295,6 +296,18 @@ fn print_human_plan(plan: &Plan, coverage: &str) {
     }
     if plan.notices.contains(&PlanNotice::GroupContainersTruncated) {
         eprintln!("{GROUP_CONTAINERS_TRUNCATED_WARN}");
+    }
+    if plan
+        .notices
+        .contains(&PlanNotice::HandoffPasteboardInaccessible)
+    {
+        eprintln!("{HANDOFF_PASTEBOARD_WARN}");
+    }
+    if plan
+        .notices
+        .contains(&PlanNotice::HandoffPasteboardTruncated)
+    {
+        eprintln!("{HANDOFF_PASTEBOARD_TRUNCATED_WARN}");
     }
 }
 

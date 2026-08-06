@@ -1036,6 +1036,49 @@ mod tests {
     }
 
     #[test]
+    fn apply_group_container_cache_leaf_via_normal_delete() {
+        use crate::groupcaches::GROUP_CONTAINER_CACHE_RULE_ID;
+
+        let _guard = test_env::lock();
+        let home = scratch("gcc-apply");
+        let leaf = home.join("Library/Group Containers/group.com.example.app/Library/Caches/c1");
+        fs::create_dir_all(leaf.parent().unwrap()).unwrap();
+        fs::write(&leaf, b"cache").unwrap();
+        std::env::set_var("HOME", &home);
+
+        let trash_dir = home.join("Trash");
+        fs::create_dir_all(&trash_dir).unwrap();
+        std::env::set_var("MOLE_TEST_TRASH_DIR", &trash_dir);
+        std::env::set_var("MOLE_DELETE_LOG", home.join("deletions.log"));
+
+        let plan = fresh_plan(vec![plan_entry(&leaf, GROUP_CONTAINER_CACHE_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(home.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+
+        let report = run_apply_defaults(
+            &plan,
+            &protection,
+            apply_opts(false),
+            &deletion_log,
+            &mut oplog,
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(report.succeeded, 1, "expected normal mole_delete path");
+        assert!(!leaf.exists());
+        assert!(fs::read_dir(&trash_dir).unwrap().next().is_some());
+        // 确认无 carve-out 早分支：规则仍走废纸篓
+        assert_eq!(report.trashed_bytes, 5);
+
+        std::env::remove_var("HOME");
+        std::env::remove_var("MOLE_TEST_TRASH_DIR");
+        std::env::remove_var("MOLE_DELETE_LOG");
+        fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
     fn permanent_mode_deletes_file() {
         let _guard = test_env::lock();
         let root = scratch("permanent-apply");

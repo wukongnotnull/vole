@@ -23,6 +23,8 @@ pub enum CustomDegrade {
     SystemLibraryInaccessible,
     /// container stubs：`~/Library/Containers` 存在但不可列（FDA 缺失等）。
     ContainersInaccessible,
+    /// Group Containers：根存在但不可列（FDA 缺失等）。
+    GroupContainersInaccessible,
 }
 
 /// `select_custom` 的返回值。
@@ -30,6 +32,8 @@ pub enum CustomDegrade {
 pub struct CustomSelectResult {
     pub paths: Vec<PathBuf>,
     pub degrade: Option<CustomDegrade>,
+    /// 非 degrade：规模截断 notice（如 group-container-caches）。
+    pub truncated: bool,
 }
 
 impl CustomSelectResult {
@@ -37,6 +41,7 @@ impl CustomSelectResult {
         Self {
             paths,
             degrade: None,
+            truncated: false,
         }
     }
 }
@@ -66,6 +71,7 @@ pub fn select_custom(
         "orphaned_app_data" => orphaned_app_data(entries, home, orphan_deps),
         "orphaned_container_stubs" => orphaned_container_stubs(home, orphan_deps),
         "orphaned_system_services" => orphaned_system_services(home, orphan_deps),
+        "group_container_caches" => group_container_caches(home),
         _ => CustomSelectResult::ok(Vec::new()),
     }
 }
@@ -88,6 +94,7 @@ fn orphaned_app_data(
         Err(OrphanScanError::LibraryInaccessible) => CustomSelectResult {
             paths: Vec::new(),
             degrade: Some(CustomDegrade::LibraryInaccessible),
+            truncated: false,
         },
     }
 }
@@ -98,6 +105,7 @@ fn orphaned_container_stubs(home: &Path, orphan_deps: &dyn OrphanDeps) -> Custom
         Err(crate::stubs::StubScanError::ContainersInaccessible) => CustomSelectResult {
             paths: Vec::new(),
             degrade: Some(CustomDegrade::ContainersInaccessible),
+            truncated: false,
         },
     }
 }
@@ -108,7 +116,25 @@ fn orphaned_system_services(home: &Path, orphan_deps: &dyn OrphanDeps) -> Custom
         Err(SysOrphanScanError::AllRootsInaccessible) => CustomSelectResult {
             paths: Vec::new(),
             degrade: Some(CustomDegrade::SystemLibraryInaccessible),
+            truncated: false,
         },
+    }
+}
+
+fn group_container_caches(home: &Path) -> CustomSelectResult {
+    match crate::groupcaches::select_group_container_caches(home) {
+        Ok(r) => CustomSelectResult {
+            paths: r.paths,
+            degrade: None,
+            truncated: r.truncated,
+        },
+        Err(crate::groupcaches::GroupCacheScanError::GroupContainersInaccessible) => {
+            CustomSelectResult {
+                paths: Vec::new(),
+                degrade: Some(CustomDegrade::GroupContainersInaccessible),
+                truncated: false,
+            }
+        }
     }
 }
 
@@ -850,5 +876,56 @@ mod tests {
         );
         assert!(got.degrade.is_none());
         assert!(got.paths.is_empty());
+    }
+
+    #[test]
+    fn group_container_caches_handler_selects_and_degrades() {
+        use crate::orphan::FakeOrphanDeps;
+        use std::os::unix::fs::PermissionsExt;
+
+        let rule = Rule {
+            id: "group-container-caches".into(),
+            category: None,
+            label: "t".into(),
+            platform: vec![],
+            paths: vec![],
+            impact: None,
+            disabled: false,
+            last_verified: None,
+            strategy: crate::rules::schema::StrategyConfig {
+                kind: crate::rules::schema::StrategyKind::Custom,
+                keep: None,
+                env_override: None,
+                days: None,
+                names: None,
+                handler: Some("group_container_caches".into()),
+            },
+            guards: Default::default(),
+        };
+        let deps = FakeOrphanDeps::default();
+
+        let home = tempfile::tempdir().unwrap();
+        let leaf = home
+            .path()
+            .join("Library/Group Containers/group.com.example.app/Logs");
+        fs::create_dir_all(&leaf).unwrap();
+        fs::write(leaf.join("a.log"), b"x").unwrap();
+        let got = select_custom("group_container_caches", &[], home.path(), &rule, &deps);
+        assert!(got.degrade.is_none());
+        assert!(!got.truncated);
+        assert_eq!(got.paths.len(), 1);
+        assert!(got.paths[0].ends_with("Logs/a.log"));
+
+        let denied = tempfile::tempdir().unwrap();
+        let root = denied.path().join("Library/Group Containers");
+        fs::create_dir_all(&root).unwrap();
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o000)).unwrap();
+        let got = select_custom("group_container_caches", &[], denied.path(), &rule, &deps);
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(got.paths.is_empty());
+        assert_eq!(
+            got.degrade,
+            Some(CustomDegrade::GroupContainersInaccessible)
+        );
     }
 }

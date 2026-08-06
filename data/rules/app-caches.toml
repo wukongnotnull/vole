@@ -3265,3 +3265,18 @@ handler = "jianyingpro_generated_caches"
 [rule.guards]
 not_running = ["VideoFusion-macOS"]
 not_running_cmdline = ["/VideoFusion-macOS.app/Contents/MacOS/VideoFusion-macOS"]
+
+
+[[rule]]
+id = "group-container-caches"
+category = "app-caches"
+label = "Group container caches"
+platform = ["macos"]
+paths = ["~/Library/Group Containers"]
+impact = "Group Containers 内 Logs（全部）与非 data_protected 容器的 Caches/tmp 叶节点；跳过 Apple / Safari 扩展；受保护容器 Logs 仍可能被保护层跳过；apply 走普通废纸篓删除"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "custom"
+handler = "group_container_caches"

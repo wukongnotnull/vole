@@ -49,6 +49,8 @@ pub enum PlanNotice {
     OrphanLibraryInaccessible,
     SystemServicesInaccessible,
     ContainersInaccessible,
+    GroupContainersInaccessible,
+    GroupContainersTruncated,
 }
 
 /// plan 生成配置。
@@ -175,6 +177,19 @@ impl Orchestrator {
                             notices.push(PlanNotice::ContainersInaccessible);
                         }
                     }
+                    if let Some(CustomDegrade::GroupContainersInaccessible) = result.degrade {
+                        self.emit(StreamEvent::Skipped {
+                            rule_id: rule.id.clone(),
+                            reason: SkipReason::TccDenied,
+                        });
+                        if !notices.contains(&PlanNotice::GroupContainersInaccessible) {
+                            notices.push(PlanNotice::GroupContainersInaccessible);
+                        }
+                    }
+                    if result.truncated && !notices.contains(&PlanNotice::GroupContainersTruncated)
+                    {
+                        notices.push(PlanNotice::GroupContainersTruncated);
+                    }
                     result.paths
                 }
                 other => other.select(&path_entries),
@@ -245,6 +260,8 @@ impl Orchestrator {
                     crate::sysorphan::system_service_label(&path)
                 } else if rule.id == crate::stubs::CONTAINER_STUB_RULE_ID {
                     crate::stubs::container_stub_label(&path)
+                } else if rule.id == crate::groupcaches::GROUP_CONTAINER_CACHE_RULE_ID {
+                    crate::groupcaches::group_container_cache_label(&path, &home)
                 } else {
                     rule.label.clone()
                 };
@@ -1090,6 +1107,124 @@ mod tests {
             }
         }
         assert!(saw_tcc, "expected Skipped TccDenied for orphaned-app-data");
+        std::env::remove_var("HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    fn group_container_cache_rule() -> Rule {
+        Rule {
+            id: "group-container-caches".into(),
+            category: Some("app-caches".into()),
+            label: "Group container caches".into(),
+            platform: vec!["macos".into()],
+            paths: vec!["~/Library/Group Containers".into()],
+            impact: None,
+            disabled: false,
+            last_verified: None,
+            strategy: StrategyConfig {
+                kind: crate::rules::StrategyKind::Custom,
+                keep: None,
+                env_override: None,
+                days: None,
+                names: None,
+                handler: Some("group_container_caches".into()),
+            },
+            guards: Default::default(),
+        }
+    }
+
+    #[test]
+    fn plan_group_container_caches_selects_leaf_with_label() {
+        let _guard = test_env::lock();
+        let home = scratch("gcc-plan");
+        let logs = home.join("Library/Group Containers/group.com.example.app/Logs");
+        fs::create_dir_all(&logs).unwrap();
+        fs::write(logs.join("a.log"), b"x").unwrap();
+        std::env::set_var("HOME", &home);
+
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), None);
+        let plan = orch
+            .build_plan(&[group_container_cache_rule()], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert_eq!(plan.entries.len(), 1);
+        assert_eq!(plan.entries[0].rule_id, "group-container-caches");
+        assert_eq!(
+            plan.entries[0].label,
+            "Group container cache: group.com.example.app/Logs/a.log"
+        );
+        assert!(plan.notices.is_empty());
+        std::env::remove_var("HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn plan_group_container_caches_degrades_when_root_unreadable() {
+        use std::os::unix::fs::PermissionsExt;
+        let _guard = test_env::lock();
+        let home = scratch("gcc-degrade");
+        let root = home.join("Library/Group Containers");
+        fs::create_dir_all(&root).unwrap();
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o000)).unwrap();
+        std::env::set_var("HOME", &home);
+
+        let (tx, rx) = unbounded();
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), Some(tx));
+        let plan = orch
+            .build_plan(&[group_container_cache_rule()], &AppProtection::new(), &[])
+            .unwrap();
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o755)).unwrap();
+
+        assert!(plan.entries.is_empty());
+        assert!(plan
+            .notices
+            .contains(&PlanNotice::GroupContainersInaccessible));
+        let mut saw = false;
+        while let Ok(ev) = rx.try_recv() {
+            if let StreamEvent::Skipped {
+                rule_id,
+                reason: SkipReason::TccDenied,
+            } = ev
+            {
+                if rule_id == "group-container-caches" {
+                    saw = true;
+                }
+            }
+        }
+        assert!(saw);
+        std::env::remove_var("HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn plan_protected_macpaw_logs_skipped_by_protection_gate() {
+        let _guard = test_env::lock();
+        let home = scratch("gcc-prot-skip");
+        let logs = home.join("Library/Group Containers/com.macpaw.CleanMyMac/Logs");
+        fs::create_dir_all(&logs).unwrap();
+        fs::write(logs.join("x.log"), b"x").unwrap();
+        std::env::set_var("HOME", &home);
+
+        let (tx, rx) = unbounded();
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), Some(tx));
+        let plan = orch
+            .build_plan(&[group_container_cache_rule()], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert!(
+            plan.entries.is_empty(),
+            "protected id Logs must not enter plan: {:?}",
+            plan.entries
+        );
+        let mut saw_skip = false;
+        while let Ok(ev) = rx.try_recv() {
+            if let StreamEvent::Skipped { rule_id, .. } = ev {
+                if rule_id == "group-container-caches" {
+                    saw_skip = true;
+                }
+            }
+        }
+        assert!(saw_skip);
         std::env::remove_var("HOME");
         let _ = fs::remove_dir_all(&home);
     }

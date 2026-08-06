@@ -14,17 +14,18 @@ class Vole < Formula
   desc "macOS cleanup and monitoring CLI (Mole-derived, GPL-3.0)"
   homepage "https://github.com/wukongnotnull/vole"
   license "GPL-3.0-only"
-  version "1.6.0"
+  version "1.7.0"
   depends_on :macos
 
   on_macos do
     on_arm do
-      url "https://github.com/wukongnotnull/vole/releases/download/v1.6.0/vole-1.6.0-aarch64-apple-darwin.tar.gz"
-      sha256 "7d5605d5019c7d7f44bbd17e49bdf95b2ad9c7108904a901727250f6f9ddbe31"
+      # sha256 filled by scripts/update-homebrew-formula.sh after release assets exist
+      url "https://github.com/wukongnotnull/vole/releases/download/v1.7.0/vole-1.7.0-aarch64-apple-darwin.tar.gz"
+      sha256 "0000000000000000000000000000000000000000000000000000000000000000"
     end
     on_intel do
-      url "https://github.com/wukongnotnull/vole/releases/download/v1.6.0/vole-1.6.0-x86_64-apple-darwin.tar.gz"
-      sha256 "6f8494523badb4f7ad7cb28304cca03b6f2a083b44f25c224034c07fffed6f7f"
+      url "https://github.com/wukongnotnull/vole/releases/download/v1.7.0/vole-1.7.0-x86_64-apple-darwin.tar.gz"
+      sha256 "0000000000000000000000000000000000000000000000000000000000000000"
     end
   end
 

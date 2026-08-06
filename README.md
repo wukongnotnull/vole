@@ -35,7 +35,7 @@
 - **冻结 NDJSON 协议**：CLI、脚本与未来桌面 app 共用同一编排层
 - **规则数据化**：**516** 条高价值清理规则以 TOML 声明，可 diff、可禁用、可 fixture 回归（含用户域 orphaned app data）
 
-适合：想要更现代、更可脚本化、更偏「安全预览再执行」的日常清理与磁盘洞察。若你需要成熟全家桶（`purge` / `installer` / 真 sudo 删除），请继续用 [Mole](https://github.com/tw93/Mole)。
+适合：想要更现代、更可脚本化、更偏「安全预览再执行」的日常清理与磁盘洞察。若你需要成熟全家桶（`purge` / `installer` / 交互提权 / 完整 `/Library` 扫描），请继续用 [Mole](https://github.com/tw93/Mole)。
 
 ---
 

@@ -110,6 +110,18 @@ pub fn select_system_service_orphans(
     Ok(out)
 }
 
+/// apply 政策重验：路径须仍能被选为 orphan（与 plan 扫描规则同形）。失败则不得删。
+pub fn recheck_system_service_entry(path: &Path, home: &Path, deps: &dyn OrphanDeps) -> bool {
+    if !crate::privilege::path_allowed_for_privilege(path) {
+        return false;
+    }
+    let roots = SystemServiceRoots::from_env();
+    let Ok(orphans) = select_system_service_orphans(&roots, home, deps) else {
+        return false;
+    };
+    orphans.iter().any(|p| p == path)
+}
+
 enum TreeAccess {
     Readable,
     Inaccessible,

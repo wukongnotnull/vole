@@ -161,6 +161,13 @@ fn mole_delete_inner(
             deletion_log.log(mode_label, "unknown", "sudo-unavailable", path);
             return Err(MoleDeleteError::SudoUnavailable);
         }
+        if crate::whitelist::is_match(Path::new(path), whitelist_patterns) {
+            deletion_log.log(mode_label, "0", "whitelisted", path);
+            oplog
+                .log("SKIPPED", Path::new(path), Some("whitelist"))
+                .ok();
+            return Err(MoleDeleteError::Whitelisted);
+        }
         let size = measure_path_size_kb(path);
         let size_field = size_kb_field(size);
         let bytes = measure_path_size_bytes(path).unwrap_or(0);

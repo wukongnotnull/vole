@@ -6,7 +6,7 @@ mod sudo;
 
 pub use sudo::{NoPrivilege, RecordingPrivilege, SudoNoninteractive};
 
-use std::path::{Component, Path};
+use std::path::{Component, Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrivilegeError {
@@ -21,13 +21,25 @@ pub trait PrivilegeBackend: Send + Sync {
     fn launchctl_unload(&self, plist: &Path) -> Result<(), PrivilegeError>;
 }
 
-const ALLOWED_PREFIXES: &[&str] = &[
+const LIVE_PREFIXES: &[&str] = &[
     "/Library/LaunchDaemons/",
     "/Library/LaunchAgents/",
     "/Library/PrivilegedHelperTools/",
 ];
 
-/// 绝对路径、无 `..`，且位于三树前缀之下。
+fn privilege_prefixes() -> Vec<String> {
+    if let Some(base) = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY") {
+        let base = PathBuf::from(base);
+        return vec![
+            format!("{}/", base.join("LaunchDaemons").display()),
+            format!("{}/", base.join("LaunchAgents").display()),
+            format!("{}/", base.join("PrivilegedHelperTools").display()),
+        ];
+    }
+    LIVE_PREFIXES.iter().map(|s| (*s).to_string()).collect()
+}
+
+/// 绝对路径、无 `..`，且为三树下**单层叶**（禁止目录根 / 多级）。
 pub fn path_allowed_for_privilege(path: &Path) -> bool {
     if !path.is_absolute() {
         return false;
@@ -38,7 +50,19 @@ pub fn path_allowed_for_privilege(path: &Path) -> bool {
     let Some(s) = path.to_str() else {
         return false;
     };
-    ALLOWED_PREFIXES.iter().any(|prefix| s.starts_with(prefix))
+    for prefix in privilege_prefixes() {
+        let Some(rest) = s.strip_prefix(&prefix) else {
+            continue;
+        };
+        if rest.is_empty() || rest.contains('/') {
+            return false;
+        }
+        if prefix.ends_with("LaunchDaemons/") || prefix.ends_with("LaunchAgents/") {
+            return rest.ends_with(".plist") && !rest.starts_with("com.apple.");
+        }
+        return !rest.starts_with("com.apple.");
+    }
+    false
 }
 
 #[cfg(test)]
@@ -66,6 +90,15 @@ mod tests {
         assert!(!path_allowed_for_privilege(Path::new("LaunchDaemons/x")));
         assert!(!path_allowed_for_privilege(Path::new(
             "/Library/LaunchDaemonsEvil/x"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/Library/LaunchDaemons/"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/Library/LaunchDaemons/com.apple.foo.plist"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/Library/LaunchDaemons/subdir/x.plist"
         )));
     }
 

@@ -109,6 +109,9 @@ impl PrivilegeBackend for RecordingPrivilege {
             return Err(PrivilegeError::Refused);
         }
         self.removed.lock().unwrap().push(path.to_path_buf());
+        // 测试 fixture：真删文件以便 apply 集成测断言
+        let _ = std::fs::remove_file(path);
+        let _ = std::fs::remove_dir_all(path);
         Ok(())
     }
 

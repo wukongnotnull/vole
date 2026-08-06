@@ -26,7 +26,7 @@ use crate::safety::{
 use crate::stubs::{
     recheck_container_stub_entry, remove_verified_container_stub, CONTAINER_STUB_RULE_ID,
 };
-use crate::sysorphan::SYSTEM_SERVICES_RULE_ID;
+use crate::sysorphan::{recheck_system_service_entry, SYSTEM_SERVICES_RULE_ID};
 use crate::vole_proto::{
     Plan as ProtoPlan, PlanEntry as ProtoPlanEntry, Report, SkipReason, SkipSummary, StreamEvent,
     SCHEMA_VERSION,
@@ -221,6 +221,18 @@ pub fn apply_plan(
             let fallback = NoPrivilege;
             let backend = ctx.privilege.unwrap_or(&fallback);
             if !path_allowed_for_privilege(&entry.path) {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            let home = dirs_home();
+            if !recheck_system_service_entry(&entry.path, &home, ctx.orphan_deps) {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -709,35 +721,43 @@ mod tests {
         fs::remove_dir_all(&root).ok();
     }
 
-    fn plan_entry_synthetic(path: &PathBuf, rule_id: &str) -> ProtoPlanEntry {
-        ProtoPlanEntry {
-            id: format!("{rule_id}-0"),
-            path: path.clone(),
-            label: "test".into(),
-            size: 0,
-            rule_id: rule_id.into(),
-            skip_reason: None,
-            dev: 1,
-            ino: 1,
-            mtime: UNIX_EPOCH + Duration::from_secs(1),
-        }
-    }
-
     #[test]
     fn apply_system_services_skips_when_probe_fails() {
+        use crate::orphan::FakeOrphanDeps;
         use crate::sysorphan::SYSTEM_SERVICES_RULE_ID;
-        use std::path::PathBuf;
+        use std::collections::HashSet;
 
         let _guard = test_env::lock();
         let root = scratch("syssvc-noprobe");
-        let file = PathBuf::from("/Library/LaunchDaemons/com.example.orphan.plist");
+        let lib = root.join("Library");
+        for d in ["LaunchDaemons", "LaunchAgents", "PrivilegedHelperTools"] {
+            fs::create_dir_all(lib.join(d)).unwrap();
+        }
+        let missing = root.join("nowhere/bin/gone");
+        let plist = lib.join("LaunchDaemons/com.example.orphan.plist");
+        fs::write(
+            &plist,
+            format!(
+                r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict><key>Program</key><string>{}</string></dict></plist>
+"#,
+                missing.display()
+            ),
+        )
+        .unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
 
-        let plan = fresh_plan(vec![plan_entry_synthetic(&file, SYSTEM_SERVICES_RULE_ID)]);
+        let plan = fresh_plan(vec![plan_entry(&plist, SYSTEM_SERVICES_RULE_ID)]);
         let protection = AppProtection::new();
         let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
         let mut oplog = OperationLogger::new("clean");
         let probe = crate::rules::FakeProcessProbe::default();
-        let orphan_deps = LiveOrphanDeps::new();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
         let backend = crate::privilege::NoPrivilege;
         let mut ctx = ApplyPlanContext::new(
             &protection,
@@ -760,23 +780,47 @@ mod tests {
             .skipped_by_reason
             .iter()
             .any(|s| s.reason == SkipReason::NeedsPrivilege));
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
         fs::remove_dir_all(&root).ok();
     }
 
     #[test]
     fn apply_system_services_records_remove_when_probe_ok() {
+        use crate::orphan::FakeOrphanDeps;
         use crate::sysorphan::SYSTEM_SERVICES_RULE_ID;
-        use std::path::PathBuf;
+        use std::collections::HashSet;
 
         let _guard = test_env::lock();
         let root = scratch("syssvc-probe-ok");
-        let file = PathBuf::from("/Library/LaunchDaemons/com.example.orphan.plist");
-        let plan = fresh_plan(vec![plan_entry_synthetic(&file, SYSTEM_SERVICES_RULE_ID)]);
+        let lib = root.join("Library");
+        for d in ["LaunchDaemons", "LaunchAgents", "PrivilegedHelperTools"] {
+            fs::create_dir_all(lib.join(d)).unwrap();
+        }
+        let missing = root.join("nowhere/bin/gone");
+        let plist = lib.join("LaunchDaemons/com.example.orphan.plist");
+        fs::write(
+            &plist,
+            format!(
+                r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict><key>Program</key><string>{}</string></dict></plist>
+"#,
+                missing.display()
+            ),
+        )
+        .unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let plan = fresh_plan(vec![plan_entry(&plist, SYSTEM_SERVICES_RULE_ID)]);
         let protection = AppProtection::new();
         let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
         let mut oplog = OperationLogger::new("clean");
         let probe = crate::rules::FakeProcessProbe::default();
-        let orphan_deps = LiveOrphanDeps::new();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
         let backend = crate::privilege::RecordingPrivilege::allowing();
         let mut ctx = ApplyPlanContext::new(
             &protection,
@@ -793,13 +837,10 @@ mod tests {
         ctx.privilege = Some(&backend);
 
         let report = apply_plan(&plan, &mut ctx).unwrap();
-        assert_eq!(report.succeeded, 0);
-        assert_eq!(report.skipped, 1);
-        assert!(report
-            .skipped_by_reason
-            .iter()
-            .any(|s| s.reason == SkipReason::PathVanished));
-        assert!(backend.removed.lock().unwrap().is_empty());
+        assert_eq!(report.succeeded, 1);
+        assert_eq!(backend.removed.lock().unwrap().len(), 1);
+        assert!(!plist.exists());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
         fs::remove_dir_all(&root).ok();
     }
 

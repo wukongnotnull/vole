@@ -25,6 +25,8 @@ pub enum CustomDegrade {
     ContainersInaccessible,
     /// Group Containers：根存在但不可列（FDA 缺失等）。
     GroupContainersInaccessible,
+    /// Handoff pasteboard：shared-pasteboard 根存在但不可列。
+    HandoffPasteboardInaccessible,
 }
 
 /// `select_custom` 的返回值。
@@ -72,6 +74,7 @@ pub fn select_custom(
         "orphaned_container_stubs" => orphaned_container_stubs(home, orphan_deps),
         "orphaned_system_services" => orphaned_system_services(home, orphan_deps),
         "group_container_caches" => group_container_caches(home),
+        "handoff_pasteboard_cache" => handoff_pasteboard_cache(home),
         _ => CustomSelectResult::ok(Vec::new()),
     }
 }
@@ -135,6 +138,21 @@ fn group_container_caches(home: &Path) -> CustomSelectResult {
                 truncated: false,
             }
         }
+    }
+}
+
+fn handoff_pasteboard_cache(home: &Path) -> CustomSelectResult {
+    match crate::handoff::select_handoff_pasteboard(home, SystemTime::now()) {
+        Ok(r) => CustomSelectResult {
+            paths: r.paths,
+            degrade: None,
+            truncated: r.truncated,
+        },
+        Err(crate::handoff::HandoffScanError::RootInaccessible) => CustomSelectResult {
+            paths: Vec::new(),
+            degrade: Some(CustomDegrade::HandoffPasteboardInaccessible),
+            truncated: false,
+        },
     }
 }
 
@@ -926,6 +944,62 @@ mod tests {
         assert_eq!(
             got.degrade,
             Some(CustomDegrade::GroupContainersInaccessible)
+        );
+    }
+
+    #[test]
+    fn handoff_pasteboard_handler_selects_and_degrades() {
+        use crate::orphan::FakeOrphanDeps;
+        use std::os::unix::fs::PermissionsExt;
+        use std::time::{Duration, SystemTime};
+
+        let rule = Rule {
+            id: "handoff-pasteboard-cache".into(),
+            category: None,
+            label: "t".into(),
+            platform: vec![],
+            paths: vec![],
+            impact: None,
+            disabled: false,
+            last_verified: None,
+            strategy: crate::rules::schema::StrategyConfig {
+                kind: crate::rules::schema::StrategyKind::Custom,
+                keep: None,
+                env_override: None,
+                days: None,
+                names: None,
+                handler: Some("handoff_pasteboard_cache".into()),
+            },
+            guards: Default::default(),
+        };
+        let deps = FakeOrphanDeps::default();
+
+        let home = tempfile::tempdir().unwrap();
+        let root = home.path().join(
+            "Library/Group Containers/group.com.apple.coreservices.useractivityd/shared-pasteboard",
+        );
+        fs::create_dir_all(&root).unwrap();
+        let old = root.join("old");
+        fs::write(&old, b"x").unwrap();
+        let ancient = SystemTime::now() - Duration::from_secs(2 * 3600);
+        filetime::set_file_mtime(&old, filetime::FileTime::from_system_time(ancient)).unwrap();
+
+        let got = select_custom("handoff_pasteboard_cache", &[], home.path(), &rule, &deps);
+        assert!(got.degrade.is_none());
+        assert_eq!(got.paths, vec![old]);
+
+        let denied = tempfile::tempdir().unwrap();
+        let droot = denied.path().join(
+            "Library/Group Containers/group.com.apple.coreservices.useractivityd/shared-pasteboard",
+        );
+        fs::create_dir_all(&droot).unwrap();
+        fs::set_permissions(&droot, fs::Permissions::from_mode(0o000)).unwrap();
+        let got = select_custom("handoff_pasteboard_cache", &[], denied.path(), &rule, &deps);
+        fs::set_permissions(&droot, fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(got.paths.is_empty());
+        assert_eq!(
+            got.degrade,
+            Some(CustomDegrade::HandoffPasteboardInaccessible)
         );
     }
 }

@@ -3280,3 +3280,18 @@ last_verified = "2026-08"
 [rule.strategy]
 kind = "custom"
 handler = "group_container_caches"
+
+
+[[rule]]
+id = "handoff-pasteboard-cache"
+category = "app-caches"
+label = "Handoff pasteboard cache"
+platform = ["macos"]
+paths = ["~/Library/Group Containers/group.com.apple.coreservices.useractivityd/shared-pasteboard"]
+impact = "Handoff / Universal Clipboard staging buffers older than 60 minutes under shared-pasteboard; ephemeral transfer items; apply uses normal trash delete"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "custom"
+handler = "handoff_pasteboard_cache"

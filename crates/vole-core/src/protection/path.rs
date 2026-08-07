@@ -539,8 +539,21 @@ mod tests {
     fn claude_pending_uploads_leaf_allowed() {
         let c = cat();
         let home = "/Users/t";
+        // 普通叶名本就可能不保护；用 data_protected 叶名「Claude」证明形状豁免接上了
+        //（无豁免时步骤 7 会按文件名拦）。
+        assert!(!should_protect_path(
+            &format!("{home}/Library/Application Support/Claude/pending-uploads/Claude"),
+            &c,
+            ProtectionMode::Cleanup
+        ));
         assert!(!should_protect_path(
             &format!("{home}/Library/Application Support/Claude/pending-uploads/upload.bin"),
+            &c,
+            ProtectionMode::Cleanup
+        ));
+        // 对照：同名叶不在 pending-uploads 形状下，步骤 7 仍拦。
+        assert!(should_protect_path(
+            &format!("{home}/Library/Application Support/OtherApp/Claude"),
             &c,
             ProtectionMode::Cleanup
         ));

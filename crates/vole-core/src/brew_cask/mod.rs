@@ -198,7 +198,10 @@ impl BrewDeps for LiveBrewDeps {
         let start = Instant::now();
         while !handle.is_finished() {
             if start.elapsed() >= timeout {
-                return Err(format!("brew uninstall timed out after {}s", timeout.as_secs()));
+                return Err(format!(
+                    "brew uninstall timed out after {}s",
+                    timeout.as_secs()
+                ));
             }
             thread::sleep(Duration::from_millis(50));
         }
@@ -280,7 +283,11 @@ fn dir_size_bytes_shallow(path: &Path) -> Option<u64> {
         return Some(meta.len());
     }
     let mut total = 0u64;
-    for entry in jwalk::WalkDir::new(path).skip_hidden(false).into_iter().flatten() {
+    for entry in jwalk::WalkDir::new(path)
+        .skip_hidden(false)
+        .into_iter()
+        .flatten()
+    {
         if let Ok(m) = entry.metadata() {
             if m.is_file() {
                 total = total.saturating_add(m.len());
@@ -383,6 +390,7 @@ mod tests {
 
     #[derive(Default)]
     struct LastUninstall {
+        #[allow(dead_code)]
         token: String,
         zap: bool,
     }

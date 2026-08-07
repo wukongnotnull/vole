@@ -2006,10 +2006,7 @@ mod tests {
         filetime::set_file_mtime(&plist, filetime::FileTime::from_system_time(ancient)).unwrap();
         std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
 
-        let plan = fresh_plan(vec![plan_entry(
-            &plist,
-            PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID,
-        )]);
+        let plan = fresh_plan(vec![plan_entry(&plist, PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID)]);
         let protection = AppProtection::new();
         let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
         let mut oplog = OperationLogger::new("clean");

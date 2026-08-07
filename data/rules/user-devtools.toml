@@ -2961,6 +2961,20 @@ last_verified = "2026-08"
 kind = "all"
 
 [[rule]]
+id = "private-var-log"
+category = "user-devtools"
+label = "System private var logs"
+platform = ["macos"]
+paths = ["/private/var/log"]
+impact = "Old system logs (.log/.gz/.asl, ≤5 deep, ≥7d); safe to rebuild"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "older_than_days"
+days = 7
+
+[[rule]]
 id = "arc-profile-code-cache"
 category = "user-devtools"
 label = "Arc profile code cache"

@@ -7,7 +7,8 @@ mod sudo;
 pub use sudo::{NoPrivilege, RecordingPrivilege, SudoNoninteractive};
 
 use crate::safety::{
-    is_icon_services_system_cache, is_rosetta_update_bundle, is_system_diagnostic_report_leaf,
+    is_icon_services_system_cache, is_private_var_log_clean_target, is_rosetta_update_bundle,
+    is_system_diagnostic_report_leaf, PRIVATE_VAR_LOG_LIVE, PRIVATE_VAR_LOG_MAX_DEPTH,
 };
 
 use std::fs;
@@ -24,8 +25,14 @@ pub const ICON_SERVICES_SYSTEM_CACHE_RULE_ID: &str = "icon-services-system-cache
 /// `diagnostic-reports-system` 规则 id（1.14.0）。
 pub const DIAGNOSTIC_REPORTS_SYSTEM_RULE_ID: &str = "diagnostic-reports-system";
 
+/// `private-var-log` 规则 id（1.15.0）。
+pub const PRIVATE_VAR_LOG_RULE_ID: &str = "private-var-log";
+
 /// 系统 DiagnosticReports 年龄阈（对齐 Mole `MOLE_CRASH_REPORT_AGE_DAYS`）。
 pub const DIAGNOSTIC_REPORTS_SYSTEM_AGE_DAYS: u32 = 7;
+
+/// `/private/var/log` 年龄阈（对齐 Mole `MOLE_LOG_AGE_DAYS`）。
+pub const PRIVATE_VAR_LOG_AGE_DAYS: u32 = 7;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrivilegeError {
@@ -144,6 +151,55 @@ pub fn diagnostic_reports_system_plan_candidates() -> Vec<PathBuf> {
     out
 }
 
+/// live 或测试映射下的 `/private/var/log` 根目录。
+pub fn private_var_log_root() -> PathBuf {
+    if let Some(base) = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY") {
+        if let Some(parent) = Path::new(&base).parent() {
+            return parent.join("private/var/log");
+        }
+    }
+    PathBuf::from(PRIVATE_VAR_LOG_LIVE)
+}
+
+fn walk_private_var_log_files(dir: &Path, depth: usize, out: &mut Vec<PathBuf>) {
+    if depth > PRIVATE_VAR_LOG_MAX_DEPTH {
+        return;
+    }
+    let Ok(rd) = fs::read_dir(dir) else {
+        return;
+    };
+    for ent in rd.flatten() {
+        let path = ent.path();
+        let Ok(meta) = fs::symlink_metadata(&path) else {
+            continue;
+        };
+        let ft = meta.file_type();
+        if ft.is_dir() {
+            if depth < PRIVATE_VAR_LOG_MAX_DEPTH {
+                walk_private_var_log_files(&path, depth + 1, out);
+            }
+            continue;
+        }
+        if !ft.is_file() {
+            continue;
+        }
+        let Some(s) = path.to_str() else {
+            continue;
+        };
+        if is_private_var_log_clean_target(s) {
+            out.push(path);
+        }
+    }
+}
+
+/// plan 候选：根下深度 ≤5、扩展名匹配的文件。
+pub fn private_var_log_plan_candidates() -> Vec<PathBuf> {
+    let root = private_var_log_root();
+    let mut out = Vec::new();
+    walk_private_var_log_files(&root, 1, &mut out);
+    out
+}
+
 /// 当前 mtime 是否早于 `days` 天（apply 年龄重验）。
 pub fn path_mtime_older_than_days(path: &Path, days: u32) -> bool {
     let Ok(meta) = fs::symlink_metadata(path) else {
@@ -159,7 +215,7 @@ pub fn path_mtime_older_than_days(path: &Path, days: u32) -> bool {
     mtime < cutoff
 }
 
-/// 绝对路径、无 `..`，且：特权 exact/叶（Rosetta / Icon Services / DiagnosticReports）**或** 三树下单层叶。
+/// 绝对路径、无 `..`，且：特权 exact/叶（Rosetta / Icon Services / DiagnosticReports / private-var-log）**或** 三树下单层叶。
 pub fn path_allowed_for_privilege(path: &Path) -> bool {
     if !path.is_absolute() {
         return false;
@@ -173,6 +229,7 @@ pub fn path_allowed_for_privilege(path: &Path) -> bool {
     if is_rosetta_update_bundle(s)
         || is_icon_services_system_cache(s)
         || is_system_diagnostic_report_leaf(s)
+        || is_private_var_log_clean_target(s)
     {
         return true;
     }
@@ -264,6 +321,23 @@ mod tests {
         )));
         assert!(!path_allowed_for_privilege(Path::new(
             "/Library/Logs/DiagnosticReports/sub/a.crash"
+        )));
+    }
+
+    #[test]
+    fn allowlist_accepts_private_var_log_targets() {
+        assert!(path_allowed_for_privilege(Path::new(
+            "/private/var/log/system.log"
+        )));
+        assert!(path_allowed_for_privilege(Path::new(
+            "/private/var/log/a/b/c/d/e.log"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/private/var/log/a/b/c/d/e/f.log"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new("/private/var/log")));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/private/var/log/notes.txt"
         )));
     }
 

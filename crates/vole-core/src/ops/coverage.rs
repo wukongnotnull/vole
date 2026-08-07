@@ -65,7 +65,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          Handoff pasteboard（mtime>60min）、\
          Toolbox keep-N、Codex staging、not_running（精确名 + cmdline）、\
          FCP / 剪映 generated、XCTestDevices 已落地。\
-         仍未移植：桌面 SMAppService / 特权助手。\
+         仍未移植：Time Machine 失败中备份清理、本地快照报告、桌面 SMAppService / 特权助手。\
          如需完整清理，请继续使用 Mole：https://github.com/tw93/Mole"
     )
 }
@@ -199,6 +199,14 @@ mod tests {
         assert!(
             unported.contains("SMAppService"),
             "desktop SMAppService must remain listed as unported"
+        );
+        assert!(
+            unported.contains("Time Machine") || unported.contains("失败中备份"),
+            "TM failed backups must remain listed as unported until implemented"
+        );
+        assert!(
+            unported.contains("快照"),
+            "local snapshot reporting must remain listed as unported until implemented"
         );
         assert!(
             !unported.contains("Rosetta"),

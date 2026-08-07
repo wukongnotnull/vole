@@ -50,6 +50,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          `/private/var/log` 旧日志（≤5 深 + ≥7 天 + sudo -n）、\
          `/private/var/db/diagnostics`（≥7 天 / .tracev3 ≥30 天 + sudo -n）、\
          `/private/var/db/DiagnosticPipeline`（≥7 天 + sudo -n）、\
+         `/private/var/db/powerlog`（≥7 天 + sudo -n）、\
          container stubs（CleanMyMac allowlist）、\
          Group Containers logs/caches（含受保护容器 Logs / bundle 命名日志）、\
          Handoff pasteboard（mtime>60min）、\
@@ -173,6 +174,7 @@ mod tests {
         assert!(note.contains("`/private/var/log` 旧日志"));
         assert!(note.contains("`/private/var/db/diagnostics`"));
         assert!(note.contains("`/private/var/db/DiagnosticPipeline`"));
+        assert!(note.contains("`/private/var/db/powerlog`"));
         assert!(unported.contains("交互提权") || unported.contains("桌面"));
         assert!(
             !unported.contains("Rosetta"),

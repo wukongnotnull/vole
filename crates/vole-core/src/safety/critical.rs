@@ -402,6 +402,55 @@ pub fn is_private_var_db_diagnostic_pipeline_clean_target(path: &str) -> bool {
     false
 }
 
+/// `/private/var/db/powerlog`（1.18.0）：深度 ≤5 任意文件叶。
+pub const PRIVATE_VAR_DB_POWERLOG_LIVE: &str = "/private/var/db/powerlog";
+pub const PRIVATE_VAR_DB_POWERLOG_MAX_DEPTH: usize = 5;
+
+fn private_var_db_powerlog_mapped_root() -> Option<PathBuf> {
+    let base = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY")?;
+    Some(
+        PathBuf::from(base)
+            .parent()?
+            .join("private/var/db/powerlog"),
+    )
+}
+
+/// 是否为本规则允许的 clean 目标路径形状（不检查存在性 / 年龄）。
+pub fn is_private_var_db_powerlog_clean_target(path: &str) -> bool {
+    let path = normalize_policy_path(path);
+    let roots: Vec<String> = {
+        let mut v = vec![PRIVATE_VAR_DB_POWERLOG_LIVE.to_string()];
+        if let Some(mapped) = private_var_db_powerlog_mapped_root() {
+            if let Some(s) = mapped.to_str() {
+                v.push(normalize_policy_path(s));
+            }
+        }
+        v
+    };
+    for root in roots {
+        let prefix = if root.ends_with('/') {
+            root.clone()
+        } else {
+            format!("{root}/")
+        };
+        let Some(rest) = path.strip_prefix(&prefix) else {
+            continue;
+        };
+        if rest.is_empty() {
+            return false;
+        }
+        let comps: Vec<&str> = rest.split('/').filter(|s| !s.is_empty()).collect();
+        if comps.is_empty() || comps.len() > PRIVATE_VAR_DB_POWERLOG_MAX_DEPTH {
+            return false;
+        }
+        if comps.iter().any(|c| *c == ".." || c.is_empty()) {
+            return false;
+        }
+        return true;
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -551,6 +600,25 @@ mod tests {
             "/private/var/db/DiagnosticPipeline"
         ));
         assert!(!is_private_var_db_diagnostic_pipeline_clean_target(
+            "/private/var/db/diagnostics/x"
+        ));
+    }
+
+    #[test]
+    fn private_var_db_powerlog_clean_target_shape() {
+        assert!(is_private_var_db_powerlog_clean_target(
+            "/private/var/db/powerlog/x.data"
+        ));
+        assert!(is_private_var_db_powerlog_clean_target(
+            "/private/var/db/powerlog/a/b/c/d/e.data"
+        ));
+        assert!(!is_private_var_db_powerlog_clean_target(
+            "/private/var/db/powerlog/a/b/c/d/e/f.data"
+        ));
+        assert!(!is_private_var_db_powerlog_clean_target(
+            "/private/var/db/powerlog"
+        ));
+        assert!(!is_private_var_db_powerlog_clean_target(
             "/private/var/db/diagnostics/x"
         ));
     }

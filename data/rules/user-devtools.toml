@@ -3003,6 +3003,20 @@ kind = "older_than_days"
 days = 7
 
 [[rule]]
+id = "private-var-db-powerlog"
+category = "user-devtools"
+label = "System powerlog"
+platform = ["macos"]
+paths = ["/private/var/db/powerlog"]
+impact = "Old /private/var/db/powerlog files (≤5 deep, ≥7d); safe to rebuild"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "older_than_days"
+days = 7
+
+[[rule]]
 id = "arc-profile-code-cache"
 category = "user-devtools"
 label = "Arc profile code cache"

@@ -2497,6 +2497,20 @@ last_verified = "2026-07"
 kind = "all"
 
 [[rule]]
+id = "diagnostic-reports-system"
+category = "app-caches"
+label = "Diagnostic reports (system)"
+platform = ["macos"]
+paths = ["/Library/Logs/DiagnosticReports/*"]
+impact = "System crash reports older than 7 days; safe to rebuild"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "older_than_days"
+days = 7
+
+[[rule]]
 id = "identity-caches"
 category = "app-caches"
 label = "Identity caches"

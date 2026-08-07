@@ -231,6 +231,33 @@ pub fn is_icon_services_system_cache(path: &str) -> bool {
     false
 }
 
+/// 系统 DiagnosticReports 目录 marker（1.14.0）。
+pub const DIAGNOSTIC_REPORTS_SYSTEM_MARKER_LIVE: &str = "/Library/Logs/DiagnosticReports/";
+
+/// `/Library/Logs/DiagnosticReports/<leaf>` 单层叶（含测试 remap）。
+pub fn is_system_diagnostic_report_leaf(path: &str) -> bool {
+    let path = normalize_policy_path(path);
+    if let Some(rest) = path.strip_prefix(DIAGNOSTIC_REPORTS_SYSTEM_MARKER_LIVE) {
+        return !rest.is_empty() && !rest.contains('/');
+    }
+    if let Some(base) = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY") {
+        let marker = format!(
+            "{}/",
+            Path::new(&base).join("Logs/DiagnosticReports").display()
+        );
+        let marker = normalize_policy_path(&marker);
+        let marker = if marker.ends_with('/') {
+            marker
+        } else {
+            format!("{marker}/")
+        };
+        if let Some(rest) = path.strip_prefix(&marker) {
+            return !rest.is_empty() && !rest.contains('/');
+        }
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -298,6 +325,28 @@ mod tests {
         ));
         assert!(!is_critical_deletion_path(
             "/Library/Caches/com.apple.iconservices.store"
+        ));
+    }
+
+    #[test]
+    fn system_diagnostic_report_leaf_exact_shape() {
+        assert!(is_system_diagnostic_report_leaf(
+            "/Library/Logs/DiagnosticReports/App.crash"
+        ));
+        assert!(!is_system_diagnostic_report_leaf(
+            "/Library/Logs/DiagnosticReports"
+        ));
+        assert!(!is_system_diagnostic_report_leaf(
+            "/Library/Logs/DiagnosticReports/"
+        ));
+        assert!(!is_system_diagnostic_report_leaf(
+            "/Library/Logs/DiagnosticReports/sub/a.crash"
+        ));
+        assert!(!is_system_diagnostic_report_leaf(
+            "/Library/Logs/other/App.crash"
+        ));
+        assert!(!is_critical_deletion_path(
+            "/Library/Logs/DiagnosticReports/App.crash"
         ));
     }
 }

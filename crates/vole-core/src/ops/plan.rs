@@ -146,6 +146,8 @@ impl Orchestrator {
                 crate::privilege::rosetta_plan_candidates()
             } else if rule.id == crate::privilege::ICON_SERVICES_SYSTEM_CACHE_RULE_ID {
                 crate::privilege::icon_services_system_plan_candidates()
+            } else if rule.id == crate::privilege::DIAGNOSTIC_REPORTS_SYSTEM_RULE_ID {
+                crate::privilege::diagnostic_reports_system_plan_candidates()
             } else {
                 collect_path_candidates(rule, &home)
             };

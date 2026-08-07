@@ -51,7 +51,7 @@ use crate::stubs::{
 };
 use crate::sysorphan::{recheck_system_service_entry, SYSTEM_SERVICES_RULE_ID};
 use crate::tmbackup::{
-    path_allowed_for_tm_delete, LiveTmDeps, TmDeps, TmRunningState, TM_BACKUP_SAFE_HOURS,
+    path_allowed_for_tm_apply, LiveTmDeps, TmDeps, TmRunningState, TM_BACKUP_SAFE_HOURS,
     TM_FAILED_BACKUPS_RULE_ID,
 };
 use crate::vole_proto::{
@@ -1790,11 +1790,16 @@ pub fn apply_plan(
             continue;
         }
 
-        // tm-failed-backups：门控重验 → allowlist → tmutil delete（非 sudo rm）。
+        // tm-failed-backups：门控重验 → allowlist → identity → tmutil delete（非 sudo rm）。
         if entry.rule_id == TM_FAILED_BACKUPS_RULE_ID {
             let live = LiveTmDeps;
             let deps = ctx.tm_deps.unwrap_or(&live);
-            if !path_allowed_for_tm_delete(&entry.path) || !entry.path.is_dir() {
+            let path = entry.path.display().to_string();
+            let identity = proto_identity(entry);
+            if !path_allowed_for_tm_apply(deps, &entry.path)
+                || !entry.path.is_dir()
+                || verify_plan_entry(&path, &identity).is_err()
+            {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -1832,7 +1837,6 @@ pub fn apply_plan(
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 continue;
             }
-            let path = entry.path.display().to_string();
             match deps.delete_backup(&entry.path) {
                 Ok(()) => {
                     succeeded += 1;
@@ -5046,8 +5050,12 @@ mod tests {
         let root = scratch("tm-off");
         let volumes = root.join("Volumes");
         fs::create_dir_all(&volumes).unwrap();
-        let evil = root.join("tmp/evil.inProgress");
+        // 故意做成「年龄+体积合格、形状不合格」：禁止靠年龄短路而放过 /tmp。
+        let evil = root.join("tmp/foo/bar/evil.inProgress");
         fs::create_dir_all(&evil).unwrap();
+        fs::write(evil.join("payload"), b"x").unwrap();
+        let ancient = SystemTime::now() - Duration::from_secs(49 * 3600);
+        filetime::set_file_mtime(&evil, filetime::FileTime::from_system_time(ancient)).unwrap();
 
         let plan = fresh_plan(vec![plan_entry(&evil, TM_FAILED_BACKUPS_RULE_ID)]);
         let protection = AppProtection::new();
@@ -5073,10 +5081,12 @@ mod tests {
             None,
         );
         ctx.tm_deps = Some(&tm);
+        ctx.now = SystemTime::now();
 
         let report = apply_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 0);
         assert!(evil.exists());
+        assert!(tm.deleted.lock().unwrap().is_empty());
         assert!(tm.deleted.lock().unwrap().is_empty());
         fs::remove_dir_all(&root).ok();
     }

@@ -75,7 +75,8 @@ fn hours_old(mtime: SystemTime, now: SystemTime) -> Option<u64> {
     now.duration_since(mtime).ok().map(|d| d.as_secs() / 3600)
 }
 
-/// `{vol}/Backups.backupdb/**/*.inProgress` 深度≤3（相对 backupdb）或挂载点下同形。
+/// `{vol}/Backups.backupdb/**/*.inProgress` 深度≤3（相对 backupdb）。
+/// Bundle 挂载点路径须由 `path_under_tm_bundle_mount` 另验，禁止仅凭深度放行。
 pub fn path_allowed_for_tm_delete(path: &Path) -> bool {
     if !path.is_absolute() {
         return false;
@@ -89,14 +90,70 @@ pub fn path_allowed_for_tm_delete(path: &Path) -> bool {
     if !is_tm_inprogress_dir_name(name) {
         return false;
     }
-    if let Some(rest) = path
+    let Some(rest) = path
         .to_str()
         .and_then(|s| s.split_once("/Backups.backupdb/").map(|(_, r)| r))
+    else {
+        return false;
+    };
+    let depth = rest.split('/').filter(|p| !p.is_empty()).count();
+    (1..=3).contains(&depth)
+}
+
+/// 路径是否位于某 backupbundle/sparsebundle 的当前挂载点下（apply 复验用）。
+pub fn path_under_tm_bundle_mount(deps: &dyn TmDeps, path: &Path) -> bool {
+    if !path.is_absolute()
+        || path.components().any(|c| matches!(c, Component::ParentDir))
+        || !path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(is_tm_inprogress_dir_name)
     {
-        let depth = rest.split('/').filter(|p| !p.is_empty()).count();
-        return (1..=3).contains(&depth);
+        return false;
     }
-    path.components().count() >= 4
+    let Some(vol) = volume_root_for_path(path, &deps.volumes_root()) else {
+        return false;
+    };
+    let Ok(rd) = fs::read_dir(vol) else {
+        return false;
+    };
+    for be in rd.flatten() {
+        let bundle = be.path();
+        let bn = be.file_name().to_string_lossy().into_owned();
+        if !(bn.ends_with(".backupbundle") || bn.ends_with(".sparsebundle")) {
+            continue;
+        }
+        let Some(mount) = deps.bundle_mount_point(&bundle) else {
+            continue;
+        };
+        if path.starts_with(&mount) {
+            let rest = path.strip_prefix(&mount).ok();
+            let depth = rest
+                .map(|r| {
+                    r.components()
+                        .filter(|c| matches!(c, Component::Normal(_)))
+                        .count()
+                })
+                .unwrap_or(0);
+            if (1..=3).contains(&depth) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn volume_root_for_path<'a>(path: &'a Path, volumes_root: &Path) -> Option<PathBuf> {
+    let rel = path.strip_prefix(volumes_root).ok()?;
+    let mut comps = rel.components();
+    let Component::Normal(vol_name) = comps.next()? else {
+        return None;
+    };
+    Some(volumes_root.join(vol_name))
+}
+
+pub fn path_allowed_for_tm_apply(deps: &dyn TmDeps, path: &Path) -> bool {
+    path_allowed_for_tm_delete(path) || path_under_tm_bundle_mount(deps, path)
 }
 
 fn walk_inprogress(root: &Path, depth: usize, max_depth: usize, out: &mut Vec<PathBuf>) {
@@ -130,7 +187,7 @@ fn walk_inprogress(root: &Path, depth: usize, max_depth: usize, out: &mut Vec<Pa
 }
 
 fn candidate_ok(deps: &dyn TmDeps, path: &Path, now: SystemTime) -> bool {
-    if !path_allowed_for_tm_delete(path) {
+    if !(path_allowed_for_tm_delete(path) || path_under_tm_bundle_mount(deps, path)) {
         return false;
     }
     let Some(mtime) = deps.path_mtime(path) else {
@@ -244,12 +301,35 @@ pub fn tm_failed_backups_plan_candidates() -> Vec<PathBuf> {
     select_tm_failed_backups(&LiveTmDeps, SystemTime::now()).paths
 }
 
-/// 生产依赖。
+/// 生产路径。
 pub struct LiveTmDeps;
+
+/// 仅 `cfg(test)` / debug 构建可读的测试捷径；release 永远 false。
+fn test_tm_force_idle() -> bool {
+    #[cfg(any(test, debug_assertions))]
+    {
+        std::env::var_os("VOLE_TEST_TM_FORCE_IDLE").is_some()
+    }
+    #[cfg(not(any(test, debug_assertions)))]
+    {
+        false
+    }
+}
+
+fn test_volumes_root_override() -> Option<PathBuf> {
+    #[cfg(any(test, debug_assertions))]
+    {
+        std::env::var_os("VOLE_TEST_VOLUMES").map(PathBuf::from)
+    }
+    #[cfg(not(any(test, debug_assertions)))]
+    {
+        None
+    }
+}
 
 impl TmDeps for LiveTmDeps {
     fn tmutil_exists(&self) -> bool {
-        if std::env::var_os("VOLE_TEST_TM_FORCE_IDLE").is_some() {
+        if test_tm_force_idle() {
             return true;
         }
         Command::new("tmutil")
@@ -260,7 +340,7 @@ impl TmDeps for LiveTmDeps {
     }
 
     fn auto_backup_configured(&self) -> bool {
-        if std::env::var_os("VOLE_TEST_TM_FORCE_IDLE").is_some() {
+        if test_tm_force_idle() {
             return true;
         }
         let output = Command::new("defaults")
@@ -282,7 +362,7 @@ impl TmDeps for LiveTmDeps {
     }
 
     fn destination_configured(&self) -> bool {
-        if std::env::var_os("VOLE_TEST_TM_FORCE_IDLE").is_some() {
+        if test_tm_force_idle() {
             return true;
         }
         let output = Command::new("tmutil").arg("destinationinfo").output();
@@ -299,7 +379,7 @@ impl TmDeps for LiveTmDeps {
     }
 
     fn running_state(&self) -> TmRunningState {
-        if std::env::var_os("VOLE_TEST_TM_FORCE_IDLE").is_some() {
+        if test_tm_force_idle() {
             return TmRunningState::Idle;
         }
         let output = Command::new("tmutil").arg("status").output();
@@ -328,14 +408,14 @@ impl TmDeps for LiveTmDeps {
     }
 
     fn volumes_root(&self) -> PathBuf {
-        if let Ok(p) = std::env::var("VOLE_TEST_VOLUMES") {
-            return PathBuf::from(p);
+        if let Some(p) = test_volumes_root_override() {
+            return p;
         }
         PathBuf::from("/Volumes")
     }
 
     fn fs_type(&self, vol: &Path) -> String {
-        if std::env::var_os("VOLE_TEST_TM_FORCE_IDLE").is_some() {
+        if test_tm_force_idle() {
             return "apfs".into();
         }
         let output = Command::new("df").arg("-T").arg(vol).output();
@@ -500,6 +580,19 @@ pub(crate) mod tests {
         assert!(is_tm_inprogress_dir_name("2024-01-01-120000.inProgress"));
         assert!(is_tm_inprogress_dir_name("x.inprogress"));
         assert!(!is_tm_inprogress_dir_name("2024-01-01-120000"));
+    }
+
+    #[test]
+    fn allowlist_rejects_non_backupdb_shape() {
+        assert!(!path_allowed_for_tm_delete(Path::new(
+            "/tmp/foo/bar/x.inProgress"
+        )));
+        assert!(!path_allowed_for_tm_delete(Path::new(
+            "/Volumes/V/not-backupdb/Host/x.inProgress"
+        )));
+        assert!(path_allowed_for_tm_delete(Path::new(
+            "/Volumes/V/Backups.backupdb/Host/x.inProgress"
+        )));
     }
 
     #[test]

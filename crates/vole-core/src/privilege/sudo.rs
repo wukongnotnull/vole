@@ -21,6 +21,10 @@ impl PrivilegeBackend for NoPrivilege {
     fn launchctl_unload(&self, _plist: &Path) -> Result<(), PrivilegeError> {
         Err(PrivilegeError::Unavailable)
     }
+
+    fn flush_dns_cache(&self) -> Result<(), PrivilegeError> {
+        Err(PrivilegeError::Unavailable)
+    }
 }
 
 /// 生产：非交互 `sudo -n`。
@@ -92,6 +96,32 @@ impl PrivilegeBackend for SudoNoninteractive {
             )))
         }
     }
+
+    fn flush_dns_cache(&self) -> Result<(), PrivilegeError> {
+        if test_no_auth() {
+            return Err(PrivilegeError::Unavailable);
+        }
+        let flush = Command::new("sudo")
+            .args(["-n", "dscacheutil", "-flushcache"])
+            .status()
+            .map_err(|e| PrivilegeError::CommandFailed(e.to_string()))?;
+        if !flush.success() {
+            return Err(PrivilegeError::CommandFailed(format!(
+                "dscacheutil exit {flush}"
+            )));
+        }
+        let hup = Command::new("sudo")
+            .args(["-n", "killall", "-HUP", "mDNSResponder"])
+            .status()
+            .map_err(|e| PrivilegeError::CommandFailed(e.to_string()))?;
+        if hup.success() {
+            Ok(())
+        } else {
+            Err(PrivilegeError::CommandFailed(format!(
+                "killall mDNSResponder exit {hup}"
+            )))
+        }
+    }
 }
 
 /// 测试用：记录 remove 调用，不执行真 sudo。
@@ -101,6 +131,7 @@ pub struct RecordingPrivilege {
     pub acquire_calls: Mutex<u32>,
     pub removed: Mutex<Vec<PathBuf>>,
     pub unloaded: Mutex<Vec<PathBuf>>,
+    pub flush_dns_calls: Mutex<u32>,
 }
 
 impl RecordingPrivilege {
@@ -111,6 +142,7 @@ impl RecordingPrivilege {
             acquire_calls: Mutex::new(0),
             removed: Mutex::new(Vec::new()),
             unloaded: Mutex::new(Vec::new()),
+            flush_dns_calls: Mutex::new(0),
         }
     }
 
@@ -121,6 +153,7 @@ impl RecordingPrivilege {
             acquire_calls: Mutex::new(0),
             removed: Mutex::new(Vec::new()),
             unloaded: Mutex::new(Vec::new()),
+            flush_dns_calls: Mutex::new(0),
         }
     }
 }
@@ -160,6 +193,14 @@ impl PrivilegeBackend for RecordingPrivilege {
             return Err(PrivilegeError::Refused);
         }
         self.unloaded.lock().unwrap().push(plist.to_path_buf());
+        Ok(())
+    }
+
+    fn flush_dns_cache(&self) -> Result<(), PrivilegeError> {
+        if !*self.probe.lock().unwrap() {
+            return Err(PrivilegeError::Unavailable);
+        }
+        *self.flush_dns_calls.lock().unwrap() += 1;
         Ok(())
     }
 }

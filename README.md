@@ -186,7 +186,7 @@ $ vole optimize --plan
 $ vole optimize --apply optimize-plan.json
 ```
 
-12 项无 sudo 主路径（缓存、saved state、坏 prefs、quarantine、sqlite vacuum、Dock、LaunchServices 等）。系统特权路径走 `sudo -n`；TTY 下可至多一次 `sudo -v` 缓存凭证。仍需桌面 Helper / 安装器长尾会诚实跳过，并写入 plan 的 `coverage_note`。
+14 项主路径（含无 sudo 缓存/saved state/坏 prefs/quarantine/sqlite/Dock/LaunchServices 等，以及需 `sudo -n` 的 `system_maintenance` / `network_optimization` DNS 刷新）。TTY 下可至多一次 `sudo -v` 缓存凭证。其余 optimize 长尾与桌面 Helper 会诚实跳过，并写入 plan 的 `coverage_note`。
 
 ### 磁盘分析
 
@@ -225,7 +225,7 @@ $ vole completions zsh > ~/.zfunc/_vole
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | **1.32.0**：Filo production Cache + 本地快照报告 + TM 失败中备份 + system.sh 主链；余项：桌面 Helper | 成熟、功能最全 |
+| 成熟度 | **1.32.0**：Filo production Cache + optimize DNS/mDNS + 本地快照报告 + TM 失败中备份 + system.sh 主链；余项：桌面 Helper | 成熟、功能最全 |
 | 核心命令 | `status` / `analyze` / `clean` / `history` / `uninstall` / `optimize` | 另有 `purge` / `installer` 等 |
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓；orphaned 启发式 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |

@@ -64,6 +64,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          GPU Metal caches（*/C/*/com.apple.metal* 目录 stale + sudo -n，跳过 EDR）、\
          Install macOS*.app（≥14 天 + SWU fail-closed + 当前大版本 keep + sudo -n）、\
          Time Machine 失败中备份（≥48h inProgress + tmutil delete）、\
+         optimize DNS/mDNS（system_maintenance / network_optimization + sudo -n）、\
          本地快照报告（status/analyze · 仅 list）、\
          Filo production Cache、\
          交互提权（TTY 下至多一次 `sudo -v` 缓存后仍 `sudo -n` 删）、\
@@ -207,6 +208,7 @@ mod tests {
             "Install macOS*.app must not remain unported"
         );
         assert!(note.contains("Time Machine 失败中备份（≥48h"));
+        assert!(note.contains("optimize DNS/mDNS"));
         assert!(
             !unported.contains("失败中备份") && !unported.contains("Time Machine 失败"),
             "TM failed backups must not remain unported"

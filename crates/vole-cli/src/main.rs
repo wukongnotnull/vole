@@ -114,7 +114,7 @@ enum Command {
         /// 可选：按 bundle id / 应用名过滤。
         target: Option<String>,
     },
-    /// 系统优化任务（plan → apply；无 sudo 长尾进 coverage_note）。
+    /// 系统优化任务（plan → apply；特权 DNS 经 sudo -n；其余长尾进 coverage_note）。
     Optimize {
         /// 只产出候选集，不改动任何文件（默认）。
         #[arg(long, conflicts_with = "apply")]

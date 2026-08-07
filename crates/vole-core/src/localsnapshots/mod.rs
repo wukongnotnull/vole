@@ -7,8 +7,8 @@ use std::process::Command;
 use regex::Regex;
 use vole_sys::macos::MacSysCommand;
 use vole_sys::timeouts::SHORT_QUERY;
-use vole_sys::SysCommand;
 use vole_sys::vole_proto::status::LocalSnapshotsInfo;
+use vole_sys::SysCommand;
 
 /// 本模块自有的 TM 运行态（不耦合 `tmbackup`）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -32,8 +32,8 @@ pub trait LocalSnapshotDeps: Send + Sync {
     fn tmutil_exists(&self) -> bool;
     fn auto_backup_configured(&self) -> bool;
     fn running_state(&self) -> LocalTmRunningState;
-    /// 成功返回 stdout；失败/超时 → `Err(())`（fail-closed → Quiet）。
-    fn list_localsnapshots(&self) -> Result<String, ()>;
+    /// 成功返回 stdout；失败/超时 → `None`（fail-closed → Quiet）。
+    fn list_localsnapshots(&self) -> Option<String>;
 }
 
 /// 生产路径。
@@ -93,15 +93,15 @@ impl LocalSnapshotDeps for LiveLocalSnapshotDeps {
         LocalTmRunningState::Unknown
     }
 
-    fn list_localsnapshots(&self) -> Result<String, ()> {
+    fn list_localsnapshots(&self) -> Option<String> {
         let cmd = MacSysCommand;
         let out = cmd
             .run(&["tmutil", "listlocalsnapshots", "/"], SHORT_QUERY)
-            .map_err(|_| ())?;
+            .ok()?;
         if !out.status.success() {
-            return Err(());
+            return None;
         }
-        Ok(String::from_utf8_lossy(&out.stdout).into_owned())
+        Some(String::from_utf8_lossy(&out.stdout).into_owned())
     }
 }
 
@@ -125,7 +125,7 @@ pub fn probe_local_snapshots(deps: &dyn LocalSnapshotDeps) -> LocalSnapshotRepor
         LocalTmRunningState::Running => return LocalSnapshotReport::SkippedBusy,
         LocalTmRunningState::Idle => {}
     }
-    let Ok(stdout) = deps.list_localsnapshots() else {
+    let Some(stdout) = deps.list_localsnapshots() else {
         return LocalSnapshotReport::Quiet;
     };
     let count = count_tm_snapshot_lines(&stdout);
@@ -170,7 +170,7 @@ mod tests {
         tmutil: bool,
         auto: bool,
         running: LocalTmRunningState,
-        list: Result<String, ()>,
+        list: Option<String>,
     }
 
     impl LocalSnapshotDeps for Fake {
@@ -183,7 +183,7 @@ mod tests {
         fn running_state(&self) -> LocalTmRunningState {
             self.running
         }
-        fn list_localsnapshots(&self) -> Result<String, ()> {
+        fn list_localsnapshots(&self) -> Option<String> {
             self.list.clone()
         }
     }
@@ -193,7 +193,7 @@ mod tests {
             tmutil: true,
             auto: true,
             running: LocalTmRunningState::Idle,
-            list: Ok(String::new()),
+            list: Some(String::new()),
         }
     }
 
@@ -231,7 +231,7 @@ mod tests {
     #[test]
     fn list_err_is_quiet_fail_closed() {
         let mut f = idle_ok();
-        f.list = Err(());
+        f.list = None;
         assert_eq!(probe_local_snapshots(&f), LocalSnapshotReport::Quiet);
     }
 
@@ -242,7 +242,7 @@ mod tests {
                    com.apple.TimeMachine.2026-08-02-130000.local\n";
         assert_eq!(count_tm_snapshot_lines(out), 2);
         let mut f = idle_ok();
-        f.list = Ok(out.into());
+        f.list = Some(out.into());
         assert_eq!(
             probe_local_snapshots(&f),
             LocalSnapshotReport::Present { count: 2 }
@@ -255,7 +255,7 @@ mod tests {
     #[test]
     fn zero_matches_quiet() {
         let mut f = idle_ok();
-        f.list = Ok("Snapshots for volume group...\n".into());
+        f.list = Some("Snapshots for volume group...\n".into());
         assert_eq!(probe_local_snapshots(&f), LocalSnapshotReport::Quiet);
         assert!(to_info(LocalSnapshotReport::Quiet).is_none());
     }

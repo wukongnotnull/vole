@@ -18,7 +18,11 @@ pub fn render_analyze(
     local_snapshots_tip: Option<&str>,
 ) {
     let area = frame.area();
-    let tip_h = if local_snapshots_tip.is_some() { 1u16 } else { 0 };
+    let tip_h = if local_snapshots_tip.is_some() {
+        1u16
+    } else {
+        0
+    };
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([

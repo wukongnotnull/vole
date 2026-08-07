@@ -303,7 +303,7 @@ dependencies = [
 
 [[package]]
 name = "conformance"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "filetime",
  "serde",
@@ -2251,7 +2251,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vole-cli"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "clap",
  "clap_complete",
@@ -2266,7 +2266,7 @@ dependencies = [
 
 [[package]]
 name = "vole-core"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "anyhow",
  "crossbeam-channel",
@@ -2287,7 +2287,7 @@ dependencies = [
 
 [[package]]
 name = "vole-proto"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -2295,7 +2295,7 @@ dependencies = [
 
 [[package]]
 name = "vole-sys"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "libc",
  "objc2-io-kit",

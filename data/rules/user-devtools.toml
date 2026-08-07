@@ -2975,6 +2975,20 @@ kind = "older_than_days"
 days = 7
 
 [[rule]]
+id = "private-var-db-diagnostics"
+category = "user-devtools"
+label = "System diagnostics db logs"
+platform = ["macos"]
+paths = ["/private/var/db/diagnostics"]
+impact = "Old /private/var/db/diagnostics files (≤5 deep; ≥7d, .tracev3 ≥30d); safe to rebuild"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "older_than_days"
+days = 7
+
+[[rule]]
 id = "arc-profile-code-cache"
 category = "user-devtools"
 label = "Arc profile code cache"

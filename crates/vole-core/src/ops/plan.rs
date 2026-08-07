@@ -150,6 +150,8 @@ impl Orchestrator {
                 crate::privilege::diagnostic_reports_system_plan_candidates()
             } else if rule.id == crate::privilege::PRIVATE_VAR_LOG_RULE_ID {
                 crate::privilege::private_var_log_plan_candidates()
+            } else if rule.id == crate::privilege::PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID {
+                crate::privilege::private_var_db_diagnostics_plan_candidates()
             } else {
                 collect_path_candidates(rule, &home)
             };

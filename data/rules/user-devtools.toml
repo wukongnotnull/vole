@@ -3091,6 +3091,19 @@ kind = "older_than_days"
 days = 7
 
 [[rule]]
+id = "code-sign-clone"
+category = "user-devtools"
+label = "Browser code signature clones"
+platform = ["macos"]
+paths = ["/private/var/folders"]
+impact = "*.code_sign_clone dirs under */X/* (depth ≤5); skips EDR; safe to rebuild"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
 id = "arc-profile-code-cache"
 category = "user-devtools"
 label = "Arc profile code cache"

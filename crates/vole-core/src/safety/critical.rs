@@ -597,6 +597,37 @@ pub fn is_private_tmp_clean_target(path: &str) -> bool {
         .any(|root| path_under_tree_max_depth(&path, root, PRIVATE_TMP_MAX_DEPTH))
 }
 
+/// `/Library/Caches`（1.22.0）：深度 ≤5、`.cache`/`.tmp`/`.log`（对齐 Mole system caches）。
+pub const LIBRARY_CACHES_LIVE: &str = "/Library/Caches";
+pub const LIBRARY_CACHES_TEMP_MAX_DEPTH: usize = 5;
+
+fn library_caches_mapped_root() -> Option<PathBuf> {
+    let base = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY")?;
+    Some(PathBuf::from(base).join("Caches"))
+}
+
+/// 是否为本规则允许的 clean 目标路径形状（不检查存在性 / 年龄）。
+pub fn is_library_caches_temp_clean_target(path: &str) -> bool {
+    let path = normalize_policy_path(path);
+    let roots: Vec<String> = {
+        let mut v = vec![LIBRARY_CACHES_LIVE.to_string()];
+        if let Some(mapped) = library_caches_mapped_root() {
+            if let Some(s) = mapped.to_str() {
+                v.push(normalize_policy_path(s));
+            }
+        }
+        v
+    };
+    for root in roots {
+        if !path_under_tree_max_depth(&path, &root, LIBRARY_CACHES_TEMP_MAX_DEPTH) {
+            continue;
+        }
+        let name = path.rsplit('/').next().unwrap_or("");
+        return name.ends_with(".cache") || name.ends_with(".tmp") || name.ends_with(".log");
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -820,5 +851,28 @@ mod tests {
         assert!(!is_private_tmp_clean_target("/private/tmp"));
         assert!(!is_private_tmp_clean_target("/private/var/tmp"));
         assert!(!is_private_tmp_clean_target("/tmp/old.file"));
+    }
+
+    #[test]
+    fn library_caches_temp_clean_target_shape() {
+        assert!(is_library_caches_temp_clean_target(
+            "/Library/Caches/foo.cache"
+        ));
+        assert!(is_library_caches_temp_clean_target(
+            "/Library/Caches/com.apple.foo/a/b/c/d.tmp"
+        ));
+        assert!(is_library_caches_temp_clean_target(
+            "/Library/Caches/a/b/c/d/e.log"
+        ));
+        assert!(!is_library_caches_temp_clean_target(
+            "/Library/Caches/a/b/c/d/e/f.log"
+        ));
+        assert!(!is_library_caches_temp_clean_target(
+            "/Library/Caches/foo.dat"
+        ));
+        assert!(!is_library_caches_temp_clean_target("/Library/Caches"));
+        assert!(!is_library_caches_temp_clean_target(
+            "/Library/Caches/com.apple.iconservices.store"
+        ));
     }
 }

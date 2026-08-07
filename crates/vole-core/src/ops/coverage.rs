@@ -54,6 +54,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          MemoryLimitViolations（≥30 天 + sudo -n）、\
          Adobe 系统日志（Adobe/CreativeCloud/adobegc ≥7 天 + sudo -n）、\
          `/private/tmp` + `/private/var/tmp`（深度 1 + ≥7 天 + sudo -n）、\
+         `/Library/Caches` `*.cache`/`*.tmp`/`*.log`（≤5 深 + ≥7 天 + sudo -n）、\
          container stubs（CleanMyMac allowlist）、\
          Group Containers logs/caches（含受保护容器 Logs / bundle 命名日志）、\
          Handoff pasteboard（mtime>60min）、\

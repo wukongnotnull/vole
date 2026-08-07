@@ -1409,4 +1409,43 @@ mod tests {
         std::env::remove_var("HOME");
         let _ = fs::remove_dir_all(&home);
     }
+
+    fn claude_pending_uploads_rule() -> Rule {
+        Rule {
+            id: "claude-pending-uploads".into(),
+            category: Some("user-devtools".into()),
+            label: "Claude pending uploads".into(),
+            platform: vec!["macos".into()],
+            paths: vec!["~/Library/Application Support/Claude/pending-uploads/*".into()],
+            impact: Some("Queued upload stubs; safe to rebuild".into()),
+            disabled: false,
+            last_verified: Some("2026-08".into()),
+            strategy: StrategyConfig::default(),
+            guards: Default::default(),
+        }
+    }
+
+    #[test]
+    fn plan_claude_pending_uploads_enters() {
+        let _guard = test_env::lock();
+        let home = scratch("claude-pending");
+        let leaf = home.join("Library/Application Support/Claude/pending-uploads/Claude");
+        touch(&leaf);
+        // Sensitive sibling must not enter via this rule (or protection).
+        let local = home.join("Library/Application Support/Claude/Local Storage/leveldb/x");
+        touch(&local);
+        std::env::set_var("VOLE_TEST_HOME", &home);
+
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), None);
+        let plan = orch
+            .build_plan(&[claude_pending_uploads_rule()], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert_eq!(plan.entries.len(), 1);
+        assert!(plan.entries[0].path.ends_with("pending-uploads/Claude"));
+        assert_eq!(plan.entries[0].rule_id, "claude-pending-uploads");
+        assert_eq!(plan.entries[0].label, "Claude pending uploads");
+        std::env::remove_var("VOLE_TEST_HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
 }

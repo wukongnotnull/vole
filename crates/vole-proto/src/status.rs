@@ -32,6 +32,19 @@ pub struct StatusSnapshot {
     pub top_processes: Vec<ProcessInfo>,
     pub process_watch: ProcessWatchConfig,
     pub process_alerts: Vec<ProcessAlert>,
+    /// Time Machine 本地快照报告（仅 list；无则 JSON 省略）。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local_snapshots: Option<LocalSnapshotsInfo>,
+}
+
+/// `tmutil listlocalsnapshots` 报告面（Mole `clean_local_snapshots` 对齐）。
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct LocalSnapshotsInfo {
+    /// Present 时为数量；Skipped* 时省略。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub count: Option<u64>,
+    pub message: String,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -227,5 +240,30 @@ mod tests {
         let v = serde_json::to_value(&snap).unwrap();
         assert_eq!(v["health_score"], 85);
         assert!(v.get("host").is_some());
+    }
+
+    #[test]
+    fn local_snapshots_omitted_when_none() {
+        let snap = StatusSnapshot::default();
+        let v = serde_json::to_value(&snap).unwrap();
+        assert!(v.get("local_snapshots").is_none());
+    }
+
+    #[test]
+    fn local_snapshots_present_serializes() {
+        let snap = StatusSnapshot {
+            local_snapshots: Some(LocalSnapshotsInfo {
+                count: Some(2),
+                message: "Time Machine local snapshots · 2 (review: tmutil listlocalsnapshots /)"
+                    .into(),
+            }),
+            ..Default::default()
+        };
+        let v = serde_json::to_value(&snap).unwrap();
+        assert_eq!(v["local_snapshots"]["count"], 2);
+        assert!(v["local_snapshots"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("review"));
     }
 }

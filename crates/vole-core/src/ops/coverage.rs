@@ -64,6 +64,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          GPU Metal caches（*/C/*/com.apple.metal* 目录 stale + sudo -n，跳过 EDR）、\
          Install macOS*.app（≥14 天 + SWU fail-closed + 当前大版本 keep + sudo -n）、\
          Time Machine 失败中备份（≥48h inProgress + tmutil delete）、\
+         本地快照报告（status/analyze · 仅 list）、\
          Filo production Cache、\
          交互提权（TTY 下至多一次 `sudo -v` 缓存后仍 `sudo -n` 删）、\
          container stubs（CleanMyMac allowlist）、\
@@ -71,7 +72,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          Handoff pasteboard（mtime>60min）、\
          Toolbox keep-N、Codex staging、not_running（精确名 + cmdline）、\
          FCP / 剪映 generated、XCTestDevices 已落地。\
-         仍未移植：本地快照报告、桌面 SMAppService / 特权助手。\
+         仍未移植：桌面 SMAppService / 特权助手。\
          如需完整清理，请继续使用 Mole：https://github.com/tw93/Mole"
     )
 }
@@ -210,10 +211,11 @@ mod tests {
             !unported.contains("失败中备份") && !unported.contains("Time Machine 失败"),
             "TM failed backups must not remain unported"
         );
+        assert!(note.contains("本地快照报告（status/analyze"));
         assert!(note.contains("Filo production Cache"));
         assert!(
-            unported.contains("快照"),
-            "local snapshot reporting must remain listed as unported until implemented"
+            !unported.contains("快照") && !unported.contains("本地快照"),
+            "local snapshot reporting must not remain unported"
         );
         assert!(
             unported.contains("SMAppService"),

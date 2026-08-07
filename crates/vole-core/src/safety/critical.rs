@@ -556,7 +556,7 @@ fn path_under_tree_max_depth(path: &str, root: &str, max_depth: usize) -> bool {
 /// Adobe/CreativeCloud 树叶或 exact `adobegc.log`（不检查存在性 / 年龄）。
 pub fn is_adobe_system_log_clean_target(path: &str) -> bool {
     let path = normalize_policy_path(path);
-    if adobegc_log_paths().iter().any(|p| path == *p) {
+    if adobegc_log_paths().contains(&path) {
         return true;
     }
     adobe_system_log_tree_roots()

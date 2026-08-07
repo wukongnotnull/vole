@@ -2040,6 +2040,19 @@ last_verified = "2026-07"
 kind = "all"
 
 [[rule]]
+id = "icon-services-system-cache"
+category = "user-devtools"
+label = "Icon services system cache"
+platform = ["macos"]
+paths = ["/Library/Caches/com.apple.iconservices.store"]
+impact = "System icon cache; safe to rebuild"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
 id = "wallpaper-agent-cache"
 category = "user-devtools"
 label = "Wallpaper agent cache"

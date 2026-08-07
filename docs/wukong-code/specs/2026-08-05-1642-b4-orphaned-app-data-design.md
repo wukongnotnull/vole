@@ -151,7 +151,7 @@ README.md                                      # 特性 / 与 Mole 对比更新
 - [ ] 无 Group Containers / Containers / LaunchAgents 删除
 - [ ] FDA 不可用时降级跳过并响亮提示（探测方式对齐 Mole：读 `~/Library/Caches` 失败即降级）
 - [ ] 迭代上限（对齐 `MOLE_MAX_ORPHAN_ITERATIONS` 精神）+ mdfind 调用上限 64，防止异常目录拖死
-- [ ] CI / conformance 全程注入假环境，无真机探针子进程
+- [x] CI / conformance 全程注入假环境，无真机探针子进程
 - [ ] 独立 findings：`docs/findings/2026-08-b4-orphaned-security-review.md`
 
 ## 8. 测试策略

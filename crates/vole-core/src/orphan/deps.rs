@@ -125,6 +125,29 @@ pub struct FakeOrphanDeps {
     pub claude_running: bool,
 }
 
+/// Hermetic runtime deps for CI / `VOLE_TEST_HOME` / `VOLE_TEST_ORPHAN=1`.
+///
+/// Spotlight off → reverse-DNS orphan judge fail-closed（不选 orphan，不起真
+/// mdfind / lsappinfo / mdutil）。与 FakeOrphanDeps::default() 同形。
+pub fn hermetic_orphan_deps() -> FakeOrphanDeps {
+    FakeOrphanDeps::default()
+}
+
+/// `VOLE_TEST_ORPHAN=1` 或已设 `VOLE_TEST_HOME` 时使用假依赖。
+pub fn use_fake_orphan_deps() -> bool {
+    std::env::var_os("VOLE_TEST_ORPHAN").is_some_and(|v| v == "1")
+        || std::env::var_os("VOLE_TEST_HOME").is_some()
+}
+
+/// CLI / Orchestrator / apply 默认依赖选择。
+pub fn orphan_deps_for_runtime() -> std::sync::Arc<dyn OrphanDeps> {
+    if use_fake_orphan_deps() {
+        std::sync::Arc::new(hermetic_orphan_deps())
+    } else {
+        std::sync::Arc::new(LiveOrphanDeps::new())
+    }
+}
+
 impl OrphanDeps for FakeOrphanDeps {
     fn spotlight_available(&self) -> bool {
         self.spotlight
@@ -179,6 +202,37 @@ fn live_mdfind_bundle(bundle_id: &str) -> Result<bool, OrphanProbeError> {
     }
     let stdout = String::from_utf8_lossy(&output.stdout);
     Ok(stdout.lines().any(|l| !l.trim().is_empty()))
+}
+
+#[cfg(test)]
+mod runtime_tests {
+    use super::*;
+
+    #[test]
+    fn use_fake_orphan_when_test_orphan_env() {
+        let _guard = crate::test_env::lock();
+        std::env::remove_var("VOLE_TEST_HOME");
+        std::env::remove_var("VOLE_TEST_ORPHAN");
+        assert!(!use_fake_orphan_deps());
+        std::env::set_var("VOLE_TEST_ORPHAN", "1");
+        assert!(use_fake_orphan_deps());
+        std::env::remove_var("VOLE_TEST_ORPHAN");
+    }
+
+    #[test]
+    fn use_fake_orphan_when_test_home_set() {
+        let _guard = crate::test_env::lock();
+        std::env::remove_var("VOLE_TEST_ORPHAN");
+        std::env::set_var("VOLE_TEST_HOME", "/tmp/vole-orphan-home");
+        assert!(use_fake_orphan_deps());
+        std::env::remove_var("VOLE_TEST_HOME");
+        assert!(!use_fake_orphan_deps());
+    }
+
+    #[test]
+    fn hermetic_deps_spotlight_off() {
+        assert!(!hermetic_orphan_deps().spotlight_available());
+    }
 }
 
 /// 对齐 Mole `pgrep -x Claude`；超时/失败 → 视为 running（fail-closed）。

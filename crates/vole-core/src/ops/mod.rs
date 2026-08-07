@@ -15,7 +15,7 @@ use std::sync::Arc;
 use thiserror::Error;
 
 use crate::cancel::{CancelToken, Cancelled};
-use crate::orphan::{LiveOrphanDeps, OrphanDeps};
+use crate::orphan::{orphan_deps_for_runtime, OrphanDeps};
 use crate::rules::{PgrepProcessProbe, ProcessProbe, StrategyBuildError};
 
 pub use apply_plan::{
@@ -77,7 +77,7 @@ impl Orchestrator {
             cancel,
             events,
             process_probe,
-            orphan_deps: Arc::new(LiveOrphanDeps::new()),
+            orphan_deps: orphan_deps_for_runtime(),
         }
     }
 

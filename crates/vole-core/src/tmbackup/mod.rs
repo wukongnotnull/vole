@@ -143,7 +143,7 @@ pub fn path_under_tm_bundle_mount(deps: &dyn TmDeps, path: &Path) -> bool {
     false
 }
 
-fn volume_root_for_path<'a>(path: &'a Path, volumes_root: &Path) -> Option<PathBuf> {
+fn volume_root_for_path(path: &Path, volumes_root: &Path) -> Option<PathBuf> {
     let rel = path.strip_prefix(volumes_root).ok()?;
     let mut comps = rel.components();
     let Component::Normal(vol_name) = comps.next()? else {

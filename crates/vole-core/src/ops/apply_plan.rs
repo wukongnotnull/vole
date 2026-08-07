@@ -16,14 +16,13 @@ use crate::orphan::{
 };
 use crate::privilege::{
     is_arm64_host, path_allowed_for_privilege, NoPrivilege, PrivilegeBackend, SudoNoninteractive,
-    ROSETTA_CACHE_RULE_ID,
+    ICON_SERVICES_SYSTEM_CACHE_RULE_ID, ROSETTA_CACHE_RULE_ID,
 };
 use crate::protection::AppProtection;
 use crate::rules::{should_skip_for_guards, ProcessProbe, Rule};
-use crate::safety::is_rosetta_update_bundle;
 use crate::safety::{
-    verify_plan_entry, verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity,
-    ValidationError,
+    is_icon_services_system_cache, is_rosetta_update_bundle, verify_plan_entry,
+    verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity, ValidationError,
 };
 use crate::stubs::{
     recheck_container_stub_entry, remove_verified_container_stub, CONTAINER_STUB_RULE_ID,
@@ -324,6 +323,96 @@ pub fn apply_plan(
             let backend = ctx.privilege.unwrap_or(&fallback);
             if !is_arm64_host()
                 || !entry.path.to_str().is_some_and(is_rosetta_update_bundle)
+                || !path_allowed_for_privilege(&entry.path)
+            {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            if !backend.probe_noninteractive() {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::NeedsPrivilege,
+                    });
+                }
+                skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+                continue;
+            }
+            let path = entry.path.display().to_string();
+            let identity = proto_identity(entry);
+            if verify_plan_entry(&path, &identity).is_err() {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            let delete_opts = MoleDeleteOptions {
+                mode: DeleteMode::Permanent,
+                dry_run: false,
+                needs_sudo: true,
+                privilege: Some(backend),
+            };
+            match mole_delete_verified(
+                &path,
+                &identity,
+                ctx.protection,
+                ctx.whitelist_patterns,
+                delete_opts,
+                ctx.trash,
+                ctx.deletion_log,
+                ctx.oplog,
+            ) {
+                Ok(outcome) => {
+                    succeeded += 1;
+                    deleted_bytes += outcome.bytes;
+                }
+                Err(MoleDeleteError::SudoUnavailable)
+                | Err(MoleDeleteError::SudoBlockedTestMode) => {
+                    skipped += 1;
+                    if let Some(event) = &ctx.on_event {
+                        event(StreamEvent::Skipped {
+                            rule_id: entry.rule_id.clone(),
+                            reason: SkipReason::NeedsPrivilege,
+                        });
+                    }
+                    skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+                }
+                Err(MoleDeleteError::Whitelisted) => {
+                    skipped += 1;
+                    skip_tracker.record(SkipReason::Whitelisted, &entry.rule_id);
+                }
+                Err(MoleDeleteError::Rejected)
+                | Err(MoleDeleteError::IdentityMismatch)
+                | Err(MoleDeleteError::Vanished) => {
+                    skipped += 1;
+                    skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                }
+                Err(_) => failed += 1,
+            }
+            continue;
+        }
+
+        // Icon Services 系统缓存：exact → allowlist → probe → sudo permanent（无 unload）。
+        if entry.rule_id == ICON_SERVICES_SYSTEM_CACHE_RULE_ID {
+            let fallback = NoPrivilege;
+            let backend = ctx.privilege.unwrap_or(&fallback);
+            if !entry
+                .path
+                .to_str()
+                .is_some_and(is_icon_services_system_cache)
                 || !path_allowed_for_privilege(&entry.path)
             {
                 skipped += 1;
@@ -1136,6 +1225,101 @@ mod tests {
         assert!(backend.removed.lock().unwrap().is_empty());
         std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
         std::env::remove_var("VOLE_TEST_FORCE_UNAME_M");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_icon_services_system_records_remove_when_probe_ok() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::ICON_SERVICES_SYSTEM_CACHE_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("icon-sys-ok");
+        let lib = root.join("Library");
+        let store = lib.join("Caches/com.apple.iconservices.store");
+        fs::create_dir_all(store.parent().unwrap()).unwrap();
+        fs::write(&store, b"icons").unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let plan = fresh_plan(vec![plan_entry(&store, ICON_SERVICES_SYSTEM_CACHE_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 1);
+        assert!(!store.exists());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_icon_services_system_rejects_three_tree_path() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::ICON_SERVICES_SYSTEM_CACHE_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("icon-sys-wrong");
+        let lib = root.join("Library");
+        for d in ["LaunchDaemons", "LaunchAgents", "PrivilegedHelperTools"] {
+            fs::create_dir_all(lib.join(d)).unwrap();
+        }
+        let plist = lib.join("LaunchDaemons/com.example.x.plist");
+        fs::write(&plist, b"p").unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let plan = fresh_plan(vec![plan_entry(&plist, ICON_SERVICES_SYSTEM_CACHE_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert!(plist.exists());
+        assert!(backend.removed.lock().unwrap().is_empty());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
         fs::remove_dir_all(&root).ok();
     }
 

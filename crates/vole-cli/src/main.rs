@@ -366,6 +366,13 @@ fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
     let mut term = Terminal::new(backend)?;
     let theme = tui::Theme::default();
 
+    let local_snapshots_tip = vole_core::localsnapshots::to_info(
+        vole_core::localsnapshots::probe_local_snapshots(
+            &vole_core::localsnapshots::LiveLocalSnapshotDeps,
+        ),
+    )
+    .map(|info| info.message);
+
     let mut stack: Vec<PathBuf> = vec![initial.to_path_buf()];
     let mut selected = 0usize;
     let mut out = AnalyzeOutput::default();
@@ -386,7 +393,16 @@ fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
             scan_rx = Some(rx);
         }
 
-        term.draw(|f| tui::render_analyze(f, &out, selected, scanning, &theme))?;
+        term.draw(|f| {
+            tui::render_analyze(
+                f,
+                &out,
+                selected,
+                scanning,
+                &theme,
+                local_snapshots_tip.as_deref(),
+            )
+        })?;
 
         if let Some(rx) = &scan_rx {
             if let Ok(result) = rx.try_recv() {

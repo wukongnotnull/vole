@@ -11,10 +11,16 @@ use super::widgets::{card, line_pair, progress_bar};
 
 pub fn render_status(frame: &mut Frame, snap: &StatusSnapshot, theme: &Theme) {
     let area = frame.area();
+    let tip = snap
+        .local_snapshots
+        .as_ref()
+        .map(|info| info.message.as_str());
+    let tip_h = if tip.is_some() { 2u16 } else { 0 };
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(2),
+            Constraint::Length(tip_h),
             Constraint::Length(3),
             Constraint::Length(3),
             Constraint::Min(4),
@@ -34,8 +40,15 @@ pub fn render_status(frame: &mut Frame, snap: &StatusSnapshot, theme: &Theme) {
         chunks[0],
     );
 
-    frame.render_widget(progress_bar("CPU", snap.cpu.usage), chunks[1]);
-    frame.render_widget(progress_bar("Memory", snap.memory.used_percent), chunks[2]);
+    if let Some(msg) = tip {
+        frame.render_widget(
+            ratatui::widgets::Paragraph::new(Line::from(msg.to_string())).style(theme.normal),
+            chunks[1],
+        );
+    }
+
+    frame.render_widget(progress_bar("CPU", snap.cpu.usage), chunks[2]);
+    frame.render_widget(progress_bar("Memory", snap.memory.used_percent), chunks[3]);
 
     let disk_lines: Vec<Line> = snap
         .disks
@@ -54,7 +67,7 @@ pub fn render_status(frame: &mut Frame, snap: &StatusSnapshot, theme: &Theme) {
             )
         })
         .collect();
-    frame.render_widget(card("Disks", disk_lines), chunks[3]);
+    frame.render_widget(card("Disks", disk_lines), chunks[4]);
 }
 
 fn human(bytes: u64) -> String {

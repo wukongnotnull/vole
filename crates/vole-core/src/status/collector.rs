@@ -5,8 +5,9 @@ use std::time::Duration;
 use thiserror::Error;
 use vole_sys::MacStatusCollector;
 
+use crate::localsnapshots::{self, LiveLocalSnapshotDeps};
 use crate::status::health::calculate_health_score;
-use crate::vole_proto::status::StatusSnapshot;
+use crate::vole_proto::status::{LocalSnapshotsInfo, StatusSnapshot};
 
 pub const REFRESH_INTERVAL: Duration = Duration::from_secs(1);
 pub const SLOW_REFRESH_INTERVAL: Duration = Duration::from_secs(30);
@@ -26,6 +27,8 @@ pub enum CollectError {
 
 pub struct StatusCollector {
     backend: MacStatusCollector,
+    local_snapshots: Option<LocalSnapshotsInfo>,
+    local_snapshots_ready: bool,
 }
 
 impl Default for StatusCollector {
@@ -38,6 +41,8 @@ impl StatusCollector {
     pub fn new() -> Self {
         Self {
             backend: MacStatusCollector::new(),
+            local_snapshots: None,
+            local_snapshots_ready: false,
         }
     }
 
@@ -55,6 +60,12 @@ impl StatusCollector {
         );
         snap.health_score = score;
         snap.health_score_msg = msg;
+        if mode == CollectionMode::Full || !self.local_snapshots_ready {
+            let report = localsnapshots::probe_local_snapshots(&LiveLocalSnapshotDeps);
+            self.local_snapshots = localsnapshots::to_info(report);
+            self.local_snapshots_ready = true;
+        }
+        snap.local_snapshots = self.local_snapshots.clone();
         Ok(snap)
     }
 

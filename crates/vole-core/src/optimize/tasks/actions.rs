@@ -331,10 +331,16 @@ pub fn plan_network_optimization(home: &Path) -> OptimizeCandidate {
 pub enum OptimizeActionError {
     Failed,
     Skipped,
+    NeedsPrivilege,
 }
 
 /// Apply a single `optimize:action:*` entry.
-pub fn apply_optimize_action(task_id: &str, path: &Path) -> Result<(), OptimizeActionError> {
+pub fn apply_optimize_action(
+    task_id: &str,
+    path: &Path,
+    privilege: Option<&dyn crate::privilege::PrivilegeBackend>,
+    dns_flushed: &mut bool,
+) -> Result<(), OptimizeActionError> {
     match task_id {
         "quarantine_cleanup" => apply_quarantine(path),
         "sqlite_vacuum" => apply_vacuum(path),
@@ -344,8 +350,36 @@ pub fn apply_optimize_action(task_id: &str, path: &Path) -> Result<(), OptimizeA
         "coreduet_cleanup" => apply_coreduet(path),
         "dock_refresh" => apply_dock(),
         "launch_services_rebuild" => apply_launch_services(),
+        "system_maintenance" | "network_optimization" => {
+            apply_dns_optimize(task_id, privilege, dns_flushed)
+        }
         _ => Err(OptimizeActionError::Failed),
     }
+}
+
+fn apply_dns_optimize(
+    task_id: &str,
+    privilege: Option<&dyn crate::privilege::PrivilegeBackend>,
+    dns_flushed: &mut bool,
+) -> Result<(), OptimizeActionError> {
+    use crate::privilege::PrivilegeError;
+
+    if !*dns_flushed {
+        let Some(backend) = privilege else {
+            return Err(OptimizeActionError::NeedsPrivilege);
+        };
+        match backend.flush_dns_cache() {
+            Ok(()) => *dns_flushed = true,
+            Err(PrivilegeError::Unavailable) | Err(PrivilegeError::Refused) => {
+                return Err(OptimizeActionError::NeedsPrivilege);
+            }
+            Err(PrivilegeError::CommandFailed(_)) => return Err(OptimizeActionError::Failed),
+        }
+    }
+    if task_id == "system_maintenance" {
+        let _ = Command::new("mdutil").args(["-s", "/"]).output();
+    }
+    Ok(())
 }
 
 fn apply_quarantine(db: &Path) -> Result<(), OptimizeActionError> {
@@ -533,7 +567,7 @@ mod tests {
         assert_eq!(hit.task_id, "quarantine_cleanup");
         assert_eq!(hit.kind, OptimizeTaskKind::Action);
 
-        apply_optimize_action("quarantine_cleanup", &db).unwrap();
+        apply_optimize_action("quarantine_cleanup", &db, None, &mut false).unwrap();
         let count = sqlite_count(&db, "SELECT COUNT(*) FROM LSQuarantineEvent;").unwrap();
         assert_eq!(count, 0);
     }

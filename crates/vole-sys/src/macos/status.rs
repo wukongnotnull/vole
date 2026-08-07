@@ -91,6 +91,7 @@ impl MacStatusCollector {
             top_processes,
             process_watch: ProcessWatchConfig::default(),
             process_alerts: Vec::new(),
+            local_snapshots: None,
         }
     }
 

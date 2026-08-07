@@ -206,6 +206,7 @@ mod tests {
             "Install macOS*.app must not remain unported"
         );
         assert!(note.contains("Time Machine 失败中备份（≥48h"));
+        assert!(note.contains("optimize DNS/mDNS"));
         assert!(
             !unported.contains("失败中备份") && !unported.contains("Time Machine 失败"),
             "TM failed backups must not remain unported"

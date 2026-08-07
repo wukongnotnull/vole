@@ -18,9 +18,9 @@ use crate::privilege::{
     is_arm64_host, path_allowed_for_privilege, NoPrivilege, PrivilegeBackend, SudoNoninteractive,
     ROSETTA_CACHE_RULE_ID,
 };
-use crate::safety::is_rosetta_update_bundle;
 use crate::protection::AppProtection;
 use crate::rules::{should_skip_for_guards, ProcessProbe, Rule};
+use crate::safety::is_rosetta_update_bundle;
 use crate::safety::{
     verify_plan_entry, verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity,
     ValidationError,
@@ -323,10 +323,7 @@ pub fn apply_plan(
             let fallback = NoPrivilege;
             let backend = ctx.privilege.unwrap_or(&fallback);
             if !is_arm64_host()
-                || !entry
-                    .path
-                    .to_str()
-                    .is_some_and(is_rosetta_update_bundle)
+                || !entry.path.to_str().is_some_and(is_rosetta_update_bundle)
                 || !path_allowed_for_privilege(&entry.path)
             {
                 skipped += 1;

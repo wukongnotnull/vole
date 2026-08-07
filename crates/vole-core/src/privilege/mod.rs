@@ -6,16 +6,26 @@ mod sudo;
 
 pub use sudo::{NoPrivilege, RecordingPrivilege, SudoNoninteractive};
 
-use crate::safety::{is_icon_services_system_cache, is_rosetta_update_bundle};
+use crate::safety::{
+    is_icon_services_system_cache, is_rosetta_update_bundle, is_system_diagnostic_report_leaf,
+};
 
+use std::fs;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
+use std::time::{Duration, SystemTime};
 
 /// `rosetta-2-cache` 规则 id（1.12.0）。
 pub const ROSETTA_CACHE_RULE_ID: &str = "rosetta-2-cache";
 
 /// `icon-services-system-cache` 规则 id（1.13.0）。
 pub const ICON_SERVICES_SYSTEM_CACHE_RULE_ID: &str = "icon-services-system-cache";
+
+/// `diagnostic-reports-system` 规则 id（1.14.0）。
+pub const DIAGNOSTIC_REPORTS_SYSTEM_RULE_ID: &str = "diagnostic-reports-system";
+
+/// 系统 DiagnosticReports 年龄阈（对齐 Mole `MOLE_CRASH_REPORT_AGE_DAYS`）。
+pub const DIAGNOSTIC_REPORTS_SYSTEM_AGE_DAYS: u32 = 7;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrivilegeError {
@@ -101,7 +111,55 @@ pub fn icon_services_system_plan_candidates() -> Vec<PathBuf> {
     }
 }
 
-/// 绝对路径、无 `..`，且：特权 exact（Rosetta / Icon Services）**或** 三树下单层叶。
+/// live 或测试映射下的系统 DiagnosticReports 根目录。
+pub fn diagnostic_reports_system_root() -> PathBuf {
+    if let Some(base) = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY") {
+        return PathBuf::from(base).join("Logs/DiagnosticReports");
+    }
+    PathBuf::from("/Library/Logs/DiagnosticReports")
+}
+
+/// plan 候选：根下可读的**文件**单层叶。
+pub fn diagnostic_reports_system_plan_candidates() -> Vec<PathBuf> {
+    let root = diagnostic_reports_system_root();
+    let Ok(rd) = fs::read_dir(&root) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for ent in rd.flatten() {
+        let path = ent.path();
+        let Ok(meta) = fs::symlink_metadata(&path) else {
+            continue;
+        };
+        if !meta.file_type().is_file() {
+            continue;
+        }
+        let Some(s) = path.to_str() else {
+            continue;
+        };
+        if is_system_diagnostic_report_leaf(s) {
+            out.push(path);
+        }
+    }
+    out
+}
+
+/// 当前 mtime 是否早于 `days` 天（apply 年龄重验）。
+pub fn path_mtime_older_than_days(path: &Path, days: u32) -> bool {
+    let Ok(meta) = fs::symlink_metadata(path) else {
+        return false;
+    };
+    let Ok(mtime) = meta.modified() else {
+        return false;
+    };
+    let Some(cutoff) = SystemTime::now().checked_sub(Duration::from_secs(u64::from(days) * 86_400))
+    else {
+        return false;
+    };
+    mtime < cutoff
+}
+
+/// 绝对路径、无 `..`，且：特权 exact/叶（Rosetta / Icon Services / DiagnosticReports）**或** 三树下单层叶。
 pub fn path_allowed_for_privilege(path: &Path) -> bool {
     if !path.is_absolute() {
         return false;
@@ -112,7 +170,10 @@ pub fn path_allowed_for_privilege(path: &Path) -> bool {
     let Some(s) = path.to_str() else {
         return false;
     };
-    if is_rosetta_update_bundle(s) || is_icon_services_system_cache(s) {
+    if is_rosetta_update_bundle(s)
+        || is_icon_services_system_cache(s)
+        || is_system_diagnostic_report_leaf(s)
+    {
         return true;
     }
     for prefix in privilege_prefixes() {
@@ -190,6 +251,19 @@ mod tests {
         )));
         assert!(!path_allowed_for_privilege(Path::new(
             "/Library/Caches/com.apple.other"
+        )));
+    }
+
+    #[test]
+    fn allowlist_accepts_diagnostic_reports_system_leaf() {
+        assert!(path_allowed_for_privilege(Path::new(
+            "/Library/Logs/DiagnosticReports/App.crash"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/Library/Logs/DiagnosticReports"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/Library/Logs/DiagnosticReports/sub/a.crash"
         )));
     }
 

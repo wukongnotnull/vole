@@ -9,8 +9,9 @@ mod validate;
 mod property;
 
 pub use critical::{
-    is_critical_deletion_path, is_private_allowlisted, is_rosetta_update_bundle,
-    normalize_policy_path, ROSETTA_UPDATE_BUNDLE_LIVE,
+    is_critical_deletion_path, is_icon_services_system_cache, is_private_allowlisted,
+    is_rosetta_update_bundle, normalize_policy_path, ICON_SERVICES_SYSTEM_CACHE_LIVE,
+    ROSETTA_UPDATE_BUNDLE_LIVE,
 };
 pub use endpoint::is_endpoint_security_cache_path;
 pub use plan_verify::{

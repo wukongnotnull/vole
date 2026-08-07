@@ -214,6 +214,23 @@ pub fn is_rosetta_update_bundle(path: &str) -> bool {
     false
 }
 
+/// Icon Services 系统缓存（1.13.0）：仅 exact。
+pub const ICON_SERVICES_SYSTEM_CACHE_LIVE: &str = "/Library/Caches/com.apple.iconservices.store";
+
+pub fn is_icon_services_system_cache(path: &str) -> bool {
+    let path = normalize_policy_path(path);
+    if path == ICON_SERVICES_SYSTEM_CACHE_LIVE {
+        return true;
+    }
+    if let Some(base) = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY") {
+        let mapped = Path::new(&base).join("Caches/com.apple.iconservices.store");
+        if let Some(s) = mapped.to_str() {
+            return path == normalize_policy_path(s);
+        }
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -261,6 +278,26 @@ mod tests {
         // critical 仍认整树；豁免走独立谓词。
         assert!(is_critical_deletion_path(
             "/Library/Apple/usr/share/rosetta/rosetta_update_bundle"
+        ));
+    }
+
+    #[test]
+    fn icon_services_system_cache_exact_only() {
+        assert!(is_icon_services_system_cache(
+            "/Library/Caches/com.apple.iconservices.store"
+        ));
+        assert!(is_icon_services_system_cache(
+            "/Library/Caches/com.apple.iconservices.store/"
+        ));
+        assert!(!is_icon_services_system_cache("/Library/Caches"));
+        assert!(!is_icon_services_system_cache(
+            "/Library/Caches/com.apple.iconservices.store/extra"
+        ));
+        assert!(!is_icon_services_system_cache(
+            "/Library/Caches/com.apple.other"
+        ));
+        assert!(!is_critical_deletion_path(
+            "/Library/Caches/com.apple.iconservices.store"
         ));
     }
 }

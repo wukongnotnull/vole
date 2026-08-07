@@ -1,0 +1,21 @@
+{
+  "id": "claude_pending_uploads_selects_child",
+  "source_bats": "manual",
+  "source_test": "claude pending-uploads leaf selected via protect carve-out",
+  "fixture": [
+    {
+      "write": "~/Library/Application Support/Claude/pending-uploads/Claude",
+      "content": "x"
+    },
+    {
+      "write": "~/Library/Application Support/Claude/Local Storage/leveldb/x",
+      "content": "x"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Claude/pending-uploads/Claude|Claude pending uploads"
+  ],
+  "expect_not_selected": [
+    "~/Library/Application Support/Claude/Local Storage/leveldb/x"
+  ]
+}

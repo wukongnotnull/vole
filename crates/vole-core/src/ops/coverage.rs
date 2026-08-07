@@ -14,7 +14,7 @@ pub const ORPHAN_LIBRARY_WARN: &str = "注意：orphaned-app-data 已跳过（�
 pub const APPLY_PERMISSION_WARN: &str = "注意：部分条目因权限或系统保护被跳过。若涉及用户库数据，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole；系统路径可能需 sudo，请改用 Mole 或具备相应权限的环境后重试。";
 
 /// system services 三树皆不可读时追加；不提 FDA。
-pub const SYSTEM_SERVICES_WARN: &str = "注意：orphaned-system-services 已跳过（无法读取 /Library/LaunchDaemons、LaunchAgents 或 PrivilegedHelperTools）。当前扫描不使用 sudo（可读子集）；apply 在非交互 sudo 可用时永久删除，无凭证则 NeedsPrivilege（可先执行 sudo -v）。";
+pub const SYSTEM_SERVICES_WARN: &str = "注意：orphaned-system-services 已跳过（无法读取 /Library/LaunchDaemons、LaunchAgents 或 PrivilegedHelperTools）。当前扫描不使用 sudo（可读子集）；apply 在非交互 sudo 可用时永久删除；TTY 下无凭证时可至多一次请求管理员权限（sudo -v）后再 sudo -n，否则 NeedsPrivilege。";
 
 /// `~/Library/Containers` 不可列时追加（container stubs 规则降级）。
 pub const CONTAINER_STUBS_WARN: &str = "注意：orphaned-container-stubs 已跳过（无法读取 ~/Library/Containers）。若为权限问题，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole 后重试。";

@@ -59,6 +59,27 @@ pub fn is_arm64_host() -> bool {
     String::from_utf8_lossy(&out.stdout).trim() == "arm64"
 }
 
+/// live 或 `VOLE_TEST_SYSTEM_LIBRARY` 映射下的 Rosetta bundle 路径。
+pub fn rosetta_bundle_path() -> PathBuf {
+    if let Some(base) = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY") {
+        return PathBuf::from(base).join("Apple/usr/share/rosetta/rosetta_update_bundle");
+    }
+    PathBuf::from(crate::safety::ROSETTA_UPDATE_BUNDLE_LIVE)
+}
+
+/// plan 候选：arm64 且路径存在时返回该 exact。
+pub fn rosetta_plan_candidates() -> Vec<PathBuf> {
+    if !is_arm64_host() {
+        return Vec::new();
+    }
+    let path = rosetta_bundle_path();
+    if path.exists() {
+        vec![path]
+    } else {
+        Vec::new()
+    }
+}
+
 /// 绝对路径、无 `..`，且：Rosetta exact **或** 三树下单层叶。
 pub fn path_allowed_for_privilege(path: &Path) -> bool {
     if !path.is_absolute() {
@@ -145,6 +166,28 @@ mod tests {
         assert!(is_arm64_host());
         std::env::set_var("VOLE_TEST_FORCE_UNAME_M", "x86_64");
         assert!(!is_arm64_host());
+        std::env::remove_var("VOLE_TEST_FORCE_UNAME_M");
+    }
+
+    #[test]
+    fn rosetta_plan_candidates_respect_arch_and_fixture() {
+        let _guard = crate::test_env::lock();
+        let root = tempfile::tempdir().unwrap();
+        let lib = root.path().join("Library");
+        let bundle = lib.join("Apple/usr/share/rosetta/rosetta_update_bundle");
+        std::fs::create_dir_all(bundle.parent().unwrap()).unwrap();
+        std::fs::write(&bundle, b"x").unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        std::env::set_var("VOLE_TEST_FORCE_UNAME_M", "x86_64");
+        assert!(rosetta_plan_candidates().is_empty());
+
+        std::env::set_var("VOLE_TEST_FORCE_UNAME_M", "arm64");
+        let c = rosetta_plan_candidates();
+        assert_eq!(c.len(), 1);
+        assert_eq!(c[0], bundle);
+
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
         std::env::remove_var("VOLE_TEST_FORCE_UNAME_M");
     }
 

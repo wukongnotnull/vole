@@ -170,6 +170,8 @@ impl Orchestrator {
                 crate::privilege::code_sign_clone_plan_candidates()
             } else if rule.id == crate::privilege::GPU_METAL_CACHES_RULE_ID {
                 crate::privilege::gpu_metal_caches_plan_candidates()
+            } else if rule.id == crate::privilege::INSTALL_MACOS_APPS_RULE_ID {
+                crate::privilege::install_macos_apps_plan_candidates()
             } else {
                 collect_path_candidates(rule, &home)
             };
@@ -1838,6 +1840,52 @@ mod tests {
             crate::privilege::GPU_METAL_CACHES_RULE_ID,
         );
         std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn plan_install_macos_apps_enters_under_test_applications() {
+        let _guard = test_env::lock();
+        let root = scratch("plan-installer");
+        let apps = root.join("Applications");
+        let app = apps.join("Install macOS Old.app");
+        fs::create_dir_all(app.join("Contents")).unwrap();
+        let mut dict = plist::Dictionary::new();
+        dict.insert(
+            "DTPlatformVersion".into(),
+            plist::Value::String("14.0".into()),
+        );
+        plist::Value::Dictionary(dict)
+            .to_file_xml(app.join("Contents/Info.plist"))
+            .unwrap();
+        let swu = root.join("com.apple.SoftwareUpdate.plist");
+        let mut swu_dict = plist::Dictionary::new();
+        swu_dict.insert("RecommendedUpdates".into(), plist::Value::Array(vec![]));
+        plist::Value::Dictionary(swu_dict)
+            .to_file_xml(&swu)
+            .unwrap();
+
+        std::env::set_var("VOLE_TEST_APPLICATIONS", &apps);
+        std::env::set_var("VOLE_TEST_SOFTWARE_UPDATE_PLIST", &swu);
+        std::env::set_var("VOLE_TEST_MACOS_MAJOR", "15");
+
+        let ancient = SystemTime::now() - Duration::from_secs(20 * 86400);
+        filetime::set_file_mtime(&app, filetime::FileTime::from_system_time(ancient)).unwrap();
+
+        assert_plan_selects_privilege(
+            privilege_rule(
+                crate::privilege::INSTALL_MACOS_APPS_RULE_ID,
+                "Old macOS installer apps",
+                vec!["/Applications".into()],
+                None,
+            ),
+            &app,
+            crate::privilege::INSTALL_MACOS_APPS_RULE_ID,
+        );
+
+        std::env::remove_var("VOLE_TEST_APPLICATIONS");
+        std::env::remove_var("VOLE_TEST_SOFTWARE_UPDATE_PLIST");
+        std::env::remove_var("VOLE_TEST_MACOS_MAJOR");
         let _ = fs::remove_dir_all(&root);
     }
 }

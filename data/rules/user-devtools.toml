@@ -3117,6 +3117,19 @@ last_verified = "2026-08"
 kind = "all"
 
 [[rule]]
+id = "install-macos-apps"
+category = "user-devtools"
+label = "Old macOS installer apps"
+platform = ["macos"]
+paths = ["/Applications"]
+impact = "Install macOS*.app ≥14d, SWU clear, not current major, not running; privileged permanent delete"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
 id = "arc-profile-code-cache"
 category = "user-devtools"
 label = "Arc profile code cache"

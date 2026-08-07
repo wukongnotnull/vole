@@ -113,6 +113,12 @@ pub const IDLEASSETSD_CFNETWORK_TMP_AGE_DAYS: u32 = 7;
 /// GPU Metal caches 新鲜保留窗（对齐 Mole `MOLE_GPU_CACHE_AGE_DAYS`；目录内无更新于此窗内文件才 stale）。
 pub const GPU_METAL_CACHE_AGE_DAYS: u32 = 1;
 
+/// `install-macos-apps` 规则 id（1.27.0）。
+pub const INSTALL_MACOS_APPS_RULE_ID: &str = "install-macos-apps";
+
+/// Install macOS\*.app 年龄阈（对齐 Mole system.sh 14 天）。
+pub const INSTALL_MACOS_APP_AGE_DAYS: u32 = 14;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrivilegeError {
     Unavailable,
@@ -875,6 +881,187 @@ pub fn gpu_metal_caches_plan_candidates() -> Vec<PathBuf> {
     out
 }
 
+/// `/Applications` 或 `VOLE_TEST_APPLICATIONS`。
+pub fn applications_root() -> PathBuf {
+    if let Ok(base) = std::env::var("VOLE_TEST_APPLICATIONS") {
+        return PathBuf::from(base);
+    }
+    PathBuf::from("/Applications")
+}
+
+/// Software Update plist 路径，或 `VOLE_TEST_SOFTWARE_UPDATE_PLIST`。
+pub fn software_update_plist_path() -> PathBuf {
+    if let Ok(p) = std::env::var("VOLE_TEST_SOFTWARE_UPDATE_PLIST") {
+        return PathBuf::from(p);
+    }
+    PathBuf::from("/Library/Preferences/com.apple.SoftwareUpdate.plist")
+}
+
+/// 当前 macOS 主版本；`VOLE_TEST_MACOS_MAJOR` 优先，否则 `sw_vers -productVersion`。
+pub fn current_macos_major() -> Option<String> {
+    if let Ok(v) = std::env::var("VOLE_TEST_MACOS_MAJOR") {
+        let t = v.trim();
+        if !t.is_empty() {
+            return Some(t.to_string());
+        }
+    }
+    let output = Command::new("sw_vers")
+        .arg("-productVersion")
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let ver = String::from_utf8_lossy(&output.stdout);
+    let major = ver.trim().split('.').next()?.trim();
+    if major.is_empty() {
+        None
+    } else {
+        Some(major.to_string())
+    }
+}
+
+/// Fail-closed：`true` = 不得清理 Installer（pending 或未知）。
+/// 仅可读且 `RecommendedUpdates` 为空数组时返回 `false`。
+pub fn software_update_pending_or_unknown(plist: &Path) -> bool {
+    if !plist.is_file() {
+        return true;
+    }
+    let Ok(value) = plist::Value::from_file(plist) else {
+        return true;
+    };
+    let Some(dict) = value.as_dictionary() else {
+        return true;
+    };
+    let Some(recommended) = dict.get("RecommendedUpdates") else {
+        return true;
+    };
+    let Some(arr) = recommended.as_array() else {
+        return true;
+    };
+    !arr.is_empty()
+}
+
+/// `{apps_root}/Install macOS*.app` 单层 bundle 形状（绝对路径、无 `..`）。
+pub fn is_install_macos_app_bundle(path: &Path, apps_root: &Path) -> bool {
+    if !path.is_absolute() || !apps_root.is_absolute() {
+        return false;
+    }
+    if path.components().any(|c| matches!(c, Component::ParentDir))
+        || apps_root
+            .components()
+            .any(|c| matches!(c, Component::ParentDir))
+    {
+        return false;
+    }
+    let Ok(rel) = path.strip_prefix(apps_root) else {
+        return false;
+    };
+    let mut comps = rel.components();
+    let Some(Component::Normal(name)) = comps.next() else {
+        return false;
+    };
+    if comps.next().is_some() {
+        return false;
+    }
+    let Some(name) = name.to_str() else {
+        return false;
+    };
+    name.starts_with("Install macOS") && name.ends_with(".app")
+}
+
+/// Installer Info.plist `DTPlatformVersion` 主版本与当前主版本相同 → keep。
+pub fn installer_matches_current_macos_major(app: &Path, current_major: Option<&str>) -> bool {
+    let Some(current) = current_major.filter(|s| !s.is_empty()) else {
+        return false;
+    };
+    let info = app.join("Contents/Info.plist");
+    let Ok(value) = plist::Value::from_file(&info) else {
+        return false;
+    };
+    let Some(dict) = value.as_dictionary() else {
+        return false;
+    };
+    let Some(ver) = dict.get("DTPlatformVersion").and_then(|v| v.as_string()) else {
+        return false;
+    };
+    let Some(installer_major) = ver
+        .split('.')
+        .next()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    else {
+        return false;
+    };
+    installer_major == current
+}
+
+/// Bundle 根 mtime 相对 `now` 的天数；失败 → `None`（不选入）。
+pub fn installer_age_days(app: &Path, now: SystemTime) -> Option<u64> {
+    let meta = fs::symlink_metadata(app).ok()?;
+    if meta.file_type().is_symlink() {
+        return None;
+    }
+    let mtime = meta.modified().ok()?;
+    let elapsed = now.duration_since(mtime).ok()?;
+    Some(elapsed.as_secs() / 86_400)
+}
+
+/// plan 候选：过期的 Install macOS\*.app（SWU 放行后）。
+pub fn install_macos_apps_plan_candidates() -> Vec<PathBuf> {
+    install_macos_apps_plan_candidates_with(
+        &applications_root(),
+        &software_update_plist_path(),
+        current_macos_major().as_deref(),
+        SystemTime::now(),
+        &crate::rules::PgrepProcessProbe,
+    )
+}
+
+/// 可注入根 / plist / 版本 / now / 进程探针（测试）。
+pub fn install_macos_apps_plan_candidates_with(
+    apps_root: &Path,
+    swu_plist: &Path,
+    current_major: Option<&str>,
+    now: SystemTime,
+    probe: &dyn crate::rules::ProcessProbe,
+) -> Vec<PathBuf> {
+    if software_update_pending_or_unknown(swu_plist) {
+        return Vec::new();
+    }
+    let Ok(entries) = fs::read_dir(apps_root) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !is_install_macos_app_bundle(&path, apps_root) {
+            continue;
+        }
+        let Ok(meta) = fs::symlink_metadata(&path) else {
+            continue;
+        };
+        if meta.file_type().is_symlink() || !meta.is_dir() {
+            continue;
+        }
+        let needle = path.to_string_lossy();
+        if !matches!(
+            probe.cmdline_substring_running(needle.as_ref()),
+            crate::rules::ProcessState::Idle
+        ) {
+            continue;
+        }
+        if installer_matches_current_macos_major(&path, current_major) {
+            continue;
+        }
+        match installer_age_days(&path, now) {
+            Some(days) if days >= u64::from(INSTALL_MACOS_APP_AGE_DAYS) => out.push(path),
+            _ => continue,
+        }
+    }
+    out
+}
+
 /// 当前 mtime 是否早于 `days` 天（apply 年龄重验）。
 pub fn path_mtime_older_than_days(path: &Path, days: u32) -> bool {
     let Ok(meta) = fs::symlink_metadata(path) else {
@@ -915,6 +1102,7 @@ pub fn path_allowed_for_privilege(path: &Path) -> bool {
         || is_idleassetsd_cfnetwork_tmp_clean_target(s)
         || (is_code_sign_clone_clean_target(s) && !is_endpoint_security_cache_path(s))
         || (is_gpu_metal_cache_clean_target(s) && !is_endpoint_security_cache_path(s))
+        || is_install_macos_app_bundle(path, &applications_root())
     {
         return true;
     }
@@ -1286,5 +1474,145 @@ mod tests {
         assert!(!b.acquire_interactive());
         assert_eq!(*b.acquire_calls.lock().unwrap(), 1);
         assert!(!b.probe_noninteractive());
+    }
+
+    fn write_swu_plist(path: &Path, recommended: plist::Value) {
+        let mut dict = plist::Dictionary::new();
+        dict.insert("RecommendedUpdates".into(), recommended);
+        plist::Value::Dictionary(dict)
+            .to_file_xml(path)
+            .expect("write swu plist");
+    }
+
+    #[test]
+    fn swu_empty_array_not_pending() {
+        let dir = tempfile::tempdir().unwrap();
+        let plist = dir.path().join("com.apple.SoftwareUpdate.plist");
+        write_swu_plist(&plist, plist::Value::Array(vec![]));
+        assert!(!software_update_pending_or_unknown(&plist));
+    }
+
+    #[test]
+    fn swu_missing_file_is_pending() {
+        let missing = PathBuf::from("/tmp/vole-no-such-swu-plist-xyz");
+        assert!(software_update_pending_or_unknown(&missing));
+    }
+
+    #[test]
+    fn swu_nonempty_recommended_is_pending() {
+        let dir = tempfile::tempdir().unwrap();
+        let plist = dir.path().join("com.apple.SoftwareUpdate.plist");
+        write_swu_plist(
+            &plist,
+            plist::Value::Array(vec![plist::Value::Dictionary(plist::Dictionary::new())]),
+        );
+        assert!(software_update_pending_or_unknown(&plist));
+    }
+
+    #[test]
+    fn is_install_macos_app_bundle_shape() {
+        let root = Path::new("/Applications");
+        assert!(is_install_macos_app_bundle(
+            Path::new("/Applications/Install macOS Sequoia.app"),
+            root
+        ));
+        assert!(!is_install_macos_app_bundle(
+            Path::new("/Applications/Safari.app"),
+            root
+        ));
+        assert!(!is_install_macos_app_bundle(
+            Path::new("/tmp/Install macOS Sequoia.app"),
+            root
+        ));
+    }
+
+    #[test]
+    fn allowlist_accepts_install_macos_under_apps_root() {
+        let _guard = crate::test_env::lock();
+        let dir = tempfile::tempdir().unwrap();
+        let apps = dir.path().join("Applications");
+        std::fs::create_dir_all(&apps).unwrap();
+        let app = apps.join("Install macOS Fixtures.app");
+        std::fs::create_dir_all(&app).unwrap();
+        std::env::set_var("VOLE_TEST_APPLICATIONS", &apps);
+        assert!(path_allowed_for_privilege(&app));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/tmp/Install macOS Evil.app"
+        )));
+        std::env::remove_var("VOLE_TEST_APPLICATIONS");
+    }
+
+    fn write_installer_info_plist(app: &Path, dt_platform_version: &str) {
+        let info = app.join("Contents/Info.plist");
+        std::fs::create_dir_all(info.parent().unwrap()).unwrap();
+        let mut dict = plist::Dictionary::new();
+        dict.insert(
+            "DTPlatformVersion".into(),
+            plist::Value::String(dt_platform_version.into()),
+        );
+        plist::Value::Dictionary(dict)
+            .to_file_xml(&info)
+            .expect("write Info.plist");
+    }
+
+    fn fixture_apps_swu_clear() -> (tempfile::TempDir, PathBuf, PathBuf) {
+        let dir = tempfile::tempdir().unwrap();
+        let apps = dir.path().join("Applications");
+        std::fs::create_dir_all(&apps).unwrap();
+        let swu = dir.path().join("com.apple.SoftwareUpdate.plist");
+        write_swu_plist(&swu, plist::Value::Array(vec![]));
+        (dir, apps, swu)
+    }
+
+    #[test]
+    fn select_skips_all_when_swu_pending() {
+        let (_dir, apps, swu) = fixture_apps_swu_clear();
+        write_swu_plist(
+            &swu,
+            plist::Value::Array(vec![plist::Value::Dictionary(plist::Dictionary::new())]),
+        );
+        let app = apps.join("Install macOS Old.app");
+        std::fs::create_dir_all(&app).unwrap();
+        write_installer_info_plist(&app, "14.0");
+        let now = SystemTime::now() + Duration::from_secs(20 * 86_400);
+        let probe = crate::rules::FakeProcessProbe::default();
+        let out = install_macos_apps_plan_candidates_with(&apps, &swu, Some("15"), now, &probe);
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn select_includes_stale_unrelated_major_when_swu_clear() {
+        let (_dir, apps, swu) = fixture_apps_swu_clear();
+        let app = apps.join("Install macOS Old.app");
+        std::fs::create_dir_all(&app).unwrap();
+        write_installer_info_plist(&app, "14.0");
+        let now = SystemTime::now() + Duration::from_secs(20 * 86_400);
+        let probe = crate::rules::FakeProcessProbe::default();
+        let out = install_macos_apps_plan_candidates_with(&apps, &swu, Some("15"), now, &probe);
+        assert_eq!(out, vec![app]);
+    }
+
+    #[test]
+    fn select_keeps_matching_major() {
+        let (_dir, apps, swu) = fixture_apps_swu_clear();
+        let app = apps.join("Install macOS Same.app");
+        std::fs::create_dir_all(&app).unwrap();
+        write_installer_info_plist(&app, "15.0");
+        let now = SystemTime::now() + Duration::from_secs(20 * 86_400);
+        let probe = crate::rules::FakeProcessProbe::default();
+        let out = install_macos_apps_plan_candidates_with(&apps, &swu, Some("15"), now, &probe);
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn select_keeps_young() {
+        let (_dir, apps, swu) = fixture_apps_swu_clear();
+        let app = apps.join("Install macOS Young.app");
+        std::fs::create_dir_all(&app).unwrap();
+        write_installer_info_plist(&app, "14.0");
+        let now = SystemTime::now();
+        let probe = crate::rules::FakeProcessProbe::default();
+        let out = install_macos_apps_plan_candidates_with(&apps, &swu, Some("15"), now, &probe);
+        assert!(out.is_empty());
     }
 }

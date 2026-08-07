@@ -16,14 +16,17 @@ use crate::orphan::{
     orphan_age_days_from_env, orphan_deps_for_runtime, OrphanDeps, OrphanJudge, ORPHANED_RULE_ID,
 };
 use crate::privilege::{
-    gpu_metal_cache_is_stale, is_arm64_host, library_caches_temp_age_days,
-    path_allowed_for_privilege, path_mtime_older_than_days, private_var_db_diagnostics_age_days,
-    NoPrivilege, PrivilegeBackend, SudoNoninteractive, ADOBE_SYSTEM_LOGS_AGE_DAYS,
-    ADOBE_SYSTEM_LOGS_RULE_ID, CODE_SIGN_CLONE_RULE_ID, DIAGNOSTIC_REPORTS_SYSTEM_AGE_DAYS,
-    DIAGNOSTIC_REPORTS_SYSTEM_RULE_ID, GPU_METAL_CACHES_RULE_ID, GPU_METAL_CACHE_AGE_DAYS,
-    ICON_SERVICES_SYSTEM_CACHE_RULE_ID, IDLEASSETSD_CFNETWORK_TMP_AGE_DAYS,
-    IDLEASSETSD_CFNETWORK_TMP_RULE_ID, LIBRARY_CACHES_TEMP_RULE_ID, PRIVATE_TMP_AGE_DAYS,
-    PRIVATE_TMP_RULE_ID, PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID,
+    applications_root, current_macos_major, gpu_metal_cache_is_stale, installer_age_days,
+    installer_matches_current_macos_major, is_arm64_host, is_install_macos_app_bundle,
+    library_caches_temp_age_days, path_allowed_for_privilege, path_mtime_older_than_days,
+    private_var_db_diagnostics_age_days, software_update_pending_or_unknown,
+    software_update_plist_path, NoPrivilege, PrivilegeBackend, SudoNoninteractive,
+    ADOBE_SYSTEM_LOGS_AGE_DAYS, ADOBE_SYSTEM_LOGS_RULE_ID, CODE_SIGN_CLONE_RULE_ID,
+    DIAGNOSTIC_REPORTS_SYSTEM_AGE_DAYS, DIAGNOSTIC_REPORTS_SYSTEM_RULE_ID,
+    GPU_METAL_CACHES_RULE_ID, GPU_METAL_CACHE_AGE_DAYS, ICON_SERVICES_SYSTEM_CACHE_RULE_ID,
+    IDLEASSETSD_CFNETWORK_TMP_AGE_DAYS, IDLEASSETSD_CFNETWORK_TMP_RULE_ID,
+    INSTALL_MACOS_APPS_RULE_ID, INSTALL_MACOS_APP_AGE_DAYS, LIBRARY_CACHES_TEMP_RULE_ID,
+    PRIVATE_TMP_AGE_DAYS, PRIVATE_TMP_RULE_ID, PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID,
     PRIVATE_VAR_DB_DIAGNOSTIC_PIPELINE_AGE_DAYS, PRIVATE_VAR_DB_DIAGNOSTIC_PIPELINE_RULE_ID,
     PRIVATE_VAR_DB_MEMORY_LIMIT_VIOLATIONS_AGE_DAYS,
     PRIVATE_VAR_DB_MEMORY_LIMIT_VIOLATIONS_RULE_ID, PRIVATE_VAR_DB_POWERLOG_AGE_DAYS,
@@ -1568,6 +1571,147 @@ pub fn apply_plan(
                 }
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 continue;
+            }
+            if !ensure_privilege_ready(ctx, backend) {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::NeedsPrivilege,
+                    });
+                }
+                skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+                continue;
+            }
+            let path = entry.path.display().to_string();
+            let identity = proto_identity(entry);
+            if verify_plan_entry(&path, &identity).is_err() {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            let delete_opts = MoleDeleteOptions {
+                mode: DeleteMode::Permanent,
+                dry_run: false,
+                needs_sudo: true,
+                privilege: Some(backend),
+            };
+            match mole_delete_verified(
+                &path,
+                &identity,
+                ctx.protection,
+                ctx.whitelist_patterns,
+                delete_opts,
+                ctx.trash,
+                ctx.deletion_log,
+                ctx.oplog,
+            ) {
+                Ok(outcome) => {
+                    succeeded += 1;
+                    deleted_bytes += outcome.bytes;
+                }
+                Err(MoleDeleteError::SudoUnavailable)
+                | Err(MoleDeleteError::SudoBlockedTestMode) => {
+                    skipped += 1;
+                    if let Some(event) = &ctx.on_event {
+                        event(StreamEvent::Skipped {
+                            rule_id: entry.rule_id.clone(),
+                            reason: SkipReason::NeedsPrivilege,
+                        });
+                    }
+                    skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+                }
+                Err(MoleDeleteError::Whitelisted) => {
+                    skipped += 1;
+                    skip_tracker.record(SkipReason::Whitelisted, &entry.rule_id);
+                }
+                Err(MoleDeleteError::Rejected)
+                | Err(MoleDeleteError::IdentityMismatch)
+                | Err(MoleDeleteError::Vanished) => {
+                    skipped += 1;
+                    skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                }
+                Err(_) => failed += 1,
+            }
+            continue;
+        }
+
+        // install-macos-apps：SWU / 运行中 / 大版本 / age → allowlist → privilege permanent。
+        if entry.rule_id == INSTALL_MACOS_APPS_RULE_ID {
+            let fallback = NoPrivilege;
+            let backend = ctx.privilege.unwrap_or(&fallback);
+            let apps_root = applications_root();
+            let shape_ok = is_install_macos_app_bundle(&entry.path, &apps_root)
+                && entry.path.is_dir()
+                && path_allowed_for_privilege(&entry.path);
+            if !shape_ok {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            if software_update_pending_or_unknown(&software_update_plist_path()) {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            let needle = entry.path.to_string_lossy();
+            if !matches!(
+                ctx.process_probe.cmdline_substring_running(needle.as_ref()),
+                crate::rules::ProcessState::Idle
+            ) {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::AppRunning,
+                    });
+                }
+                skip_tracker.record(SkipReason::AppRunning, &entry.rule_id);
+                continue;
+            }
+            if installer_matches_current_macos_major(&entry.path, current_macos_major().as_deref())
+            {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            match installer_age_days(&entry.path, SystemTime::now()) {
+                Some(days) if days >= u64::from(INSTALL_MACOS_APP_AGE_DAYS) => {}
+                _ => {
+                    skipped += 1;
+                    if let Some(event) = &ctx.on_event {
+                        event(StreamEvent::Skipped {
+                            rule_id: entry.rule_id.clone(),
+                            reason: SkipReason::PathVanished,
+                        });
+                    }
+                    skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                    continue;
+                }
             }
             if !ensure_privilege_ready(ctx, backend) {
                 skipped += 1;
@@ -4487,6 +4631,204 @@ mod tests {
         assert!(plist.exists());
         assert!(backend.removed.lock().unwrap().is_empty());
         std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_install_macos_removes_when_probe_ok() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::INSTALL_MACOS_APPS_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("installer-ok");
+        let apps = root.join("Applications");
+        let app = apps.join("Install macOS Old.app");
+        fs::create_dir_all(app.join("Contents")).unwrap();
+        let mut dict = plist::Dictionary::new();
+        dict.insert(
+            "DTPlatformVersion".into(),
+            plist::Value::String("14.0".into()),
+        );
+        plist::Value::Dictionary(dict)
+            .to_file_xml(app.join("Contents/Info.plist"))
+            .unwrap();
+        let ancient = SystemTime::now() - Duration::from_secs(20 * 86400);
+        filetime::set_file_mtime(&app, filetime::FileTime::from_system_time(ancient)).unwrap();
+        let swu = root.join("com.apple.SoftwareUpdate.plist");
+        let mut swu_dict = plist::Dictionary::new();
+        swu_dict.insert("RecommendedUpdates".into(), plist::Value::Array(vec![]));
+        plist::Value::Dictionary(swu_dict)
+            .to_file_xml(&swu)
+            .unwrap();
+
+        std::env::set_var("VOLE_TEST_APPLICATIONS", &apps);
+        std::env::set_var("VOLE_TEST_SOFTWARE_UPDATE_PLIST", &swu);
+        std::env::set_var("VOLE_TEST_MACOS_MAJOR", "15");
+
+        let plan = fresh_plan(vec![plan_entry(&app, INSTALL_MACOS_APPS_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 1);
+        assert!(!app.exists());
+        assert!(backend.removed.lock().unwrap().iter().any(|p| p == &app));
+
+        std::env::remove_var("VOLE_TEST_APPLICATIONS");
+        std::env::remove_var("VOLE_TEST_SOFTWARE_UPDATE_PLIST");
+        std::env::remove_var("VOLE_TEST_MACOS_MAJOR");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_install_macos_skips_when_swu_pending() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::INSTALL_MACOS_APPS_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("installer-swu");
+        let apps = root.join("Applications");
+        let app = apps.join("Install macOS Old.app");
+        fs::create_dir_all(app.join("Contents")).unwrap();
+        let mut dict = plist::Dictionary::new();
+        dict.insert(
+            "DTPlatformVersion".into(),
+            plist::Value::String("14.0".into()),
+        );
+        plist::Value::Dictionary(dict)
+            .to_file_xml(app.join("Contents/Info.plist"))
+            .unwrap();
+        let ancient = SystemTime::now() - Duration::from_secs(20 * 86400);
+        filetime::set_file_mtime(&app, filetime::FileTime::from_system_time(ancient)).unwrap();
+        let swu = root.join("com.apple.SoftwareUpdate.plist");
+        let mut swu_dict = plist::Dictionary::new();
+        swu_dict.insert(
+            "RecommendedUpdates".into(),
+            plist::Value::Array(vec![plist::Value::Dictionary(plist::Dictionary::new())]),
+        );
+        plist::Value::Dictionary(swu_dict)
+            .to_file_xml(&swu)
+            .unwrap();
+
+        std::env::set_var("VOLE_TEST_APPLICATIONS", &apps);
+        std::env::set_var("VOLE_TEST_SOFTWARE_UPDATE_PLIST", &swu);
+        std::env::set_var("VOLE_TEST_MACOS_MAJOR", "15");
+
+        let plan = fresh_plan(vec![plan_entry(&app, INSTALL_MACOS_APPS_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert!(app.exists());
+        assert!(backend.removed.lock().unwrap().is_empty());
+
+        std::env::remove_var("VOLE_TEST_APPLICATIONS");
+        std::env::remove_var("VOLE_TEST_SOFTWARE_UPDATE_PLIST");
+        std::env::remove_var("VOLE_TEST_MACOS_MAJOR");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_install_macos_rejects_off_apps_root() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::INSTALL_MACOS_APPS_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("installer-offroot");
+        let apps = root.join("Applications");
+        fs::create_dir_all(&apps).unwrap();
+        let evil = root.join("tmp/Install macOS Evil.app");
+        fs::create_dir_all(&evil).unwrap();
+        let swu = root.join("com.apple.SoftwareUpdate.plist");
+        let mut swu_dict = plist::Dictionary::new();
+        swu_dict.insert("RecommendedUpdates".into(), plist::Value::Array(vec![]));
+        plist::Value::Dictionary(swu_dict)
+            .to_file_xml(&swu)
+            .unwrap();
+
+        std::env::set_var("VOLE_TEST_APPLICATIONS", &apps);
+        std::env::set_var("VOLE_TEST_SOFTWARE_UPDATE_PLIST", &swu);
+        std::env::set_var("VOLE_TEST_MACOS_MAJOR", "15");
+
+        let plan = fresh_plan(vec![plan_entry(&evil, INSTALL_MACOS_APPS_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert!(evil.exists());
+        assert!(backend.removed.lock().unwrap().is_empty());
+
+        std::env::remove_var("VOLE_TEST_APPLICATIONS");
+        std::env::remove_var("VOLE_TEST_SOFTWARE_UPDATE_PLIST");
+        std::env::remove_var("VOLE_TEST_MACOS_MAJOR");
         fs::remove_dir_all(&root).ok();
     }
 

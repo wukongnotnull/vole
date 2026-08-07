@@ -1,23 +1,23 @@
 # Mole `system.sh` 差距 backlog（CLI · 桌面延后）
 
-- 日期：2026-08-08
-- 状态：已批准（盘点文档）；**不开实现**，供后续选刀
-- 依据：Mole `third_party/mole-1.48.1/lib/clean/system.sh`；Vole privilege 规则至 **1.27.0**；用户确认桌面 SMAppService 暂缓
+- 日期：2026-08-08（修订：同日本地快照报告合入后更新）
+- 状态：已批准（盘点文档）；**不开实现**（除已合并项外），供后续选刀
+- 依据：Mole `third_party/mole-1.48.1/lib/clean/system.sh`；Vole 至 **1.29.0**（含本地快照报告）；用户确认桌面 SMAppService 暂缓
 - 范围：**仅** `system.sh` 收口；不含 purge / installer 子命令 / 宽开发者长尾 / 营销
 - 更广路线图（uninstall / optimize 长尾、子命令与桌面边界、并行波次）：见 [`2026-08-08-0119-mole-parity-roadmap-design.md`](2026-08-08-0119-mole-parity-roadmap-design.md)
 
 ## 1. 结论
 
-`clean_deep_system` **主清理链在 Vole 已基本对齐**（含特权 `sudo -n` 与 TTY `sudo -v`）。`system.sh` 余量只剩：
+`clean_deep_system` **主清理链在 Vole 已对齐**（含特权 `sudo -n` 与 TTY `sudo -v`）。`system.sh` 可删函数中的实质删缺口 **`clean_time_machine_failed_backups` 已落地（1.28.0）**；报告面 **`clean_local_snapshots` 已落地（1.29.0）**。余量：
 
-| 类别 | 项 | 建议 |
+| 类别 | 项 | 状态 |
 |---|---|---|
 | **永不做** | `/Library/Updates`、`/macOS Install Data` | 与 Mole keep 一致；代码路径禁止删除 |
-| **可选高风险删** | `clean_time_machine_failed_backups` | 单独 design；fail-closed；体积可能很大 |
-| **报告向、不删** | `clean_local_snapshots` | Mole 仅提示 `tmutil listlocalsnapshots`；适合 `status`/`analyze`，不进 `clean --apply` 删 |
+| **已落地** | `clean_time_machine_failed_backups` | 规则 `tm-failed-backups`；PR #67 / 1.28.0 |
+| **已落地** | `clean_local_snapshots`（仅报告） | `status`/`analyze` 提示；PR #70 / 1.29.0；**不**进 clean apply 删 |
 | **桌面** | SMAppService / PrivilegedHelper | **本 backlog 明确排除**（已延后） |
 
-下一实现刀若继续走 system 线：优先 **TM 失败中备份**（唯一仍可删且未移植的 system 函数）；或先把 coverage「仍未移植」补上「Time Machine 失败备份 / 快照报告」以保持诚实。
+本文件 system 线可删/报告余量已收口；下一刀转向 parity roadmap **W2 并行池**。
 
 ## 2. `clean_deep_system` 对照表
 
@@ -45,47 +45,43 @@
 
 ## 3. `system.sh` 其它函数
 
-### 3.1 `clean_time_machine_failed_backups`（唯一实质删缺口）
+### 3.1 `clean_time_machine_failed_backups`（已落地）
 
 - **行为**：在 Time Machine 已配置、非运行中、状态可知时，扫描备份卷上 `*.inProgress` / `*.inprogress` 失败中目录并清理；网络卷跳过；探测失败 fail-closed。
-- **风险**：误删进行中备份 → 数据不可恢复；依赖 `tmutil` / 卷枚举 / 文件系统类型。
-- **依赖**：不宜默认并入日常 `clean`；需清晰 skip 文案与 privilege/路径闸口；本机 `/Volumes` 场景难 hermetic 测。
-- **建议版本**：若做，单独 MINOR；强制 security-review；先写 dedicated design。
+- **Vole**：规则 `tm-failed-backups`；计划 [`../plans/2026-08-08-0057-tm-failed-backups.md`](../plans/2026-08-08-0057-tm-failed-backups.md)；发版 **1.28.0** / PR #67。
+- **删除语义**：仅 `tmutil delete`；不经 `PrivilegeBackend::remove_permanent`。
 
-### 3.2 `clean_local_snapshots`（Mole 亦不删除）
+### 3.2 `clean_local_snapshots`（已落地 · 仅报告）
 
 - **行为**：`tmutil listlocalsnapshots /` 后 **只打印数量 + review 提示**，不 `tmutil deletelocalsnapshots`。
-- **建议**：挂 `status` 或 `analyze` 提示行；**禁止** clean apply 删除本地快照（除非未来另开产品决策并二次批准）。
+- **Vole**：`status` / `analyze` 提示行；proto 可选 `local_snapshots`；发版 **1.29.0** / PR #70。
+- **约束**：**禁止** clean apply 删除本地快照（除非未来另开产品决策并二次批准）。
 
 ## 4. 非目标（本文件明确写出）
 
 - 桌面 SMAppService / PrivilegedHelper（vole-macos）
 - Mole `purge` / `installer` 子命令
 - `/Library/Updates`、`/macOS Install Data` 删除
-- 宽 `dev.sh` / `user.sh` 规则长尾盘点（另开文档）
+- 宽 `dev.sh` / `user.sh` 规则长尾盘点（见 parity roadmap W2c）
 - 打 Git tag / Homebrew 公证仪式
 
-## 5. coverage 建议（诚实面）
+## 5. coverage 诚实面（已对齐）
 
-当前「仍未移植」仅写桌面。system 收口后更诚实的二选一：
-
-- **A.** 维持现状（桌面一句话）；TM 未写入 coverage，避免吓用户  
-- **B.** 改为：`仍未移植：Time Machine 失败备份清理、本地快照报告、桌面 SMAppService…`
-
-本 backlog **推荐 B**（若下一刀不做 TM，也至少在 findings 存档；coverage 可等开刀前再改，避免空头支票）。
+当前 coverage「仍未移植」主要为桌面 SMAppService / 特权助手（TM 失败备份与本地快照报告均已从该句移除，与 1.28.0 / 1.29.0 一致）。
 
 ## 6. 推荐选刀顺序（CLI · 无桌面）
 
-1. **（可选）coverage 诚实化** — docs/小改，PATCH  
-2. **TM 失败中备份** — 高风险 system 余刀；或先 spike design  
-3. **本地快照报告** — status/analyze；低删风险  
-4. （本文件范围外）宽 Mole 差距 / 发版仪式 / 营销  
+1. ~~TM 失败中备份~~ **已完成**（1.28.0）
+2. ~~本地快照报告~~ **已完成**（1.29.0）
+3. **W2 并行池**（推荐）— 见 [`2026-08-08-0119-mole-parity-roadmap-design.md`](2026-08-08-0119-mole-parity-roadmap-design.md) §3：W2a① / W2b① / W2c 窄规则任选首刀
+4. （本文件范围外）发版仪式 / 营销
 
 ## 7. 验收（本文档）
 
-- [x] `clean_deep_system` 逐段打勾  
-- [x] 永不做 Updates / Install Data 写死  
-- [x] TM 失败备份与快照报告分列  
-- [x] 桌面排除  
+- [x] `clean_deep_system` 逐段打勾
+- [x] 永不做 Updates / Install Data 写死
+- [x] TM 失败备份与快照报告分列；二者均 **已标落地**
+- [x] 桌面排除
+- [x] coverage 叙事与 1.28.0 / 1.29.0 一致
 
-下一步：用户从 §6 选一刀 → 走 brainstorming/writing-plans（TM 必须单独 design）。
+下一步：从 §6 第 3 项（W2 并行池）→ brainstorming / writing-plans。

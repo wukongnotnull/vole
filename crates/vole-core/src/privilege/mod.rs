@@ -7,16 +7,17 @@ mod sudo;
 pub use sudo::{NoPrivilege, RecordingPrivilege, SudoNoninteractive};
 
 use crate::safety::{
-    is_adobe_system_log_clean_target, is_icon_services_system_cache,
+    is_adobe_system_log_clean_target, is_code_sign_clone_clean_target,
+    is_endpoint_security_cache_path, is_icon_services_system_cache,
     is_idleassetsd_cfnetwork_tmp_clean_target, is_library_caches_temp_clean_target,
     is_private_tmp_clean_target, is_private_var_db_diagnostic_pipeline_clean_target,
     is_private_var_db_diagnostics_clean_target,
     is_private_var_db_memory_limit_violations_clean_target,
     is_private_var_db_powerlog_clean_target, is_private_var_log_clean_target,
     is_rosetta_update_bundle, is_system_diagnostic_report_leaf, ADOBEGC_LOG_LIVE, ADOBE_LOGS_LIVE,
-    ADOBE_SYSTEM_LOGS_MAX_DEPTH, CREATIVE_CLOUD_LOGS_LIVE, IDLEASSETSD_CFNETWORK_TMP_MAX_DEPTH,
-    IDLEASSETSD_DIR_NAME, IDLEASSETSD_LOCATE_MAX_DEPTH, LIBRARY_CACHES_LIVE,
-    LIBRARY_CACHES_TEMP_MAX_DEPTH, PRIVATE_TMP_LIVE, PRIVATE_TMP_MAX_DEPTH,
+    ADOBE_SYSTEM_LOGS_MAX_DEPTH, CODE_SIGN_CLONE_MAX_DEPTH, CREATIVE_CLOUD_LOGS_LIVE,
+    IDLEASSETSD_CFNETWORK_TMP_MAX_DEPTH, IDLEASSETSD_DIR_NAME, IDLEASSETSD_LOCATE_MAX_DEPTH,
+    LIBRARY_CACHES_LIVE, LIBRARY_CACHES_TEMP_MAX_DEPTH, PRIVATE_TMP_LIVE, PRIVATE_TMP_MAX_DEPTH,
     PRIVATE_VAR_DB_DIAGNOSTICS_LIVE, PRIVATE_VAR_DB_DIAGNOSTICS_MAX_DEPTH,
     PRIVATE_VAR_DB_DIAGNOSTIC_PIPELINE_LIVE, PRIVATE_VAR_DB_DIAGNOSTIC_PIPELINE_MAX_DEPTH,
     PRIVATE_VAR_DB_MEMORY_LIMIT_VIOLATIONS_LIVE, PRIVATE_VAR_DB_MEMORY_LIMIT_VIOLATIONS_MAX_DEPTH,
@@ -65,6 +66,9 @@ pub const LIBRARY_CACHES_TEMP_RULE_ID: &str = "library-caches-temp";
 
 /// `idleassetsd-cfnetwork-tmp` 规则 id（1.23.0）。
 pub const IDLEASSETSD_CFNETWORK_TMP_RULE_ID: &str = "idleassetsd-cfnetwork-tmp";
+
+/// `code-sign-clone` 规则 id（1.24.0）。
+pub const CODE_SIGN_CLONE_RULE_ID: &str = "code-sign-clone";
 
 /// 系统 DiagnosticReports 年龄阈（对齐 Mole `MOLE_CRASH_REPORT_AGE_DAYS`）。
 pub const DIAGNOSTIC_REPORTS_SYSTEM_AGE_DAYS: u32 = 7;
@@ -740,6 +744,42 @@ pub fn idleassetsd_cfnetwork_tmp_plan_candidates() -> Vec<PathBuf> {
     out
 }
 
+fn walk_code_sign_clone_dirs(dir: &Path, depth: usize, out: &mut Vec<PathBuf>) {
+    if depth > CODE_SIGN_CLONE_MAX_DEPTH {
+        return;
+    }
+    let Ok(rd) = fs::read_dir(dir) else {
+        return;
+    };
+    for ent in rd.flatten() {
+        let path = ent.path();
+        let Ok(meta) = fs::symlink_metadata(&path) else {
+            continue;
+        };
+        if !meta.file_type().is_dir() {
+            continue;
+        }
+        let Some(s) = path.to_str() else {
+            continue;
+        };
+        if is_code_sign_clone_clean_target(s) && !is_endpoint_security_cache_path(s) {
+            out.push(path.clone());
+            continue;
+        }
+        if depth < CODE_SIGN_CLONE_MAX_DEPTH {
+            walk_code_sign_clone_dirs(&path, depth + 1, out);
+        }
+    }
+}
+
+/// plan 候选：folders 下 `*/X/*/*.code_sign_clone` 目录（排除 EDR）。
+pub fn code_sign_clone_plan_candidates() -> Vec<PathBuf> {
+    let root = private_var_folders_root();
+    let mut out = Vec::new();
+    walk_code_sign_clone_dirs(&root, 1, &mut out);
+    out
+}
+
 /// 当前 mtime 是否早于 `days` 天（apply 年龄重验）。
 pub fn path_mtime_older_than_days(path: &Path, days: u32) -> bool {
     let Ok(meta) = fs::symlink_metadata(path) else {
@@ -778,6 +818,7 @@ pub fn path_allowed_for_privilege(path: &Path) -> bool {
         || is_private_tmp_clean_target(s)
         || is_library_caches_temp_clean_target(s)
         || is_idleassetsd_cfnetwork_tmp_clean_target(s)
+        || (is_code_sign_clone_clean_target(s) && !is_endpoint_security_cache_path(s))
     {
         return true;
     }
@@ -1017,6 +1058,19 @@ mod tests {
         )));
         assert!(!path_allowed_for_privilege(Path::new(
             "/private/var/folders/zz/uid/T/com.apple.idleassetsd/other.tmp"
+        )));
+    }
+
+    #[test]
+    fn allowlist_accepts_code_sign_clone_targets() {
+        assert!(path_allowed_for_privilege(Path::new(
+            "/private/var/folders/zz/uid/X/Foo.app.code_sign_clone"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/private/var/folders/zz/uid/C/Foo.app.code_sign_clone"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/private/var/folders/zz/uid/X/com.crowdstrike.falcon.App.code_sign_clone"
         )));
     }
 

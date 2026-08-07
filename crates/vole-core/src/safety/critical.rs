@@ -693,6 +693,43 @@ pub fn is_idleassetsd_cfnetwork_tmp_clean_target(path: &str) -> bool {
     false
 }
 
+/// Browser code_sign_clone（1.24.0）：`/private/var/folders/**/X/**/*.code_sign_clone` 目录。
+pub const CODE_SIGN_CLONE_MAX_DEPTH: usize = 5;
+
+/// 是否为本规则允许的 clean 目标路径形状（不检查存在性 / EDR）。
+pub fn is_code_sign_clone_clean_target(path: &str) -> bool {
+    let path = normalize_policy_path(path);
+    let Some(leaf) = path.rsplit('/').next() else {
+        return false;
+    };
+    if !leaf.ends_with(".code_sign_clone") {
+        return false;
+    }
+    for root in private_var_folders_roots() {
+        let prefix = if root.ends_with('/') {
+            root.clone()
+        } else {
+            format!("{root}/")
+        };
+        let Some(rest) = path.strip_prefix(&prefix) else {
+            continue;
+        };
+        let comps: Vec<&str> = rest.split('/').filter(|s| !s.is_empty()).collect();
+        if comps.is_empty() || comps.len() > CODE_SIGN_CLONE_MAX_DEPTH {
+            continue;
+        }
+        if comps.iter().any(|c| *c == ".." || c.is_empty()) {
+            continue;
+        }
+        // Mole `-path "*/X/*"`：路径段中含 `X`。
+        if !comps.contains(&"X") {
+            continue;
+        }
+        return *comps.last().expect("non-empty") == leaf;
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -963,6 +1000,28 @@ mod tests {
         ));
         assert!(!is_idleassetsd_cfnetwork_tmp_clean_target(
             "/private/var/folders/zz/uid/T/com.apple.idleassetsd"
+        ));
+    }
+
+    #[test]
+    fn code_sign_clone_clean_target_shape() {
+        assert!(is_code_sign_clone_clean_target(
+            "/private/var/folders/zz/uid/X/Foo.app.code_sign_clone"
+        ));
+        assert!(is_code_sign_clone_clean_target(
+            "/var/folders/zz/uid/X/a/b.code_sign_clone"
+        ));
+        assert!(!is_code_sign_clone_clean_target(
+            "/private/var/folders/zz/uid/X/a/b/c/d/e.code_sign_clone"
+        ));
+        assert!(!is_code_sign_clone_clean_target(
+            "/private/var/folders/zz/uid/C/Foo.app.code_sign_clone"
+        ));
+        assert!(!is_code_sign_clone_clean_target(
+            "/private/var/folders/zz/uid/X/Foo.app"
+        ));
+        assert!(!is_code_sign_clone_clean_target(
+            "/private/var/folders/zz/uid/X"
         ));
     }
 }

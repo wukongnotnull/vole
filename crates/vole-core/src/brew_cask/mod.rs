@@ -94,8 +94,8 @@ fn info_matches_app(info: &str, app_path: &Path, app_bundle_name: &str) -> bool 
 /// Homebrew 依赖（测试可注入）。
 pub trait BrewDeps: Send + Sync {
     fn brew_available(&self) -> bool;
-    fn list_casks(&self) -> Result<Vec<String>, ()>;
-    fn cask_info(&self, token: &str) -> Result<String, ()>;
+    fn list_casks(&self) -> Option<Vec<String>>;
+    fn cask_info(&self, token: &str) -> Option<String>;
     fn is_cask_installed(&self, token: &str) -> CaskInstallState;
     fn uninstall_cask(
         &self,
@@ -120,45 +120,47 @@ impl BrewDeps for LiveBrewDeps {
             .unwrap_or(false)
     }
 
-    fn list_casks(&self) -> Result<Vec<String>, ()> {
+    fn list_casks(&self) -> Option<Vec<String>> {
         let output = Command::new("brew")
             .args(["list", "--cask"])
             .env("HOMEBREW_NO_ENV_HINTS", "1")
             .output()
-            .map_err(|_| ())?;
+            .ok()?;
         if !output.status.success() {
-            return Err(());
+            return None;
         }
-        Ok(String::from_utf8_lossy(&output.stdout)
-            .lines()
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .map(str::to_string)
-            .collect())
+        Some(
+            String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_string)
+                .collect(),
+        )
     }
 
-    fn cask_info(&self, token: &str) -> Result<String, ()> {
+    fn cask_info(&self, token: &str) -> Option<String> {
         let output = Command::new("brew")
             .args(["info", "--cask", token])
             .env("HOMEBREW_NO_ENV_HINTS", "1")
             .output()
-            .map_err(|_| ())?;
+            .ok()?;
         if !output.status.success() {
-            return Err(());
+            return None;
         }
-        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+        Some(String::from_utf8_lossy(&output.stdout).into_owned())
     }
 
     fn is_cask_installed(&self, token: &str) -> CaskInstallState {
         match self.list_casks() {
-            Ok(list) => {
+            Some(list) => {
                 if list.iter().any(|c| c == token) {
                     CaskInstallState::Installed
                 } else {
                     CaskInstallState::NotInstalled
                 }
             }
-            Err(()) => CaskInstallState::Unknown,
+            None => CaskInstallState::Unknown,
         }
     }
 
@@ -174,9 +176,7 @@ impl BrewDeps for LiveBrewDeps {
         if !is_valid_cask_token(token) {
             return Err("invalid cask token".into());
         }
-        let size = app_path
-            .and_then(|p| dir_size_bytes_shallow(p))
-            .unwrap_or(0);
+        let size = app_path.and_then(dir_size_bytes_shallow).unwrap_or(0);
         let timeout = Duration::from_secs(brew_uninstall_timeout_secs(app_path, size));
 
         let token_owned = token.to_string();
@@ -346,11 +346,11 @@ fn detect_via_caskroom_search(
         return None;
     }
     let token = tokens.pop()?;
-    let list = deps.list_casks().ok()?;
+    let list = deps.list_casks()?;
     if !list.iter().any(|c| c == &token) {
         return None;
     }
-    let info = deps.cask_info(&token).ok()?;
+    let info = deps.cask_info(&token)?;
     if !info_matches_app(&info, app_path, app_bundle_name) {
         return None;
     }
@@ -366,7 +366,7 @@ fn detect_via_brew_list(
         .strip_suffix(".app")
         .unwrap_or(app_bundle_name)
         .to_ascii_lowercase();
-    let list = deps.list_casks().ok()?;
+    let list = deps.list_casks()?;
     let matches: Vec<_> = list
         .into_iter()
         .filter(|c| c.eq_ignore_ascii_case(&stem))
@@ -375,7 +375,7 @@ fn detect_via_brew_list(
         return None;
     }
     let token = matches.into_iter().next()?;
-    let info = deps.cask_info(&token).ok()?;
+    let info = deps.cask_info(&token)?;
     if !info_matches_app(&info, app_path, app_bundle_name) {
         return None;
     }
@@ -400,8 +400,8 @@ mod tests {
         resolve: Option<PathBuf>,
         symlink: Option<PathBuf>,
         find_hits: Vec<PathBuf>,
-        list: Result<Vec<String>, ()>,
-        info: Result<String, ()>,
+        list: Option<Vec<String>>,
+        info: Option<String>,
         install_state: CaskInstallState,
         uninstall_ok: bool,
         last_uninstall: Mutex<Option<LastUninstall>>,
@@ -414,8 +414,8 @@ mod tests {
                 resolve: None,
                 symlink: None,
                 find_hits: Vec::new(),
-                list: Ok(vec![]),
-                info: Ok(String::new()),
+                list: Some(vec![]),
+                info: Some(String::new()),
                 install_state: CaskInstallState::Unknown,
                 uninstall_ok: true,
                 last_uninstall: Mutex::new(None),
@@ -427,10 +427,10 @@ mod tests {
         fn brew_available(&self) -> bool {
             self.available
         }
-        fn list_casks(&self) -> Result<Vec<String>, ()> {
+        fn list_casks(&self) -> Option<Vec<String>> {
             self.list.clone()
         }
-        fn cask_info(&self, _token: &str) -> Result<String, ()> {
+        fn cask_info(&self, _token: &str) -> Option<String> {
             self.info.clone()
         }
         fn is_cask_installed(&self, _token: &str) -> CaskInstallState {

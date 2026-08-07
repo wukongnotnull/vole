@@ -6,9 +6,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 use vole_sys::Trash;
 
-use crate::brew_cask::{
-    parse_brew_cask_rule_id, BrewDeps, CaskInstallState, LiveBrewDeps,
-};
+use crate::brew_cask::{parse_brew_cask_rule_id, BrewDeps, CaskInstallState, LiveBrewDeps};
 use crate::delete::{
     mole_delete_verified, DeleteMode, DeletionLogger, MoleDeleteError, MoleDeleteOptions,
 };
@@ -324,11 +322,11 @@ mod tests {
         fn brew_available(&self) -> bool {
             true
         }
-        fn list_casks(&self) -> Result<Vec<String>, ()> {
-            Ok(vec![])
+        fn list_casks(&self) -> Option<Vec<String>> {
+            Some(vec![])
         }
-        fn cask_info(&self, _: &str) -> Result<String, ()> {
-            Ok(String::new())
+        fn cask_info(&self, _: &str) -> Option<String> {
+            Some(String::new())
         }
         fn is_cask_installed(&self, _: &str) -> CaskInstallState {
             self.install_state

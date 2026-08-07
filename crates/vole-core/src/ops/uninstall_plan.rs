@@ -148,12 +148,7 @@ pub fn build_uninstall_plan_with_brew(
             )
         };
 
-        if let Some(entry) = try_plan_entry(
-            &app.app_path,
-            &label,
-            &rule_app,
-            &uninstall_protect,
-        ) {
+        if let Some(entry) = try_plan_entry(&app.app_path, &label, &rule_app, &uninstall_protect) {
             entries.push(entry);
         }
 
@@ -241,21 +236,16 @@ mod tests {
         fn brew_available(&self) -> bool {
             self.available
         }
-        fn list_casks(&self) -> Result<Vec<String>, ()> {
-            Ok(vec![])
+        fn list_casks(&self) -> Option<Vec<String>> {
+            Some(vec![])
         }
-        fn cask_info(&self, _: &str) -> Result<String, ()> {
-            Ok(String::new())
+        fn cask_info(&self, _: &str) -> Option<String> {
+            Some(String::new())
         }
         fn is_cask_installed(&self, _: &str) -> CaskInstallState {
             CaskInstallState::Unknown
         }
-        fn uninstall_cask(
-            &self,
-            _: &str,
-            _: ZapMode,
-            _: Option<&Path>,
-        ) -> Result<(), String> {
+        fn uninstall_cask(&self, _: &str, _: ZapMode, _: Option<&Path>) -> Result<(), String> {
             Ok(())
         }
         fn resolve_path(&self, _: &Path) -> Option<PathBuf> {

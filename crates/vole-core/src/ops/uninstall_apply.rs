@@ -6,7 +6,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 use vole_sys::Trash;
 
-use crate::brew_cask::{parse_brew_cask_rule_id, BrewDeps, CaskInstallState, LiveBrewDeps};
+use crate::brew_cask::{
+    detect_cask_name, parse_brew_cask_rule_id, BrewDeps, CaskInstallState, LiveBrewDeps,
+};
 use crate::delete::{
     mole_delete_verified, DeleteMode, DeletionLogger, MoleDeleteError, MoleDeleteOptions,
 };
@@ -155,6 +157,21 @@ pub fn apply_uninstall_proto_plan(
                 Some(b) => b,
                 None => &live_fallback,
             };
+            // plan 不可信：token 必须与路径现检一致，否则不调 brew。
+            match detect_cask_name(brew, entry.path.as_path()) {
+                Some(detected) if detected == token => {}
+                _ => {
+                    skipped += 1;
+                    if let Some(event) = &ctx.on_event {
+                        event(StreamEvent::Skipped {
+                            rule_id: entry.rule_id.clone(),
+                            reason: SkipReason::PathVanished,
+                        });
+                    }
+                    skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                    continue;
+                }
+            }
             match brew.uninstall_cask(&token, mode, Some(entry.path.as_path())) {
                 Ok(()) => {
                     succeeded += 1;
@@ -316,6 +333,8 @@ mod tests {
         uninstall_ok: bool,
         install_state: CaskInstallState,
         last: Mutex<Option<(String, bool)>>,
+        /// Stage1 resolve；须导向与 rule_id token 一致的 Caskroom 路径。
+        resolve: Option<PathBuf>,
     }
 
     impl BrewDeps for RecordingBrew {
@@ -345,7 +364,7 @@ mod tests {
             }
         }
         fn resolve_path(&self, _: &Path) -> Option<PathBuf> {
-            None
+            self.resolve.clone()
         }
         fn read_symlink(&self, _: &Path) -> Option<PathBuf> {
             None
@@ -353,6 +372,10 @@ mod tests {
         fn find_caskroom_apps(&self, _: &str) -> Vec<PathBuf> {
             vec![]
         }
+    }
+
+    fn foo_caskroom() -> PathBuf {
+        PathBuf::from("/opt/homebrew/Caskroom/foo/1.0/Foo.app")
     }
 
     fn scratch(tag: &str) -> PathBuf {
@@ -449,6 +472,7 @@ mod tests {
             uninstall_ok: true,
             install_state: CaskInstallState::NotInstalled,
             last: Mutex::new(None),
+            resolve: Some(foo_caskroom()),
         };
         let protection = AppProtection::new();
         let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
@@ -504,6 +528,7 @@ mod tests {
             uninstall_ok: false,
             install_state: CaskInstallState::Installed,
             last: Mutex::new(None),
+            resolve: Some(foo_caskroom()),
         };
         let protection = AppProtection::new();
         let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
@@ -556,6 +581,7 @@ mod tests {
             uninstall_ok: false,
             install_state: CaskInstallState::NotInstalled,
             last: Mutex::new(None),
+            resolve: Some(foo_caskroom()),
         };
         let protection = AppProtection::new();
         let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
@@ -577,6 +603,61 @@ mod tests {
         assert!(!file.exists());
         let last = brew.last.lock().unwrap().clone().unwrap();
         assert!(!last.1); // nozap
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_brew_skips_when_token_mismatches_path() {
+        let _guard = test_env::lock();
+        let root = scratch("brew-mismatch");
+        let file = root.join("Foo.app");
+        fs::create_dir_all(&file).unwrap();
+        let identity = capture_plan_entry_identity(&file).unwrap();
+        let entry = ProtoPlanEntry {
+            id: "1".into(),
+            path: file.clone(),
+            label: "Foo".into(),
+            size: 1,
+            // 声称卸载 victim，但路径实际解析为 foo
+            rule_id: encode_brew_cask_rule_id(ZapMode::Zap, "victim"),
+            skip_reason: None,
+            dev: identity.dev,
+            ino: identity.ino,
+            mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+        };
+        let plan = ProtoPlan {
+            schema_version: SCHEMA_VERSION,
+            created_at: SystemTime::now(),
+            ttl_secs: 900,
+            entries: vec![entry],
+            coverage_note: None,
+        };
+        let brew = RecordingBrew {
+            uninstall_ok: true,
+            install_state: CaskInstallState::Installed,
+            last: Mutex::new(None),
+            resolve: Some(foo_caskroom()),
+        };
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("uninstall");
+        let trash = MacTrash;
+        let mut ctx = UninstallApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: UninstallApplyOptions { permanent: true },
+            trash: &trash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            brew: Some(&brew),
+        };
+        let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(brew.last.lock().unwrap().is_none());
+        assert!(file.exists());
         fs::remove_dir_all(&root).ok();
     }
 }

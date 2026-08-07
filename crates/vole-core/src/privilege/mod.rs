@@ -6,7 +6,13 @@ mod sudo;
 
 pub use sudo::{NoPrivilege, RecordingPrivilege, SudoNoninteractive};
 
+use crate::safety::is_rosetta_update_bundle;
+
 use std::path::{Component, Path, PathBuf};
+use std::process::Command;
+
+/// `rosetta-2-cache` 规则 id（1.12.0）。
+pub const ROSETTA_CACHE_RULE_ID: &str = "rosetta-2-cache";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrivilegeError {
@@ -39,7 +45,21 @@ fn privilege_prefixes() -> Vec<String> {
     LIVE_PREFIXES.iter().map(|s| (*s).to_string()).collect()
 }
 
-/// 绝对路径、无 `..`，且为三树下**单层叶**（禁止目录根 / 多级）。
+/// 运行时是否 Apple Silicon 原生进程（对齐 Mole `uname -m == arm64`）。
+pub fn is_arm64_host() -> bool {
+    if let Ok(v) = std::env::var("VOLE_TEST_FORCE_UNAME_M") {
+        return v.trim() == "arm64";
+    }
+    let Ok(out) = Command::new("uname").arg("-m").output() else {
+        return false;
+    };
+    if !out.status.success() {
+        return false;
+    }
+    String::from_utf8_lossy(&out.stdout).trim() == "arm64"
+}
+
+/// 绝对路径、无 `..`，且：Rosetta exact **或** 三树下单层叶。
 pub fn path_allowed_for_privilege(path: &Path) -> bool {
     if !path.is_absolute() {
         return false;
@@ -50,6 +70,9 @@ pub fn path_allowed_for_privilege(path: &Path) -> bool {
     let Some(s) = path.to_str() else {
         return false;
     };
+    if is_rosetta_update_bundle(s) {
+        return true;
+    }
     for prefix in privilege_prefixes() {
         let Some(rest) = s.strip_prefix(&prefix) else {
             continue;
@@ -100,6 +123,29 @@ mod tests {
         assert!(!path_allowed_for_privilege(Path::new(
             "/Library/LaunchDaemons/subdir/x.plist"
         )));
+    }
+
+    #[test]
+    fn allowlist_accepts_rosetta_exact() {
+        assert!(path_allowed_for_privilege(Path::new(
+            "/Library/Apple/usr/share/rosetta/rosetta_update_bundle"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/Library/Apple/usr/share/rosetta"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/Library/Apple/usr/share/rosetta/rosetta_update_bundle/x"
+        )));
+    }
+
+    #[test]
+    fn arm64_host_respects_force_env() {
+        let _guard = crate::test_env::lock();
+        std::env::set_var("VOLE_TEST_FORCE_UNAME_M", "arm64");
+        assert!(is_arm64_host());
+        std::env::set_var("VOLE_TEST_FORCE_UNAME_M", "x86_64");
+        assert!(!is_arm64_host());
+        std::env::remove_var("VOLE_TEST_FORCE_UNAME_M");
     }
 
     #[test]

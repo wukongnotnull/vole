@@ -7,12 +7,14 @@ mod sudo;
 pub use sudo::{NoPrivilege, RecordingPrivilege, SudoNoninteractive};
 
 use crate::safety::{
-    is_adobe_system_log_clean_target, is_icon_services_system_cache, is_private_tmp_clean_target,
+    is_adobe_system_log_clean_target, is_icon_services_system_cache,
+    is_library_caches_temp_clean_target, is_private_tmp_clean_target,
     is_private_var_db_diagnostic_pipeline_clean_target, is_private_var_db_diagnostics_clean_target,
     is_private_var_db_memory_limit_violations_clean_target,
     is_private_var_db_powerlog_clean_target, is_private_var_log_clean_target,
     is_rosetta_update_bundle, is_system_diagnostic_report_leaf, ADOBEGC_LOG_LIVE, ADOBE_LOGS_LIVE,
-    ADOBE_SYSTEM_LOGS_MAX_DEPTH, CREATIVE_CLOUD_LOGS_LIVE, PRIVATE_TMP_LIVE, PRIVATE_TMP_MAX_DEPTH,
+    ADOBE_SYSTEM_LOGS_MAX_DEPTH, CREATIVE_CLOUD_LOGS_LIVE, LIBRARY_CACHES_LIVE,
+    LIBRARY_CACHES_TEMP_MAX_DEPTH, PRIVATE_TMP_LIVE, PRIVATE_TMP_MAX_DEPTH,
     PRIVATE_VAR_DB_DIAGNOSTICS_LIVE, PRIVATE_VAR_DB_DIAGNOSTICS_MAX_DEPTH,
     PRIVATE_VAR_DB_DIAGNOSTIC_PIPELINE_LIVE, PRIVATE_VAR_DB_DIAGNOSTIC_PIPELINE_MAX_DEPTH,
     PRIVATE_VAR_DB_MEMORY_LIMIT_VIOLATIONS_LIVE, PRIVATE_VAR_DB_MEMORY_LIMIT_VIOLATIONS_MAX_DEPTH,
@@ -56,6 +58,9 @@ pub const ADOBE_SYSTEM_LOGS_RULE_ID: &str = "adobe-system-logs";
 /// `private-tmp` 规则 id（1.21.0）。
 pub const PRIVATE_TMP_RULE_ID: &str = "private-tmp";
 
+/// `library-caches-temp` 规则 id（1.22.0）。
+pub const LIBRARY_CACHES_TEMP_RULE_ID: &str = "library-caches-temp";
+
 /// 系统 DiagnosticReports 年龄阈（对齐 Mole `MOLE_CRASH_REPORT_AGE_DAYS`）。
 pub const DIAGNOSTIC_REPORTS_SYSTEM_AGE_DAYS: u32 = 7;
 
@@ -82,6 +87,12 @@ pub const ADOBE_SYSTEM_LOGS_AGE_DAYS: u32 = 7;
 
 /// `/private/tmp` + `/private/var/tmp` 年龄阈（对齐 Mole `MOLE_TEMP_FILE_AGE_DAYS`）。
 pub const PRIVATE_TMP_AGE_DAYS: u32 = 7;
+
+/// `/Library/Caches` `*.cache`/`*.tmp` 年龄阈（对齐 Mole `MOLE_TEMP_FILE_AGE_DAYS`）。
+pub const LIBRARY_CACHES_TEMP_AGE_DAYS: u32 = 7;
+
+/// `/Library/Caches` `*.log` 年龄阈（对齐 Mole `MOLE_LOG_AGE_DAYS`）。
+pub const LIBRARY_CACHES_LOG_AGE_DAYS: u32 = 7;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrivilegeError {
@@ -579,6 +590,62 @@ pub fn private_tmp_plan_candidates() -> Vec<PathBuf> {
     out
 }
 
+/// `/Library/Caches` 文件应使用的年龄阈（`.log` → LOG，其它 → TEMP）。
+pub fn library_caches_temp_age_days(path: &Path) -> u32 {
+    if path.extension().and_then(|e| e.to_str()) == Some("log") {
+        LIBRARY_CACHES_LOG_AGE_DAYS
+    } else {
+        LIBRARY_CACHES_TEMP_AGE_DAYS
+    }
+}
+
+/// live 或测试映射下的 `/Library/Caches` 根目录。
+pub fn library_caches_root() -> PathBuf {
+    if let Some(base) = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY") {
+        return PathBuf::from(base).join("Caches");
+    }
+    PathBuf::from(LIBRARY_CACHES_LIVE)
+}
+
+fn walk_library_caches_temp_files(dir: &Path, depth: usize, out: &mut Vec<PathBuf>) {
+    if depth > LIBRARY_CACHES_TEMP_MAX_DEPTH {
+        return;
+    }
+    let Ok(rd) = fs::read_dir(dir) else {
+        return;
+    };
+    for ent in rd.flatten() {
+        let path = ent.path();
+        let Ok(meta) = fs::symlink_metadata(&path) else {
+            continue;
+        };
+        let ft = meta.file_type();
+        if ft.is_dir() {
+            if depth < LIBRARY_CACHES_TEMP_MAX_DEPTH {
+                walk_library_caches_temp_files(&path, depth + 1, out);
+            }
+            continue;
+        }
+        if !ft.is_file() {
+            continue;
+        }
+        let Some(s) = path.to_str() else {
+            continue;
+        };
+        if is_library_caches_temp_clean_target(s) {
+            out.push(path);
+        }
+    }
+}
+
+/// plan 候选：`/Library/Caches` 下深度 ≤5、扩展名匹配的普通文件。
+pub fn library_caches_temp_plan_candidates() -> Vec<PathBuf> {
+    let root = library_caches_root();
+    let mut out = Vec::new();
+    walk_library_caches_temp_files(&root, 1, &mut out);
+    out
+}
+
 /// 当前 mtime 是否早于 `days` 天（apply 年龄重验）。
 pub fn path_mtime_older_than_days(path: &Path, days: u32) -> bool {
     let Ok(meta) = fs::symlink_metadata(path) else {
@@ -615,6 +682,7 @@ pub fn path_allowed_for_privilege(path: &Path) -> bool {
         || is_private_var_db_memory_limit_violations_clean_target(s)
         || is_adobe_system_log_clean_target(s)
         || is_private_tmp_clean_target(s)
+        || is_library_caches_temp_clean_target(s)
     {
         return true;
     }
@@ -822,6 +890,42 @@ mod tests {
         )));
         assert!(!path_allowed_for_privilege(Path::new("/private/tmp")));
         assert!(!path_allowed_for_privilege(Path::new("/private/var/tmp")));
+    }
+
+    #[test]
+    fn allowlist_accepts_library_caches_temp_targets() {
+        assert!(path_allowed_for_privilege(Path::new(
+            "/Library/Caches/foo.cache"
+        )));
+        assert!(path_allowed_for_privilege(Path::new(
+            "/Library/Caches/com.apple.foo/a.tmp"
+        )));
+        assert!(path_allowed_for_privilege(Path::new(
+            "/Library/Caches/a/b/c/d/e.log"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/Library/Caches/a/b/c/d/e/f.log"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/Library/Caches/foo.dat"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new("/Library/Caches")));
+    }
+
+    #[test]
+    fn library_caches_temp_age_days_splits_log() {
+        assert_eq!(
+            library_caches_temp_age_days(Path::new("/x/y.cache")),
+            LIBRARY_CACHES_TEMP_AGE_DAYS
+        );
+        assert_eq!(
+            library_caches_temp_age_days(Path::new("/x/y.tmp")),
+            LIBRARY_CACHES_TEMP_AGE_DAYS
+        );
+        assert_eq!(
+            library_caches_temp_age_days(Path::new("/x/y.log")),
+            LIBRARY_CACHES_LOG_AGE_DAYS
+        );
     }
 
     #[test]

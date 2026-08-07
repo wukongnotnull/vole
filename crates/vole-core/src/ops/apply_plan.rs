@@ -15,10 +15,11 @@ use crate::orphan::{
     orphan_age_days_from_env, LiveOrphanDeps, OrphanDeps, OrphanJudge, ORPHANED_RULE_ID,
 };
 use crate::privilege::{
-    is_arm64_host, path_allowed_for_privilege, path_mtime_older_than_days,
-    private_var_db_diagnostics_age_days, NoPrivilege, PrivilegeBackend, SudoNoninteractive,
-    ADOBE_SYSTEM_LOGS_AGE_DAYS, ADOBE_SYSTEM_LOGS_RULE_ID, DIAGNOSTIC_REPORTS_SYSTEM_AGE_DAYS,
-    DIAGNOSTIC_REPORTS_SYSTEM_RULE_ID, ICON_SERVICES_SYSTEM_CACHE_RULE_ID, PRIVATE_TMP_AGE_DAYS,
+    is_arm64_host, library_caches_temp_age_days, path_allowed_for_privilege,
+    path_mtime_older_than_days, private_var_db_diagnostics_age_days, NoPrivilege, PrivilegeBackend,
+    SudoNoninteractive, ADOBE_SYSTEM_LOGS_AGE_DAYS, ADOBE_SYSTEM_LOGS_RULE_ID,
+    DIAGNOSTIC_REPORTS_SYSTEM_AGE_DAYS, DIAGNOSTIC_REPORTS_SYSTEM_RULE_ID,
+    ICON_SERVICES_SYSTEM_CACHE_RULE_ID, LIBRARY_CACHES_TEMP_RULE_ID, PRIVATE_TMP_AGE_DAYS,
     PRIVATE_TMP_RULE_ID, PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID,
     PRIVATE_VAR_DB_DIAGNOSTIC_PIPELINE_AGE_DAYS, PRIVATE_VAR_DB_DIAGNOSTIC_PIPELINE_RULE_ID,
     PRIVATE_VAR_DB_MEMORY_LIMIT_VIOLATIONS_AGE_DAYS,
@@ -29,7 +30,8 @@ use crate::privilege::{
 use crate::protection::AppProtection;
 use crate::rules::{should_skip_for_guards, ProcessProbe, Rule};
 use crate::safety::{
-    is_adobe_system_log_clean_target, is_icon_services_system_cache, is_private_tmp_clean_target,
+    is_adobe_system_log_clean_target, is_icon_services_system_cache,
+    is_library_caches_temp_clean_target, is_private_tmp_clean_target,
     is_private_var_db_diagnostic_pipeline_clean_target, is_private_var_db_diagnostics_clean_target,
     is_private_var_db_memory_limit_violations_clean_target,
     is_private_var_db_powerlog_clean_target, is_private_var_log_clean_target,
@@ -1165,6 +1167,101 @@ pub fn apply_plan(
             if !entry.path.to_str().is_some_and(is_private_tmp_clean_target)
                 || !entry.path.is_file()
                 || !path_mtime_older_than_days(&entry.path, PRIVATE_TMP_AGE_DAYS)
+                || !path_allowed_for_privilege(&entry.path)
+            {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            if !backend.probe_noninteractive() {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::NeedsPrivilege,
+                    });
+                }
+                skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+                continue;
+            }
+            let path = entry.path.display().to_string();
+            let identity = proto_identity(entry);
+            if verify_plan_entry(&path, &identity).is_err() {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            let delete_opts = MoleDeleteOptions {
+                mode: DeleteMode::Permanent,
+                dry_run: false,
+                needs_sudo: true,
+                privilege: Some(backend),
+            };
+            match mole_delete_verified(
+                &path,
+                &identity,
+                ctx.protection,
+                ctx.whitelist_patterns,
+                delete_opts,
+                ctx.trash,
+                ctx.deletion_log,
+                ctx.oplog,
+            ) {
+                Ok(outcome) => {
+                    succeeded += 1;
+                    deleted_bytes += outcome.bytes;
+                }
+                Err(MoleDeleteError::SudoUnavailable)
+                | Err(MoleDeleteError::SudoBlockedTestMode) => {
+                    skipped += 1;
+                    if let Some(event) = &ctx.on_event {
+                        event(StreamEvent::Skipped {
+                            rule_id: entry.rule_id.clone(),
+                            reason: SkipReason::NeedsPrivilege,
+                        });
+                    }
+                    skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+                }
+                Err(MoleDeleteError::Whitelisted) => {
+                    skipped += 1;
+                    skip_tracker.record(SkipReason::Whitelisted, &entry.rule_id);
+                }
+                Err(MoleDeleteError::Rejected)
+                | Err(MoleDeleteError::IdentityMismatch)
+                | Err(MoleDeleteError::Vanished) => {
+                    skipped += 1;
+                    skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                }
+                Err(_) => failed += 1,
+            }
+            continue;
+        }
+
+        // library-caches-temp：形状（≤5 + 扩展名）→ 文件 → 分龄 → allowlist → probe → sudo permanent。
+        if entry.rule_id == LIBRARY_CACHES_TEMP_RULE_ID {
+            let fallback = NoPrivilege;
+            let backend = ctx.privilege.unwrap_or(&fallback);
+            if !entry
+                .path
+                .to_str()
+                .is_some_and(is_library_caches_temp_clean_target)
+                || !entry.path.is_file()
+                || !path_mtime_older_than_days(
+                    &entry.path,
+                    library_caches_temp_age_days(&entry.path),
+                )
                 || !path_allowed_for_privilege(&entry.path)
             {
                 skipped += 1;
@@ -3268,6 +3365,199 @@ mod tests {
         std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
 
         let plan = fresh_plan(vec![plan_entry(&plist, PRIVATE_TMP_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert!(plist.exists());
+        assert!(backend.removed.lock().unwrap().is_empty());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_library_caches_temp_removes_old_leaf() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::LIBRARY_CACHES_TEMP_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("lcaches-ok");
+        let lib = root.join("Library");
+        let leaf = lib.join("Caches/Vendor/foo.cache");
+        fs::create_dir_all(leaf.parent().unwrap()).unwrap();
+        fs::write(&leaf, b"cache").unwrap();
+        let ancient = SystemTime::now() - Duration::from_secs(10 * 86400);
+        filetime::set_file_mtime(&leaf, filetime::FileTime::from_system_time(ancient)).unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let plan = fresh_plan(vec![plan_entry(&leaf, LIBRARY_CACHES_TEMP_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletion.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 1);
+        assert!(!leaf.exists());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_library_caches_temp_skips_fresh() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::LIBRARY_CACHES_TEMP_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("lcaches-fresh");
+        let lib = root.join("Library");
+        let leaf = lib.join("Caches/com.apple.foo/a.tmp");
+        fs::create_dir_all(leaf.parent().unwrap()).unwrap();
+        fs::write(&leaf, b"tmp").unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let plan = fresh_plan(vec![plan_entry(&leaf, LIBRARY_CACHES_TEMP_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert!(leaf.exists());
+        assert!(backend.removed.lock().unwrap().is_empty());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_library_caches_temp_skips_wrong_ext_even_with_rule_id() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::LIBRARY_CACHES_TEMP_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("lcaches-ext");
+        let lib = root.join("Library");
+        let leaf = lib.join("Caches/foo.dat");
+        fs::create_dir_all(leaf.parent().unwrap()).unwrap();
+        fs::write(&leaf, b"dat").unwrap();
+        let ancient = SystemTime::now() - Duration::from_secs(10 * 86400);
+        filetime::set_file_mtime(&leaf, filetime::FileTime::from_system_time(ancient)).unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let plan = fresh_plan(vec![plan_entry(&leaf, LIBRARY_CACHES_TEMP_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert!(leaf.exists());
+        assert!(backend.removed.lock().unwrap().is_empty());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_library_caches_temp_skips_three_tree_even_with_rule_id() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::LIBRARY_CACHES_TEMP_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("lcaches-threetree");
+        let lib = root.join("Library");
+        let plist = lib.join("LaunchDaemons/com.example.plist");
+        fs::create_dir_all(plist.parent().unwrap()).unwrap();
+        fs::write(&plist, b"plist").unwrap();
+        let ancient = SystemTime::now() - Duration::from_secs(10 * 86400);
+        filetime::set_file_mtime(&plist, filetime::FileTime::from_system_time(ancient)).unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let plan = fresh_plan(vec![plan_entry(&plist, LIBRARY_CACHES_TEMP_RULE_ID)]);
         let protection = AppProtection::new();
         let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
         let mut oplog = OperationLogger::new("clean");

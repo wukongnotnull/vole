@@ -178,6 +178,10 @@ fn is_explicit_clean_cache_path(path: &str) -> bool {
     if is_group_container_logs_path(path) {
         return true;
     }
+    // Claude Desktop pending-uploads 叶（非 /Cache/ 段，需独立形状豁免）。
+    if is_claude_pending_uploads_path(path) {
+        return true;
+    }
     // mole user.sh `_clean_recent_items`: fixed Recent*.sfl(2) + recentitems.plist.
     // Filename is `com.apple.*`, so step-7 bundle guards would otherwise block them.
     if is_explicit_recent_items_path(path) {
@@ -221,6 +225,15 @@ fn is_explicit_recent_items_path(path: &str) -> bool {
 
 fn is_explicit_jetbrains_toolbox_apps_path(path: &str) -> bool {
     path.contains("/Library/Application Support/JetBrains/Toolbox/apps/")
+}
+
+/// Claude Desktop `pending-uploads` 单层叶（1.11.0）。
+fn is_claude_pending_uploads_path(path: &str) -> bool {
+    const MARKER: &str = "/Library/Application Support/Claude/pending-uploads/";
+    let Some(rest) = path.split(MARKER).nth(1) else {
+        return false;
+    };
+    !rest.is_empty() && !rest.contains('/')
 }
 
 fn matches_critical_user_paths(path: &str) -> bool {
@@ -520,6 +533,49 @@ mod tests {
             &c,
             ProtectionMode::Cleanup
         ));
+    }
+
+    #[test]
+    fn claude_pending_uploads_leaf_allowed() {
+        let c = cat();
+        let home = "/Users/t";
+        // 普通叶名本就可能不保护；用 data_protected 叶名「Claude」证明形状豁免接上了
+        //（无豁免时步骤 7 会按文件名拦）。
+        assert!(!should_protect_path(
+            &format!("{home}/Library/Application Support/Claude/pending-uploads/Claude"),
+            &c,
+            ProtectionMode::Cleanup
+        ));
+        assert!(!should_protect_path(
+            &format!("{home}/Library/Application Support/Claude/pending-uploads/upload.bin"),
+            &c,
+            ProtectionMode::Cleanup
+        ));
+        // 对照：同名叶不在 pending-uploads 形状下，步骤 7 仍拦。
+        assert!(should_protect_path(
+            &format!("{home}/Library/Application Support/OtherApp/Claude"),
+            &c,
+            ProtectionMode::Cleanup
+        ));
+    }
+
+    #[test]
+    fn claude_pending_uploads_carve_out_is_leaf_only() {
+        // 现网 Claude Application Support 路径因 glob 整串匹配通常本就不保护；
+        // 形状豁免须仅覆盖单层叶，嵌套不因豁免函数误匹配（纵深 / 防日后改匹配）。
+        let home = "/Users/t";
+        assert!(is_claude_pending_uploads_path(&format!(
+            "{home}/Library/Application Support/Claude/pending-uploads/upload.bin"
+        )));
+        assert!(!is_claude_pending_uploads_path(&format!(
+            "{home}/Library/Application Support/Claude/pending-uploads"
+        )));
+        assert!(!is_claude_pending_uploads_path(&format!(
+            "{home}/Library/Application Support/Claude/pending-uploads/a/b"
+        )));
+        assert!(!is_claude_pending_uploads_path(&format!(
+            "{home}/Library/Application Support/Claude/Local Storage/file"
+        )));
     }
 
     #[test]

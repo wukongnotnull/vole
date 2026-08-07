@@ -1418,6 +1418,19 @@ last_verified = "2026-07"
 kind = "all"
 
 [[rule]]
+id = "claude-pending-uploads"
+category = "user-devtools"
+label = "Claude pending uploads"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Claude/pending-uploads/*"]
+impact = "Queued upload stubs; safe to rebuild"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
 id = "qoder-cache"
 category = "user-devtools"
 label = "Qoder cache"

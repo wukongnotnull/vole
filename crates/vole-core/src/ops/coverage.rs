@@ -42,13 +42,14 @@ pub fn coverage_note(enabled_rules: usize) -> String {
     format!(
         "本版本启用 {enabled_rules} 条清理规则（Mole v1.48.1 库存约 {MOLE_INVENTORY_TOTAL} 条）。\
          产品 v2 CLI（clean / uninstall / optimize）已达；用户域 orphaned app data（Caches/Logs/Saved State）、\
-         Claude Desktop workspace VM orphan、system services orphan（/Library LaunchDaemons/Agents/PHT 可读子集 plan + sudo -n apply 真删）、\
+         Claude Desktop workspace VM orphan、Claude pending-uploads、\
+         system services orphan（/Library LaunchDaemons/Agents/PHT 可读子集 plan + sudo -n apply 真删）、\
          container stubs（CleanMyMac allowlist）、\
          Group Containers logs/caches（含受保护容器 Logs / bundle 命名日志）、\
          Handoff pasteboard（mtime>60min）、\
          Toolbox keep-N、Codex staging、not_running（精确名 + cmdline）、\
          FCP / 剪映 generated、XCTestDevices 已落地。\
-         仍未移植：其它 sudo/系统路径（如 Rosetta `/Library`、claude pending-uploads）、交互提权 / 桌面特权助手。\
+         仍未移植：其它 sudo/系统路径（如 Rosetta `/Library`）、交互提权 / 桌面特权助手。\
          如需完整清理，请继续使用 Mole：https://github.com/tw93/Mole"
     )
 }
@@ -143,6 +144,15 @@ mod tests {
         assert!(
             !unported.contains("Claude"),
             "Claude VM must not remain in the unported list"
+        );
+        assert!(note.contains("Claude pending-uploads"));
+        assert!(
+            !unported.contains("claude pending-uploads"),
+            "claude pending-uploads must not remain unported"
+        );
+        assert!(
+            !unported.contains("pending-uploads"),
+            "pending-uploads must not remain unported"
         );
         assert!(
             !unported.contains("system services orphan"),

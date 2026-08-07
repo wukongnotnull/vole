@@ -6,13 +6,16 @@ mod sudo;
 
 pub use sudo::{NoPrivilege, RecordingPrivilege, SudoNoninteractive};
 
-use crate::safety::is_rosetta_update_bundle;
+use crate::safety::{is_icon_services_system_cache, is_rosetta_update_bundle};
 
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 
 /// `rosetta-2-cache` 规则 id（1.12.0）。
 pub const ROSETTA_CACHE_RULE_ID: &str = "rosetta-2-cache";
+
+/// `icon-services-system-cache` 规则 id（1.13.0）。
+pub const ICON_SERVICES_SYSTEM_CACHE_RULE_ID: &str = "icon-services-system-cache";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrivilegeError {
@@ -80,7 +83,25 @@ pub fn rosetta_plan_candidates() -> Vec<PathBuf> {
     }
 }
 
-/// 绝对路径、无 `..`，且：Rosetta exact **或** 三树下单层叶。
+/// live 或测试映射下的 Icon Services 系统缓存路径。
+pub fn icon_services_system_cache_path() -> PathBuf {
+    if let Some(base) = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY") {
+        return PathBuf::from(base).join("Caches/com.apple.iconservices.store");
+    }
+    PathBuf::from(crate::safety::ICON_SERVICES_SYSTEM_CACHE_LIVE)
+}
+
+/// plan 候选：路径存在时返回 exact（无 arch 门控）。
+pub fn icon_services_system_plan_candidates() -> Vec<PathBuf> {
+    let path = icon_services_system_cache_path();
+    if path.exists() {
+        vec![path]
+    } else {
+        Vec::new()
+    }
+}
+
+/// 绝对路径、无 `..`，且：特权 exact（Rosetta / Icon Services）**或** 三树下单层叶。
 pub fn path_allowed_for_privilege(path: &Path) -> bool {
     if !path.is_absolute() {
         return false;
@@ -91,7 +112,7 @@ pub fn path_allowed_for_privilege(path: &Path) -> bool {
     let Some(s) = path.to_str() else {
         return false;
     };
-    if is_rosetta_update_bundle(s) {
+    if is_rosetta_update_bundle(s) || is_icon_services_system_cache(s) {
         return true;
     }
     for prefix in privilege_prefixes() {
@@ -156,6 +177,19 @@ mod tests {
         )));
         assert!(!path_allowed_for_privilege(Path::new(
             "/Library/Apple/usr/share/rosetta/rosetta_update_bundle/x"
+        )));
+    }
+
+    #[test]
+    fn allowlist_accepts_icon_services_system_exact() {
+        assert!(path_allowed_for_privilege(Path::new(
+            "/Library/Caches/com.apple.iconservices.store"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/Library/Caches/com.apple.iconservices.store/x"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/Library/Caches/com.apple.other"
         )));
     }
 

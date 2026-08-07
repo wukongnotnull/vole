@@ -730,6 +730,51 @@ pub fn is_code_sign_clone_clean_target(path: &str) -> bool {
     false
 }
 
+/// Rebuildable GPU Metal caches（1.25.0）：对齐 Mole `is_rebuildable_gpu_cache_dir`。
+pub const GPU_METAL_CACHE_RELATIVE_DEPTH: usize = 5;
+/// Mole `find … -maxdepth 8`。
+pub const GPU_METAL_CACHE_LOCATE_MAX_DEPTH: usize = 8;
+
+const GPU_METAL_CACHE_NAMES: &[&str] = &[
+    "com.apple.metal",
+    "com.apple.metalfe",
+    "com.apple.gpuarchiver",
+];
+
+/// 是否为本规则允许的 clean 目标路径形状（不检查存在性 / EDR / stale）。
+pub fn is_gpu_metal_cache_clean_target(path: &str) -> bool {
+    let path = normalize_policy_path(path);
+    let Some(leaf) = path.rsplit('/').next() else {
+        return false;
+    };
+    if !GPU_METAL_CACHE_NAMES.contains(&leaf) {
+        return false;
+    }
+    for root in private_var_folders_roots() {
+        let prefix = if root.ends_with('/') {
+            root.clone()
+        } else {
+            format!("{root}/")
+        };
+        let Some(rest) = path.strip_prefix(&prefix) else {
+            continue;
+        };
+        let comps: Vec<&str> = rest.split('/').filter(|s| !s.is_empty()).collect();
+        // Mole case: folders/*/*/C/*/com.apple.metal{,fe}|gpuarchiver
+        if comps.len() != GPU_METAL_CACHE_RELATIVE_DEPTH {
+            continue;
+        }
+        if comps.iter().any(|c| *c == ".." || c.is_empty()) {
+            continue;
+        }
+        if comps[2] != "C" {
+            continue;
+        }
+        return comps[4] == leaf;
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1022,6 +1067,31 @@ mod tests {
         ));
         assert!(!is_code_sign_clone_clean_target(
             "/private/var/folders/zz/uid/X"
+        ));
+    }
+
+    #[test]
+    fn gpu_metal_cache_clean_target_shape() {
+        assert!(is_gpu_metal_cache_clean_target(
+            "/private/var/folders/zz/uid/C/com.example.App/com.apple.metal"
+        ));
+        assert!(is_gpu_metal_cache_clean_target(
+            "/var/folders/zz/uid/C/com.example.App/com.apple.metalfe"
+        ));
+        assert!(is_gpu_metal_cache_clean_target(
+            "/private/var/folders/zz/uid/C/com.example.App/com.apple.gpuarchiver"
+        ));
+        assert!(!is_gpu_metal_cache_clean_target(
+            "/private/var/folders/zz/uid/T/com.example.App/com.apple.metal"
+        ));
+        assert!(!is_gpu_metal_cache_clean_target(
+            "/private/var/folders/zz/uid/C/com.example.App/com.apple.metal/extra"
+        ));
+        assert!(!is_gpu_metal_cache_clean_target(
+            "/private/var/folders/zz/uid/C/com.apple.metal"
+        ));
+        assert!(!is_gpu_metal_cache_clean_target(
+            "/private/var/folders/zz/uid/C/com.example.App/other"
         ));
     }
 }

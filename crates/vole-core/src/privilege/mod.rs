@@ -8,21 +8,22 @@ pub use sudo::{NoPrivilege, RecordingPrivilege, SudoNoninteractive};
 
 use crate::safety::{
     is_adobe_system_log_clean_target, is_code_sign_clone_clean_target,
-    is_endpoint_security_cache_path, is_icon_services_system_cache,
-    is_idleassetsd_cfnetwork_tmp_clean_target, is_library_caches_temp_clean_target,
-    is_private_tmp_clean_target, is_private_var_db_diagnostic_pipeline_clean_target,
-    is_private_var_db_diagnostics_clean_target,
+    is_endpoint_security_cache_path, is_gpu_metal_cache_clean_target,
+    is_icon_services_system_cache, is_idleassetsd_cfnetwork_tmp_clean_target,
+    is_library_caches_temp_clean_target, is_private_tmp_clean_target,
+    is_private_var_db_diagnostic_pipeline_clean_target, is_private_var_db_diagnostics_clean_target,
     is_private_var_db_memory_limit_violations_clean_target,
     is_private_var_db_powerlog_clean_target, is_private_var_log_clean_target,
     is_rosetta_update_bundle, is_system_diagnostic_report_leaf, ADOBEGC_LOG_LIVE, ADOBE_LOGS_LIVE,
     ADOBE_SYSTEM_LOGS_MAX_DEPTH, CODE_SIGN_CLONE_MAX_DEPTH, CREATIVE_CLOUD_LOGS_LIVE,
-    IDLEASSETSD_CFNETWORK_TMP_MAX_DEPTH, IDLEASSETSD_DIR_NAME, IDLEASSETSD_LOCATE_MAX_DEPTH,
-    LIBRARY_CACHES_LIVE, LIBRARY_CACHES_TEMP_MAX_DEPTH, PRIVATE_TMP_LIVE, PRIVATE_TMP_MAX_DEPTH,
-    PRIVATE_VAR_DB_DIAGNOSTICS_LIVE, PRIVATE_VAR_DB_DIAGNOSTICS_MAX_DEPTH,
-    PRIVATE_VAR_DB_DIAGNOSTIC_PIPELINE_LIVE, PRIVATE_VAR_DB_DIAGNOSTIC_PIPELINE_MAX_DEPTH,
-    PRIVATE_VAR_DB_MEMORY_LIMIT_VIOLATIONS_LIVE, PRIVATE_VAR_DB_MEMORY_LIMIT_VIOLATIONS_MAX_DEPTH,
-    PRIVATE_VAR_DB_POWERLOG_LIVE, PRIVATE_VAR_DB_POWERLOG_MAX_DEPTH, PRIVATE_VAR_FOLDERS_LIVE,
-    PRIVATE_VAR_LOG_LIVE, PRIVATE_VAR_LOG_MAX_DEPTH, PRIVATE_VAR_TMP_LIVE,
+    GPU_METAL_CACHE_LOCATE_MAX_DEPTH, IDLEASSETSD_CFNETWORK_TMP_MAX_DEPTH, IDLEASSETSD_DIR_NAME,
+    IDLEASSETSD_LOCATE_MAX_DEPTH, LIBRARY_CACHES_LIVE, LIBRARY_CACHES_TEMP_MAX_DEPTH,
+    PRIVATE_TMP_LIVE, PRIVATE_TMP_MAX_DEPTH, PRIVATE_VAR_DB_DIAGNOSTICS_LIVE,
+    PRIVATE_VAR_DB_DIAGNOSTICS_MAX_DEPTH, PRIVATE_VAR_DB_DIAGNOSTIC_PIPELINE_LIVE,
+    PRIVATE_VAR_DB_DIAGNOSTIC_PIPELINE_MAX_DEPTH, PRIVATE_VAR_DB_MEMORY_LIMIT_VIOLATIONS_LIVE,
+    PRIVATE_VAR_DB_MEMORY_LIMIT_VIOLATIONS_MAX_DEPTH, PRIVATE_VAR_DB_POWERLOG_LIVE,
+    PRIVATE_VAR_DB_POWERLOG_MAX_DEPTH, PRIVATE_VAR_FOLDERS_LIVE, PRIVATE_VAR_LOG_LIVE,
+    PRIVATE_VAR_LOG_MAX_DEPTH, PRIVATE_VAR_TMP_LIVE,
 };
 
 use std::fs;
@@ -70,6 +71,9 @@ pub const IDLEASSETSD_CFNETWORK_TMP_RULE_ID: &str = "idleassetsd-cfnetwork-tmp";
 /// `code-sign-clone` 规则 id（1.24.0）。
 pub const CODE_SIGN_CLONE_RULE_ID: &str = "code-sign-clone";
 
+/// `gpu-metal-caches` 规则 id（1.25.0）。
+pub const GPU_METAL_CACHES_RULE_ID: &str = "gpu-metal-caches";
+
 /// 系统 DiagnosticReports 年龄阈（对齐 Mole `MOLE_CRASH_REPORT_AGE_DAYS`）。
 pub const DIAGNOSTIC_REPORTS_SYSTEM_AGE_DAYS: u32 = 7;
 
@@ -105,6 +109,9 @@ pub const LIBRARY_CACHES_LOG_AGE_DAYS: u32 = 7;
 
 /// idleassetsd `CFNetworkDownload_*.tmp` 年龄阈（对齐 Mole `MOLE_TEMP_FILE_AGE_DAYS`）。
 pub const IDLEASSETSD_CFNETWORK_TMP_AGE_DAYS: u32 = 7;
+
+/// GPU Metal caches 新鲜保留窗（对齐 Mole `MOLE_GPU_CACHE_AGE_DAYS`；目录内无更新于此窗内文件才 stale）。
+pub const GPU_METAL_CACHE_AGE_DAYS: u32 = 1;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrivilegeError {
@@ -780,6 +787,90 @@ pub fn code_sign_clone_plan_candidates() -> Vec<PathBuf> {
     out
 }
 
+/// 对齐 Mole `gpu_cache_dir_is_stale`：目录不是 symlink，且目录内无「mtime 落在最近 `age_days` 天」的普通文件。
+pub fn gpu_metal_cache_is_stale(path: &Path, age_days: u32) -> bool {
+    let Ok(meta) = fs::symlink_metadata(path) else {
+        return false;
+    };
+    if meta.file_type().is_symlink() || !meta.file_type().is_dir() {
+        return false;
+    }
+    !dir_has_recent_regular_file(path, age_days)
+}
+
+fn dir_has_recent_regular_file(dir: &Path, age_days: u32) -> bool {
+    let Some(cutoff) =
+        SystemTime::now().checked_sub(Duration::from_secs(u64::from(age_days) * 86_400))
+    else {
+        return true;
+    };
+    let Ok(rd) = fs::read_dir(dir) else {
+        return false;
+    };
+    for ent in rd.flatten() {
+        let path = ent.path();
+        let Ok(meta) = fs::symlink_metadata(&path) else {
+            continue;
+        };
+        let ft = meta.file_type();
+        if ft.is_dir() {
+            if dir_has_recent_regular_file(&path, age_days) {
+                return true;
+            }
+            continue;
+        }
+        if !ft.is_file() {
+            continue;
+        }
+        let Ok(mtime) = meta.modified() else {
+            continue;
+        };
+        if mtime >= cutoff {
+            return true;
+        }
+    }
+    false
+}
+
+fn walk_gpu_metal_cache_dirs(dir: &Path, depth: usize, out: &mut Vec<PathBuf>) {
+    if depth > GPU_METAL_CACHE_LOCATE_MAX_DEPTH {
+        return;
+    }
+    let Ok(rd) = fs::read_dir(dir) else {
+        return;
+    };
+    for ent in rd.flatten() {
+        let path = ent.path();
+        let Ok(meta) = fs::symlink_metadata(&path) else {
+            continue;
+        };
+        if !meta.file_type().is_dir() {
+            continue;
+        }
+        let Some(s) = path.to_str() else {
+            continue;
+        };
+        if is_gpu_metal_cache_clean_target(s)
+            && !is_endpoint_security_cache_path(s)
+            && gpu_metal_cache_is_stale(&path, GPU_METAL_CACHE_AGE_DAYS)
+        {
+            out.push(path.clone());
+            continue;
+        }
+        if depth < GPU_METAL_CACHE_LOCATE_MAX_DEPTH {
+            walk_gpu_metal_cache_dirs(&path, depth + 1, out);
+        }
+    }
+}
+
+/// plan 候选：folders 下重建型 GPU Metal 缓存目录（stale + 排除 EDR）。
+pub fn gpu_metal_caches_plan_candidates() -> Vec<PathBuf> {
+    let root = private_var_folders_root();
+    let mut out = Vec::new();
+    walk_gpu_metal_cache_dirs(&root, 1, &mut out);
+    out
+}
+
 /// 当前 mtime 是否早于 `days` 天（apply 年龄重验）。
 pub fn path_mtime_older_than_days(path: &Path, days: u32) -> bool {
     let Ok(meta) = fs::symlink_metadata(path) else {
@@ -819,6 +910,7 @@ pub fn path_allowed_for_privilege(path: &Path) -> bool {
         || is_library_caches_temp_clean_target(s)
         || is_idleassetsd_cfnetwork_tmp_clean_target(s)
         || (is_code_sign_clone_clean_target(s) && !is_endpoint_security_cache_path(s))
+        || (is_gpu_metal_cache_clean_target(s) && !is_endpoint_security_cache_path(s))
     {
         return true;
     }
@@ -1071,6 +1163,19 @@ mod tests {
         )));
         assert!(!path_allowed_for_privilege(Path::new(
             "/private/var/folders/zz/uid/X/com.crowdstrike.falcon.App.code_sign_clone"
+        )));
+    }
+
+    #[test]
+    fn allowlist_accepts_gpu_metal_cache_targets() {
+        assert!(path_allowed_for_privilege(Path::new(
+            "/private/var/folders/zz/uid/C/com.example.App/com.apple.metal"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/private/var/folders/zz/uid/T/com.example.App/com.apple.metal"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/private/var/folders/zz/uid/C/com.crowdstrike.falcon.App/com.apple.metal"
         )));
     }
 

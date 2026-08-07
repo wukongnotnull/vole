@@ -168,6 +168,8 @@ impl Orchestrator {
                 crate::privilege::idleassetsd_cfnetwork_tmp_plan_candidates()
             } else if rule.id == crate::privilege::CODE_SIGN_CLONE_RULE_ID {
                 crate::privilege::code_sign_clone_plan_candidates()
+            } else if rule.id == crate::privilege::GPU_METAL_CACHES_RULE_ID {
+                crate::privilege::gpu_metal_caches_plan_candidates()
             } else {
                 collect_path_candidates(rule, &home)
             };

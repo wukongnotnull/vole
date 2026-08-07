@@ -15,17 +15,19 @@ use crate::orphan::{
     orphan_age_days_from_env, LiveOrphanDeps, OrphanDeps, OrphanJudge, ORPHANED_RULE_ID,
 };
 use crate::privilege::{
-    is_arm64_host, path_allowed_for_privilege, path_mtime_older_than_days, NoPrivilege,
-    PrivilegeBackend, SudoNoninteractive, DIAGNOSTIC_REPORTS_SYSTEM_AGE_DAYS,
-    DIAGNOSTIC_REPORTS_SYSTEM_RULE_ID, ICON_SERVICES_SYSTEM_CACHE_RULE_ID,
+    is_arm64_host, path_allowed_for_privilege, path_mtime_older_than_days,
+    private_var_db_diagnostics_age_days, NoPrivilege, PrivilegeBackend, SudoNoninteractive,
+    DIAGNOSTIC_REPORTS_SYSTEM_AGE_DAYS, DIAGNOSTIC_REPORTS_SYSTEM_RULE_ID,
+    ICON_SERVICES_SYSTEM_CACHE_RULE_ID, PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID,
     PRIVATE_VAR_LOG_AGE_DAYS, PRIVATE_VAR_LOG_RULE_ID, ROSETTA_CACHE_RULE_ID,
 };
 use crate::protection::AppProtection;
 use crate::rules::{should_skip_for_guards, ProcessProbe, Rule};
 use crate::safety::{
-    is_icon_services_system_cache, is_private_var_log_clean_target, is_rosetta_update_bundle,
-    is_system_diagnostic_report_leaf, verify_plan_entry, verify_plan_entry_for_apply,
-    PlanApplyError, PlanEntryIdentity, ValidationError,
+    is_icon_services_system_cache, is_private_var_db_diagnostics_clean_target,
+    is_private_var_log_clean_target, is_rosetta_update_bundle, is_system_diagnostic_report_leaf,
+    verify_plan_entry, verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity,
+    ValidationError,
 };
 use crate::stubs::{
     recheck_container_stub_entry, remove_verified_container_stub, CONTAINER_STUB_RULE_ID,
@@ -600,6 +602,99 @@ pub fn apply_plan(
                 .is_some_and(is_private_var_log_clean_target)
                 || !entry.path.is_file()
                 || !path_mtime_older_than_days(&entry.path, PRIVATE_VAR_LOG_AGE_DAYS)
+                || !path_allowed_for_privilege(&entry.path)
+            {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            if !backend.probe_noninteractive() {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::NeedsPrivilege,
+                    });
+                }
+                skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+                continue;
+            }
+            let path = entry.path.display().to_string();
+            let identity = proto_identity(entry);
+            if verify_plan_entry(&path, &identity).is_err() {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            let delete_opts = MoleDeleteOptions {
+                mode: DeleteMode::Permanent,
+                dry_run: false,
+                needs_sudo: true,
+                privilege: Some(backend),
+            };
+            match mole_delete_verified(
+                &path,
+                &identity,
+                ctx.protection,
+                ctx.whitelist_patterns,
+                delete_opts,
+                ctx.trash,
+                ctx.deletion_log,
+                ctx.oplog,
+            ) {
+                Ok(outcome) => {
+                    succeeded += 1;
+                    deleted_bytes += outcome.bytes;
+                }
+                Err(MoleDeleteError::SudoUnavailable)
+                | Err(MoleDeleteError::SudoBlockedTestMode) => {
+                    skipped += 1;
+                    if let Some(event) = &ctx.on_event {
+                        event(StreamEvent::Skipped {
+                            rule_id: entry.rule_id.clone(),
+                            reason: SkipReason::NeedsPrivilege,
+                        });
+                    }
+                    skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+                }
+                Err(MoleDeleteError::Whitelisted) => {
+                    skipped += 1;
+                    skip_tracker.record(SkipReason::Whitelisted, &entry.rule_id);
+                }
+                Err(MoleDeleteError::Rejected)
+                | Err(MoleDeleteError::IdentityMismatch)
+                | Err(MoleDeleteError::Vanished) => {
+                    skipped += 1;
+                    skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                }
+                Err(_) => failed += 1,
+            }
+            continue;
+        }
+
+        // `/private/var/db/diagnostics`：形状 → 文件 → 分龄 → allowlist → probe → sudo permanent。
+        if entry.rule_id == PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID {
+            let fallback = NoPrivilege;
+            let backend = ctx.privilege.unwrap_or(&fallback);
+            let age = private_var_db_diagnostics_age_days(&entry.path);
+            if !entry
+                .path
+                .to_str()
+                .is_some_and(is_private_var_db_diagnostics_clean_target)
+                || !entry.path.is_file()
+                || !path_mtime_older_than_days(&entry.path, age)
                 || !path_allowed_for_privilege(&entry.path)
             {
                 skipped += 1;
@@ -1717,6 +1812,201 @@ mod tests {
         std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
 
         let plan = fresh_plan(vec![plan_entry(&plist, PRIVATE_VAR_LOG_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert!(plist.exists());
+        assert!(backend.removed.lock().unwrap().is_empty());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_private_var_db_diagnostics_records_remove_when_old() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("pvd-ok");
+        let lib = root.join("Library");
+        let leaf = root.join("private/var/db/diagnostics/log.data");
+        fs::create_dir_all(leaf.parent().unwrap()).unwrap();
+        fs::write(&leaf, b"data").unwrap();
+        let ancient = SystemTime::now() - Duration::from_secs(10 * 86400);
+        filetime::set_file_mtime(&leaf, filetime::FileTime::from_system_time(ancient)).unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let plan = fresh_plan(vec![plan_entry(&leaf, PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 1);
+        assert!(!leaf.exists());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_private_var_db_diagnostics_skips_mid_age_tracev3() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("pvd-mid-trace");
+        let lib = root.join("Library");
+        let leaf = root.join("private/var/db/diagnostics/mid.tracev3");
+        fs::create_dir_all(leaf.parent().unwrap()).unwrap();
+        fs::write(&leaf, b"trace").unwrap();
+        // 15 days old: >7 but <30 → must skip for .tracev3
+        let mid = SystemTime::now() - Duration::from_secs(15 * 86400);
+        filetime::set_file_mtime(&leaf, filetime::FileTime::from_system_time(mid)).unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let plan = fresh_plan(vec![plan_entry(&leaf, PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert!(leaf.exists());
+        assert!(backend.removed.lock().unwrap().is_empty());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_private_var_db_diagnostics_removes_old_tracev3() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("pvd-old-trace");
+        let lib = root.join("Library");
+        let leaf = root.join("private/var/db/diagnostics/old.tracev3");
+        fs::create_dir_all(leaf.parent().unwrap()).unwrap();
+        fs::write(&leaf, b"trace").unwrap();
+        let ancient = SystemTime::now() - Duration::from_secs(40 * 86400);
+        filetime::set_file_mtime(&leaf, filetime::FileTime::from_system_time(ancient)).unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let plan = fresh_plan(vec![plan_entry(&leaf, PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 1);
+        assert!(!leaf.exists());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_private_var_db_diagnostics_skips_three_tree_even_with_rule_id() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("pvd-threetree");
+        let lib = root.join("Library");
+        let plist = lib.join("LaunchDaemons/com.example.plist");
+        fs::create_dir_all(plist.parent().unwrap()).unwrap();
+        fs::write(&plist, b"plist").unwrap();
+        let ancient = SystemTime::now() - Duration::from_secs(40 * 86400);
+        filetime::set_file_mtime(&plist, filetime::FileTime::from_system_time(ancient)).unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let plan = fresh_plan(vec![plan_entry(&plist, PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID)]);
         let protection = AppProtection::new();
         let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
         let mut oplog = OperationLogger::new("clean");

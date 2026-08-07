@@ -1,0 +1,14 @@
+{
+  "id": "w2c_filo_production_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "filo-production-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Filo/production/Cache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Filo/production/Cache/item|Filo production cache"
+  ],
+  "expect_not_selected": []
+}

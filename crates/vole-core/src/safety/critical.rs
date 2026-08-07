@@ -628,6 +628,71 @@ pub fn is_library_caches_temp_clean_target(path: &str) -> bool {
     false
 }
 
+/// idleassetsd 中止下载（1.23.0）：`/private/var/folders/**/T/com.apple.idleassetsd/**/CFNetworkDownload_*.tmp`。
+pub const PRIVATE_VAR_FOLDERS_LIVE: &str = "/private/var/folders";
+pub const IDLEASSETSD_DIR_NAME: &str = "com.apple.idleassetsd";
+/// 相对 idleassetsd 根的文件深度（对齐 Mole `find "$idle_tmp_dir" -maxdepth 5`）。
+pub const IDLEASSETSD_CFNETWORK_TMP_MAX_DEPTH: usize = 5;
+/// 在 folders 下定位 idleassetsd 目录的深度（对齐 Mole `find … -maxdepth 5`）。
+pub const IDLEASSETSD_LOCATE_MAX_DEPTH: usize = 5;
+
+fn private_var_folders_roots() -> Vec<String> {
+    let mut v = vec![
+        PRIVATE_VAR_FOLDERS_LIVE.to_string(),
+        "/var/folders".to_string(),
+    ];
+    if let Some(base) = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY") {
+        if let Some(parent) = Path::new(&base).parent() {
+            if let Some(s) = parent.join("private/var/folders").to_str() {
+                v.push(normalize_policy_path(s));
+            }
+        }
+    }
+    v
+}
+
+fn is_cfnetwork_download_tmp_name(name: &str) -> bool {
+    name.starts_with("CFNetworkDownload_") && name.ends_with(".tmp")
+}
+
+/// 是否为本规则允许的 clean 目标路径形状（不检查存在性 / 年龄）。
+pub fn is_idleassetsd_cfnetwork_tmp_clean_target(path: &str) -> bool {
+    let path = normalize_policy_path(path);
+    let Some(leaf) = path.rsplit('/').next() else {
+        return false;
+    };
+    if !is_cfnetwork_download_tmp_name(leaf) {
+        return false;
+    }
+    for root in private_var_folders_roots() {
+        let prefix = if root.ends_with('/') {
+            root.clone()
+        } else {
+            format!("{root}/")
+        };
+        let Some(rest) = path.strip_prefix(&prefix) else {
+            continue;
+        };
+        let marker = "T/com.apple.idleassetsd/";
+        let Some(idx) = rest.find(marker) else {
+            continue;
+        };
+        let after = &rest[idx + marker.len()..];
+        if after.is_empty() {
+            return false;
+        }
+        let comps: Vec<&str> = after.split('/').filter(|s| !s.is_empty()).collect();
+        if comps.is_empty() || comps.len() > IDLEASSETSD_CFNETWORK_TMP_MAX_DEPTH {
+            return false;
+        }
+        if comps.iter().any(|c| *c == ".." || c.is_empty()) {
+            return false;
+        }
+        return *comps.last().expect("non-empty") == leaf;
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -873,6 +938,31 @@ mod tests {
         assert!(!is_library_caches_temp_clean_target("/Library/Caches"));
         assert!(!is_library_caches_temp_clean_target(
             "/Library/Caches/com.apple.iconservices.store"
+        ));
+    }
+
+    #[test]
+    fn idleassetsd_cfnetwork_tmp_clean_target_shape() {
+        assert!(is_idleassetsd_cfnetwork_tmp_clean_target(
+            "/private/var/folders/zz/uid/T/com.apple.idleassetsd/CFNetworkDownload_abc.tmp"
+        ));
+        assert!(is_idleassetsd_cfnetwork_tmp_clean_target(
+            "/private/var/folders/zz/uid/T/com.apple.idleassetsd/a/b/c/d/CFNetworkDownload_x.tmp"
+        ));
+        assert!(is_idleassetsd_cfnetwork_tmp_clean_target(
+            "/var/folders/zz/uid/T/com.apple.idleassetsd/CFNetworkDownload_abc.tmp"
+        ));
+        assert!(!is_idleassetsd_cfnetwork_tmp_clean_target(
+            "/private/var/folders/zz/uid/T/com.apple.idleassetsd/a/b/c/d/e/CFNetworkDownload_x.tmp"
+        ));
+        assert!(!is_idleassetsd_cfnetwork_tmp_clean_target(
+            "/private/var/folders/zz/uid/C/com.apple.idleassetsd/CFNetworkDownload_abc.tmp"
+        ));
+        assert!(!is_idleassetsd_cfnetwork_tmp_clean_target(
+            "/private/var/folders/zz/uid/T/com.apple.idleassetsd/other.tmp"
+        ));
+        assert!(!is_idleassetsd_cfnetwork_tmp_clean_target(
+            "/private/var/folders/zz/uid/T/com.apple.idleassetsd"
         ));
     }
 }

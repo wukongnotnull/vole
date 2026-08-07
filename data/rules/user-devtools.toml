@@ -3077,6 +3077,20 @@ kind = "older_than_days"
 days = 7
 
 [[rule]]
+id = "idleassetsd-cfnetwork-tmp"
+category = "user-devtools"
+label = "Idleassetsd wallpaper download temps"
+platform = ["macos"]
+paths = ["/private/var/folders"]
+impact = "Stale CFNetworkDownload_*.tmp under */T/com.apple.idleassetsd (≤5 deep, ≥7d); safe to rebuild"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "older_than_days"
+days = 7
+
+[[rule]]
 id = "arc-profile-code-cache"
 category = "user-devtools"
 label = "Arc profile code cache"

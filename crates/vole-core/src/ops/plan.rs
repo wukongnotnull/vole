@@ -164,6 +164,8 @@ impl Orchestrator {
                 crate::privilege::private_tmp_plan_candidates()
             } else if rule.id == crate::privilege::LIBRARY_CACHES_TEMP_RULE_ID {
                 crate::privilege::library_caches_temp_plan_candidates()
+            } else if rule.id == crate::privilege::IDLEASSETSD_CFNETWORK_TMP_RULE_ID {
+                crate::privilege::idleassetsd_cfnetwork_tmp_plan_candidates()
             } else {
                 collect_path_candidates(rule, &home)
             };

@@ -8,18 +8,20 @@ pub use sudo::{NoPrivilege, RecordingPrivilege, SudoNoninteractive};
 
 use crate::safety::{
     is_adobe_system_log_clean_target, is_icon_services_system_cache,
-    is_library_caches_temp_clean_target, is_private_tmp_clean_target,
-    is_private_var_db_diagnostic_pipeline_clean_target, is_private_var_db_diagnostics_clean_target,
+    is_idleassetsd_cfnetwork_tmp_clean_target, is_library_caches_temp_clean_target,
+    is_private_tmp_clean_target, is_private_var_db_diagnostic_pipeline_clean_target,
+    is_private_var_db_diagnostics_clean_target,
     is_private_var_db_memory_limit_violations_clean_target,
     is_private_var_db_powerlog_clean_target, is_private_var_log_clean_target,
     is_rosetta_update_bundle, is_system_diagnostic_report_leaf, ADOBEGC_LOG_LIVE, ADOBE_LOGS_LIVE,
-    ADOBE_SYSTEM_LOGS_MAX_DEPTH, CREATIVE_CLOUD_LOGS_LIVE, LIBRARY_CACHES_LIVE,
+    ADOBE_SYSTEM_LOGS_MAX_DEPTH, CREATIVE_CLOUD_LOGS_LIVE, IDLEASSETSD_CFNETWORK_TMP_MAX_DEPTH,
+    IDLEASSETSD_DIR_NAME, IDLEASSETSD_LOCATE_MAX_DEPTH, LIBRARY_CACHES_LIVE,
     LIBRARY_CACHES_TEMP_MAX_DEPTH, PRIVATE_TMP_LIVE, PRIVATE_TMP_MAX_DEPTH,
     PRIVATE_VAR_DB_DIAGNOSTICS_LIVE, PRIVATE_VAR_DB_DIAGNOSTICS_MAX_DEPTH,
     PRIVATE_VAR_DB_DIAGNOSTIC_PIPELINE_LIVE, PRIVATE_VAR_DB_DIAGNOSTIC_PIPELINE_MAX_DEPTH,
     PRIVATE_VAR_DB_MEMORY_LIMIT_VIOLATIONS_LIVE, PRIVATE_VAR_DB_MEMORY_LIMIT_VIOLATIONS_MAX_DEPTH,
-    PRIVATE_VAR_DB_POWERLOG_LIVE, PRIVATE_VAR_DB_POWERLOG_MAX_DEPTH, PRIVATE_VAR_LOG_LIVE,
-    PRIVATE_VAR_LOG_MAX_DEPTH, PRIVATE_VAR_TMP_LIVE,
+    PRIVATE_VAR_DB_POWERLOG_LIVE, PRIVATE_VAR_DB_POWERLOG_MAX_DEPTH, PRIVATE_VAR_FOLDERS_LIVE,
+    PRIVATE_VAR_LOG_LIVE, PRIVATE_VAR_LOG_MAX_DEPTH, PRIVATE_VAR_TMP_LIVE,
 };
 
 use std::fs;
@@ -61,6 +63,9 @@ pub const PRIVATE_TMP_RULE_ID: &str = "private-tmp";
 /// `library-caches-temp` 规则 id（1.22.0）。
 pub const LIBRARY_CACHES_TEMP_RULE_ID: &str = "library-caches-temp";
 
+/// `idleassetsd-cfnetwork-tmp` 规则 id（1.23.0）。
+pub const IDLEASSETSD_CFNETWORK_TMP_RULE_ID: &str = "idleassetsd-cfnetwork-tmp";
+
 /// 系统 DiagnosticReports 年龄阈（对齐 Mole `MOLE_CRASH_REPORT_AGE_DAYS`）。
 pub const DIAGNOSTIC_REPORTS_SYSTEM_AGE_DAYS: u32 = 7;
 
@@ -93,6 +98,9 @@ pub const LIBRARY_CACHES_TEMP_AGE_DAYS: u32 = 7;
 
 /// `/Library/Caches` `*.log` 年龄阈（对齐 Mole `MOLE_LOG_AGE_DAYS`）。
 pub const LIBRARY_CACHES_LOG_AGE_DAYS: u32 = 7;
+
+/// idleassetsd `CFNetworkDownload_*.tmp` 年龄阈（对齐 Mole `MOLE_TEMP_FILE_AGE_DAYS`）。
+pub const IDLEASSETSD_CFNETWORK_TMP_AGE_DAYS: u32 = 7;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrivilegeError {
@@ -646,6 +654,92 @@ pub fn library_caches_temp_plan_candidates() -> Vec<PathBuf> {
     out
 }
 
+fn private_var_folders_root() -> PathBuf {
+    if let Some(base) = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY") {
+        if let Some(parent) = Path::new(&base).parent() {
+            return parent.join("private/var/folders");
+        }
+    }
+    PathBuf::from(PRIVATE_VAR_FOLDERS_LIVE)
+}
+
+fn walk_locate_idleassetsd_dirs(dir: &Path, depth: usize, out: &mut Vec<PathBuf>) {
+    if depth > IDLEASSETSD_LOCATE_MAX_DEPTH {
+        return;
+    }
+    let Ok(rd) = fs::read_dir(dir) else {
+        return;
+    };
+    for ent in rd.flatten() {
+        let path = ent.path();
+        let Ok(meta) = fs::symlink_metadata(&path) else {
+            continue;
+        };
+        if !meta.file_type().is_dir() {
+            continue;
+        }
+        let is_idle = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n == IDLEASSETSD_DIR_NAME);
+        if is_idle {
+            // Mole: `-path "*/T/*" -name com.apple.idleassetsd`
+            if path.to_str().is_some_and(|s| {
+                s.contains("/T/com.apple.idleassetsd") || s.ends_with("/T/com.apple.idleassetsd")
+            }) {
+                out.push(path);
+            }
+            continue;
+        }
+        if depth < IDLEASSETSD_LOCATE_MAX_DEPTH {
+            walk_locate_idleassetsd_dirs(&path, depth + 1, out);
+        }
+    }
+}
+
+fn walk_idleassetsd_cfnetwork_tmp_files(dir: &Path, depth: usize, out: &mut Vec<PathBuf>) {
+    if depth > IDLEASSETSD_CFNETWORK_TMP_MAX_DEPTH {
+        return;
+    }
+    let Ok(rd) = fs::read_dir(dir) else {
+        return;
+    };
+    for ent in rd.flatten() {
+        let path = ent.path();
+        let Ok(meta) = fs::symlink_metadata(&path) else {
+            continue;
+        };
+        let ft = meta.file_type();
+        if ft.is_dir() {
+            if depth < IDLEASSETSD_CFNETWORK_TMP_MAX_DEPTH {
+                walk_idleassetsd_cfnetwork_tmp_files(&path, depth + 1, out);
+            }
+            continue;
+        }
+        if !ft.is_file() {
+            continue;
+        }
+        let Some(s) = path.to_str() else {
+            continue;
+        };
+        if is_idleassetsd_cfnetwork_tmp_clean_target(s) {
+            out.push(path);
+        }
+    }
+}
+
+/// plan 候选：folders 下定位 idleassetsd（*/T/*）后扫描 `CFNetworkDownload_*.tmp`。
+pub fn idleassetsd_cfnetwork_tmp_plan_candidates() -> Vec<PathBuf> {
+    let root = private_var_folders_root();
+    let mut dirs = Vec::new();
+    walk_locate_idleassetsd_dirs(&root, 1, &mut dirs);
+    let mut out = Vec::new();
+    for dir in dirs {
+        walk_idleassetsd_cfnetwork_tmp_files(&dir, 1, &mut out);
+    }
+    out
+}
+
 /// 当前 mtime 是否早于 `days` 天（apply 年龄重验）。
 pub fn path_mtime_older_than_days(path: &Path, days: u32) -> bool {
     let Ok(meta) = fs::symlink_metadata(path) else {
@@ -683,6 +777,7 @@ pub fn path_allowed_for_privilege(path: &Path) -> bool {
         || is_adobe_system_log_clean_target(s)
         || is_private_tmp_clean_target(s)
         || is_library_caches_temp_clean_target(s)
+        || is_idleassetsd_cfnetwork_tmp_clean_target(s)
     {
         return true;
     }
@@ -910,6 +1005,19 @@ mod tests {
             "/Library/Caches/foo.dat"
         )));
         assert!(!path_allowed_for_privilege(Path::new("/Library/Caches")));
+    }
+
+    #[test]
+    fn allowlist_accepts_idleassetsd_cfnetwork_tmp_targets() {
+        assert!(path_allowed_for_privilege(Path::new(
+            "/private/var/folders/zz/uid/T/com.apple.idleassetsd/CFNetworkDownload_abc.tmp"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/private/var/folders/zz/uid/C/com.apple.idleassetsd/CFNetworkDownload_abc.tmp"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/private/var/folders/zz/uid/T/com.apple.idleassetsd/other.tmp"
+        )));
     }
 
     #[test]

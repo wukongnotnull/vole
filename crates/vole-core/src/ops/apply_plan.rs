@@ -18,6 +18,7 @@ use crate::privilege::{
     is_arm64_host, path_allowed_for_privilege, NoPrivilege, PrivilegeBackend, SudoNoninteractive,
     ROSETTA_CACHE_RULE_ID,
 };
+use crate::safety::is_rosetta_update_bundle;
 use crate::protection::AppProtection;
 use crate::rules::{should_skip_for_guards, ProcessProbe, Rule};
 use crate::safety::{
@@ -321,7 +322,13 @@ pub fn apply_plan(
         if entry.rule_id == ROSETTA_CACHE_RULE_ID {
             let fallback = NoPrivilege;
             let backend = ctx.privilege.unwrap_or(&fallback);
-            if !is_arm64_host() || !path_allowed_for_privilege(&entry.path) {
+            if !is_arm64_host()
+                || !entry
+                    .path
+                    .to_str()
+                    .is_some_and(is_rosetta_update_bundle)
+                || !path_allowed_for_privilege(&entry.path)
+            {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -1076,6 +1083,59 @@ mod tests {
         assert_eq!(report.succeeded, 0);
         assert_eq!(report.skipped, 1);
         assert!(bundle.exists());
+        assert!(backend.removed.lock().unwrap().is_empty());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        std::env::remove_var("VOLE_TEST_FORCE_UNAME_M");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_rosetta_rejects_three_tree_path_with_rosetta_rule_id() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::ROSETTA_CACHE_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("rosetta-wrong-tree");
+        let lib = root.join("Library");
+        for d in ["LaunchDaemons", "LaunchAgents", "PrivilegedHelperTools"] {
+            fs::create_dir_all(lib.join(d)).unwrap();
+        }
+        let plist = lib.join("LaunchDaemons/com.example.notorphan.plist");
+        fs::write(&plist, b"plist").unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+        std::env::set_var("VOLE_TEST_FORCE_UNAME_M", "arm64");
+
+        // 篡改式 plan：rule_id=rosetta，path=三树叶 → 必须 skip，不得 sudo 删。
+        let plan = fresh_plan(vec![plan_entry(&plist, ROSETTA_CACHE_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(plist.exists());
         assert!(backend.removed.lock().unwrap().is_empty());
         std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
         std::env::remove_var("VOLE_TEST_FORCE_UNAME_M");

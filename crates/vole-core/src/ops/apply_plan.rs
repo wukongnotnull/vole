@@ -15,10 +15,12 @@ use crate::orphan::{
     orphan_age_days_from_env, LiveOrphanDeps, OrphanDeps, OrphanJudge, ORPHANED_RULE_ID,
 };
 use crate::privilege::{
-    path_allowed_for_privilege, NoPrivilege, PrivilegeBackend, SudoNoninteractive,
+    is_arm64_host, path_allowed_for_privilege, NoPrivilege, PrivilegeBackend, SudoNoninteractive,
+    ROSETTA_CACHE_RULE_ID,
 };
 use crate::protection::AppProtection;
 use crate::rules::{should_skip_for_guards, ProcessProbe, Rule};
+use crate::safety::is_rosetta_update_bundle;
 use crate::safety::{
     verify_plan_entry, verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity,
     ValidationError,
@@ -269,6 +271,94 @@ pub fn apply_plan(
             }
             if entry.path.extension().and_then(|e| e.to_str()) == Some("plist") {
                 let _ = backend.launchctl_unload(&entry.path);
+            }
+            let delete_opts = MoleDeleteOptions {
+                mode: DeleteMode::Permanent,
+                dry_run: false,
+                needs_sudo: true,
+                privilege: Some(backend),
+            };
+            match mole_delete_verified(
+                &path,
+                &identity,
+                ctx.protection,
+                ctx.whitelist_patterns,
+                delete_opts,
+                ctx.trash,
+                ctx.deletion_log,
+                ctx.oplog,
+            ) {
+                Ok(outcome) => {
+                    succeeded += 1;
+                    deleted_bytes += outcome.bytes;
+                }
+                Err(MoleDeleteError::SudoUnavailable)
+                | Err(MoleDeleteError::SudoBlockedTestMode) => {
+                    skipped += 1;
+                    if let Some(event) = &ctx.on_event {
+                        event(StreamEvent::Skipped {
+                            rule_id: entry.rule_id.clone(),
+                            reason: SkipReason::NeedsPrivilege,
+                        });
+                    }
+                    skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+                }
+                Err(MoleDeleteError::Whitelisted) => {
+                    skipped += 1;
+                    skip_tracker.record(SkipReason::Whitelisted, &entry.rule_id);
+                }
+                Err(MoleDeleteError::Rejected)
+                | Err(MoleDeleteError::IdentityMismatch)
+                | Err(MoleDeleteError::Vanished) => {
+                    skipped += 1;
+                    skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                }
+                Err(_) => failed += 1,
+            }
+            continue;
+        }
+
+        // Rosetta update bundle：arm64 → allowlist → probe → sudo permanent（无 unload）。
+        if entry.rule_id == ROSETTA_CACHE_RULE_ID {
+            let fallback = NoPrivilege;
+            let backend = ctx.privilege.unwrap_or(&fallback);
+            if !is_arm64_host()
+                || !entry.path.to_str().is_some_and(is_rosetta_update_bundle)
+                || !path_allowed_for_privilege(&entry.path)
+            {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            if !backend.probe_noninteractive() {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::NeedsPrivilege,
+                    });
+                }
+                skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+                continue;
+            }
+            let path = entry.path.display().to_string();
+            let identity = proto_identity(entry);
+            if verify_plan_entry(&path, &identity).is_err() {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
             }
             let delete_opts = MoleDeleteOptions {
                 mode: DeleteMode::Permanent,
@@ -841,6 +931,211 @@ mod tests {
         assert_eq!(backend.removed.lock().unwrap().len(), 1);
         assert!(!plist.exists());
         std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_rosetta_skips_when_probe_fails() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::ROSETTA_CACHE_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("rosetta-noprobe");
+        let lib = root.join("Library");
+        let bundle = lib.join("Apple/usr/share/rosetta/rosetta_update_bundle");
+        fs::create_dir_all(bundle.parent().unwrap()).unwrap();
+        fs::write(&bundle, b"bundle").unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+        std::env::set_var("VOLE_TEST_FORCE_UNAME_M", "arm64");
+
+        let plan = fresh_plan(vec![plan_entry(&bundle, ROSETTA_CACHE_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::NoPrivilege;
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(report
+            .skipped_by_reason
+            .iter()
+            .any(|s| s.reason == SkipReason::NeedsPrivilege));
+        assert!(bundle.exists());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        std::env::remove_var("VOLE_TEST_FORCE_UNAME_M");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_rosetta_records_remove_when_probe_ok() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::ROSETTA_CACHE_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("rosetta-probe-ok");
+        let lib = root.join("Library");
+        let bundle = lib.join("Apple/usr/share/rosetta/rosetta_update_bundle");
+        fs::create_dir_all(bundle.parent().unwrap()).unwrap();
+        fs::write(&bundle, b"bundle").unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+        std::env::set_var("VOLE_TEST_FORCE_UNAME_M", "arm64");
+
+        let plan = fresh_plan(vec![plan_entry(&bundle, ROSETTA_CACHE_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 1);
+        assert_eq!(backend.removed.lock().unwrap().len(), 1);
+        assert!(!bundle.exists());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        std::env::remove_var("VOLE_TEST_FORCE_UNAME_M");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_rosetta_skips_on_x86_host() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::ROSETTA_CACHE_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("rosetta-x86");
+        let lib = root.join("Library");
+        let bundle = lib.join("Apple/usr/share/rosetta/rosetta_update_bundle");
+        fs::create_dir_all(bundle.parent().unwrap()).unwrap();
+        fs::write(&bundle, b"bundle").unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+        std::env::set_var("VOLE_TEST_FORCE_UNAME_M", "x86_64");
+
+        let plan = fresh_plan(vec![plan_entry(&bundle, ROSETTA_CACHE_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(bundle.exists());
+        assert!(backend.removed.lock().unwrap().is_empty());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        std::env::remove_var("VOLE_TEST_FORCE_UNAME_M");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_rosetta_rejects_three_tree_path_with_rosetta_rule_id() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::ROSETTA_CACHE_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("rosetta-wrong-tree");
+        let lib = root.join("Library");
+        for d in ["LaunchDaemons", "LaunchAgents", "PrivilegedHelperTools"] {
+            fs::create_dir_all(lib.join(d)).unwrap();
+        }
+        let plist = lib.join("LaunchDaemons/com.example.notorphan.plist");
+        fs::write(&plist, b"plist").unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+        std::env::set_var("VOLE_TEST_FORCE_UNAME_M", "arm64");
+
+        // 篡改式 plan：rule_id=rosetta，path=三树叶 → 必须 skip，不得 sudo 删。
+        let plan = fresh_plan(vec![plan_entry(&plist, ROSETTA_CACHE_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(plist.exists());
+        assert!(backend.removed.lock().unwrap().is_empty());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        std::env::remove_var("VOLE_TEST_FORCE_UNAME_M");
         fs::remove_dir_all(&root).ok();
     }
 

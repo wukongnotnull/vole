@@ -139,7 +139,14 @@ impl Orchestrator {
                 Err(err) => return Err(OpsError::Strategy(err)),
             };
 
-            let expanded = collect_path_candidates(rule, &home);
+            let expanded = if rule.id == crate::privilege::ROSETTA_CACHE_RULE_ID {
+                if !crate::privilege::is_arm64_host() {
+                    continue;
+                }
+                crate::privilege::rosetta_plan_candidates()
+            } else {
+                collect_path_candidates(rule, &home)
+            };
             let path_entries = build_path_entries(&expanded);
             let selected = match &strategy {
                 ResolvedStrategy::Custom(custom) => {

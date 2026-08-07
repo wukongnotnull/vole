@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use super::critical::{
     is_coresymbolicationd_cache, is_critical_deletion_path, is_private_allowlisted,
-    normalize_policy_path,
+    is_rosetta_update_bundle, normalize_policy_path,
 };
 use super::endpoint::is_endpoint_security_cache_path;
 
@@ -92,6 +92,10 @@ pub fn validate_path_for_deletion(
     }
 
     if is_coresymbolicationd_cache(&policy_path) {
+        return Ok(());
+    }
+
+    if is_rosetta_update_bundle(&policy_path) {
         return Ok(());
     }
 
@@ -265,6 +269,20 @@ mod tests {
             Err(ValidationError::AncestorResolvesToCritical)
         );
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn accepts_rosetta_update_bundle_despite_library_apple_critical() {
+        let p = NoPathProtection;
+        assert!(validate_path_for_deletion(
+            "/Library/Apple/usr/share/rosetta/rosetta_update_bundle",
+            &p
+        )
+        .is_ok());
+        assert_eq!(
+            validate_path_for_deletion("/Library/Apple/usr/share/rosetta", &p),
+            Err(ValidationError::CriticalSystemPath)
+        );
     }
 
     #[test]

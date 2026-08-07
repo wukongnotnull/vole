@@ -196,6 +196,24 @@ pub fn is_coresymbolicationd_cache(path: &str) -> bool {
         || path.starts_with("/System/Library/Caches/com.apple.coresymbolicationd/data/")
 }
 
+/// Rosetta 更新包（1.12.0）：仅 exact，禁止 `/Library/Apple/**` 泛放。
+pub const ROSETTA_UPDATE_BUNDLE_LIVE: &str =
+    "/Library/Apple/usr/share/rosetta/rosetta_update_bundle";
+
+pub fn is_rosetta_update_bundle(path: &str) -> bool {
+    let path = normalize_policy_path(path);
+    if path == ROSETTA_UPDATE_BUNDLE_LIVE {
+        return true;
+    }
+    if let Some(base) = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY") {
+        let mapped = Path::new(&base).join("Apple/usr/share/rosetta/rosetta_update_bundle");
+        if let Some(s) = mapped.to_str() {
+            return path == normalize_policy_path(s);
+        }
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -223,5 +241,26 @@ mod tests {
     fn rejects_single_user_home() {
         assert!(is_critical_deletion_path("/Users/alice"));
         assert!(!is_critical_deletion_path("/Users/alice/Library/Caches"));
+    }
+
+    #[test]
+    fn rosetta_update_bundle_exact_only() {
+        assert!(is_rosetta_update_bundle(
+            "/Library/Apple/usr/share/rosetta/rosetta_update_bundle"
+        ));
+        assert!(is_rosetta_update_bundle(
+            "/Library/Apple/usr/share/rosetta/rosetta_update_bundle/"
+        ));
+        assert!(!is_rosetta_update_bundle(
+            "/Library/Apple/usr/share/rosetta"
+        ));
+        assert!(!is_rosetta_update_bundle(
+            "/Library/Apple/usr/share/rosetta/rosetta_update_bundle/extra"
+        ));
+        assert!(!is_rosetta_update_bundle("/Library/Apple/other"));
+        // critical 仍认整树；豁免走独立谓词。
+        assert!(is_critical_deletion_path(
+            "/Library/Apple/usr/share/rosetta/rosetta_update_bundle"
+        ));
     }
 }

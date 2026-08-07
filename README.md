@@ -225,12 +225,12 @@ $ vole completions zsh > ~/.zfunc/_vole
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | **1.28.0**：TM 失败中备份（tmutil delete）+ system.sh 主链；余项：快照报告 / 桌面 Helper | 成熟、功能最全 |
+| 成熟度 | **1.32.0**：Filo production Cache + TM 失败中备份 + system.sh 主链；余项：快照报告 / 桌面 Helper | 成熟、功能最全 |
 | 核心命令 | `status` / `analyze` / `clean` / `history` / `uninstall` / `optimize` | 另有 `purge` / `installer` 等 |
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓；orphaned 启发式 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |
 | 外部依赖 | 无第三方 CLI 依赖 | 部分场景推荐 `fd` 等 |
-| 规则规模 | **533** 条高价值规则 | 全量数百条 `safe_clean` 目标 |
+| 规则规模 | **534** 条高价值规则 | 全量数百条 `safe_clean` 目标 |
 | 桌面端路线 | [vole-macos](https://github.com/wukongnotnull/vole-macos) Clean MVP（内嵌 sidecar） | 另有商业 [Mole for Mac](https://mole.fit) |
 | 许可证 | GPL-3.0 | GPL-3.0 |
 

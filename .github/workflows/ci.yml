@@ -65,5 +65,6 @@ jobs:
         # 只跑 plan 阶段：不删任何文件。apply 阶段用例留给一次性环境。
         run: |
           export VOLE_TEST_ROOT=$(mktemp -d)
+          export VOLE_TEST_ORPHAN=1
           export VOLE_RULES_DIR="$PWD/data/rules"
           bash scripts/verify-clean-candidates.sh

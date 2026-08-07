@@ -7,7 +7,10 @@ mod installed;
 mod judge;
 mod select;
 
-pub use deps::{FakeOrphanDeps, LiveOrphanDeps, MdfindBudget, OrphanDeps, OrphanProbeError};
+pub use deps::{
+    hermetic_orphan_deps, orphan_deps_for_runtime, use_fake_orphan_deps, FakeOrphanDeps,
+    LiveOrphanDeps, MdfindBudget, OrphanDeps, OrphanProbeError,
+};
 pub use installed::default_app_scan_roots;
 pub use judge::{
     bundle_id_from_orphan_path, claude_vm_orphan_age_days_from_env,

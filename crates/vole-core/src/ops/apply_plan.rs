@@ -12,7 +12,7 @@ use crate::handoff::{recheck_handoff_pasteboard_entry, HANDOFF_PASTEBOARD_RULE_I
 use crate::oplog::OperationLogger;
 use crate::orphan::{
     bundle_id_from_orphan_path, claude_vm_orphan_age_days_from_env, is_claude_vm_bundle_path,
-    orphan_age_days_from_env, LiveOrphanDeps, OrphanDeps, OrphanJudge, ORPHANED_RULE_ID,
+    orphan_age_days_from_env, orphan_deps_for_runtime, OrphanDeps, OrphanJudge, ORPHANED_RULE_ID,
 };
 use crate::privilege::{
     gpu_metal_cache_is_stale, is_arm64_host, library_caches_temp_age_days,
@@ -122,7 +122,7 @@ pub fn apply_proto_plan(
 ) -> Result<Report, ApplyPlanError> {
     let deletion_log = DeletionLogger::with_path(crate::delete::deletion_log_path());
     let mut oplog = OperationLogger::new("clean");
-    let orphan_deps = LiveOrphanDeps::new();
+    let orphan_deps = orphan_deps_for_runtime();
     let sudo = SudoNoninteractive;
     let mut ctx = ApplyPlanContext::new(
         protection,
@@ -133,7 +133,7 @@ pub fn apply_proto_plan(
         &mut oplog,
         rules,
         process_probe,
-        &orphan_deps,
+        orphan_deps.as_ref(),
         on_event,
     );
     ctx.privilege = Some(&sudo);
@@ -1899,7 +1899,7 @@ mod tests {
         process_probe: &dyn crate::rules::ProcessProbe,
         trash: &dyn Trash,
     ) -> Result<Report, ApplyPlanError> {
-        let orphan_deps = LiveOrphanDeps::new();
+        let orphan_deps = crate::orphan::FakeOrphanDeps::default();
         let mut ctx = ApplyPlanContext::new(
             protection,
             &[],

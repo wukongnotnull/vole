@@ -40,7 +40,8 @@ pub use uninstall_apply::{
     UninstallApplyOptions,
 };
 pub use uninstall_plan::{
-    build_uninstall_plan, default_applications_dirs, scan_applications, UninstallPlanOptions,
+    build_uninstall_plan, build_uninstall_plan_with_brew, default_applications_dirs,
+    scan_applications, UninstallPlanOptions,
 };
 
 #[derive(Debug, Error)]

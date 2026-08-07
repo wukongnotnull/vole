@@ -1,10 +1,14 @@
 //! `uninstall` apply：TTL + TOCTOU + Uninstall 模式保护 + `mole_delete_verified`。
+//! brew-cask 条目走 `BrewDeps::uninstall_cask`，失败仅在 cask 已卸载时回退 delete。
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use thiserror::Error;
 use vole_sys::Trash;
 
+use crate::brew_cask::{
+    parse_brew_cask_rule_id, BrewDeps, CaskInstallState, LiveBrewDeps,
+};
 use crate::delete::{
     mole_delete_verified, DeleteMode, DeletionLogger, MoleDeleteError, MoleDeleteOptions,
 };
@@ -40,6 +44,8 @@ pub struct UninstallApplyContext<'a> {
     pub oplog: &'a mut OperationLogger,
     pub on_event: Option<&'a dyn Fn(StreamEvent)>,
     pub now: SystemTime,
+    /// 注入 brew；None 则用 LiveBrewDeps（仅 brew-cask 条目会碰）。
+    pub brew: Option<&'a dyn BrewDeps>,
 }
 
 pub fn apply_uninstall_plan(
@@ -51,6 +57,7 @@ pub fn apply_uninstall_plan(
     let deletion_log = DeletionLogger::from_env();
     let mut oplog = OperationLogger::new("uninstall");
     let _ = oplog.session_start();
+    let live = LiveBrewDeps;
     let mut ctx = UninstallApplyContext {
         protection,
         whitelist_patterns: &[],
@@ -60,6 +67,7 @@ pub fn apply_uninstall_plan(
         oplog: &mut oplog,
         on_event,
         now: SystemTime::now(),
+        brew: Some(&live),
     };
     let report = apply_uninstall_proto_plan(plan, &mut ctx)?;
     let _ = oplog.session_end(
@@ -141,6 +149,37 @@ pub fn apply_uninstall_proto_plan(
             }
             skip_tracker.record(reason, &entry.rule_id);
             continue;
+        }
+
+        if let Some((mode, token)) = parse_brew_cask_rule_id(&entry.rule_id) {
+            let live_fallback = LiveBrewDeps;
+            let brew: &dyn BrewDeps = match ctx.brew {
+                Some(b) => b,
+                None => &live_fallback,
+            };
+            match brew.uninstall_cask(&token, mode, Some(entry.path.as_path())) {
+                Ok(()) => {
+                    succeeded += 1;
+                    // brew 可能已带走体积；不重复记账字节亦可
+                    continue;
+                }
+                Err(_) => match brew.is_cask_installed(&token) {
+                    CaskInstallState::NotInstalled => {
+                        // 回退 mole_delete
+                    }
+                    CaskInstallState::Installed | CaskInstallState::Unknown => {
+                        skipped += 1;
+                        if let Some(event) = &ctx.on_event {
+                            event(StreamEvent::Skipped {
+                                rule_id: entry.rule_id.clone(),
+                                reason: SkipReason::PathVanished,
+                            });
+                        }
+                        skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                        continue;
+                    }
+                },
+            }
         }
 
         let delete_opts = MoleDeleteOptions {
@@ -264,14 +303,59 @@ impl SkipTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::brew_cask::{encode_brew_cask_rule_id, ZapMode};
     use crate::delete::DeletionLogger;
     use crate::oplog::OperationLogger;
     use crate::protection::AppProtection;
     use crate::safety::capture_plan_entry_identity;
     use crate::test_env;
     use std::fs;
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
+    use std::sync::Mutex;
     use vole_sys::macos::MacTrash;
+
+    struct RecordingBrew {
+        uninstall_ok: bool,
+        install_state: CaskInstallState,
+        last: Mutex<Option<(String, bool)>>,
+    }
+
+    impl BrewDeps for RecordingBrew {
+        fn brew_available(&self) -> bool {
+            true
+        }
+        fn list_casks(&self) -> Result<Vec<String>, ()> {
+            Ok(vec![])
+        }
+        fn cask_info(&self, _: &str) -> Result<String, ()> {
+            Ok(String::new())
+        }
+        fn is_cask_installed(&self, _: &str) -> CaskInstallState {
+            self.install_state
+        }
+        fn uninstall_cask(
+            &self,
+            token: &str,
+            mode: ZapMode,
+            _: Option<&Path>,
+        ) -> Result<(), String> {
+            *self.last.lock().unwrap() = Some((token.to_string(), matches!(mode, ZapMode::Zap)));
+            if self.uninstall_ok {
+                Ok(())
+            } else {
+                Err("fail".into())
+            }
+        }
+        fn resolve_path(&self, _: &Path) -> Option<PathBuf> {
+            None
+        }
+        fn read_symlink(&self, _: &Path) -> Option<PathBuf> {
+            None
+        }
+        fn find_caskroom_apps(&self, _: &str) -> Vec<PathBuf> {
+            vec![]
+        }
+    }
 
     fn scratch(tag: &str) -> PathBuf {
         let dir =
@@ -320,6 +404,7 @@ mod tests {
             oplog: &mut oplog,
             on_event: None,
             now: SystemTime::now(),
+            brew: None,
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 1);
@@ -333,6 +418,167 @@ mod tests {
         };
         let err = apply_uninstall_proto_plan(&expired, &mut ctx).unwrap_err();
         assert_eq!(err, UninstallApplyError::Expired);
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_brew_cask_calls_uninstall_zap() {
+        let _guard = test_env::lock();
+        let root = scratch("brew-ok");
+        let file = root.join("Foo.app");
+        fs::create_dir_all(&file).unwrap();
+        let identity = capture_plan_entry_identity(&file).unwrap();
+        let rule = encode_brew_cask_rule_id(ZapMode::Zap, "foo");
+        let entry = ProtoPlanEntry {
+            id: "1".into(),
+            path: file.clone(),
+            label: "Foo [Brew:foo]".into(),
+            size: 1,
+            rule_id: rule,
+            skip_reason: None,
+            dev: identity.dev,
+            ino: identity.ino,
+            mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+        };
+        let plan = ProtoPlan {
+            schema_version: SCHEMA_VERSION,
+            created_at: SystemTime::now(),
+            ttl_secs: 900,
+            entries: vec![entry],
+            coverage_note: None,
+        };
+        let brew = RecordingBrew {
+            uninstall_ok: true,
+            install_state: CaskInstallState::NotInstalled,
+            last: Mutex::new(None),
+        };
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("uninstall");
+        let trash = MacTrash;
+        let mut ctx = UninstallApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: UninstallApplyOptions { permanent: true },
+            trash: &trash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            brew: Some(&brew),
+        };
+        let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 1);
+        let last = brew.last.lock().unwrap().clone().unwrap();
+        assert_eq!(last.0, "foo");
+        assert!(last.1);
+        // brew 成功不走 mole_delete，文件仍在
+        assert!(file.exists());
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_brew_fail_still_installed_skips_delete() {
+        let _guard = test_env::lock();
+        let root = scratch("brew-keep");
+        let file = root.join("Foo.app");
+        fs::create_dir_all(&file).unwrap();
+        let identity = capture_plan_entry_identity(&file).unwrap();
+        let entry = ProtoPlanEntry {
+            id: "1".into(),
+            path: file.clone(),
+            label: "Foo".into(),
+            size: 1,
+            rule_id: encode_brew_cask_rule_id(ZapMode::Zap, "foo"),
+            skip_reason: None,
+            dev: identity.dev,
+            ino: identity.ino,
+            mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+        };
+        let plan = ProtoPlan {
+            schema_version: SCHEMA_VERSION,
+            created_at: SystemTime::now(),
+            ttl_secs: 900,
+            entries: vec![entry],
+            coverage_note: None,
+        };
+        let brew = RecordingBrew {
+            uninstall_ok: false,
+            install_state: CaskInstallState::Installed,
+            last: Mutex::new(None),
+        };
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("uninstall");
+        let trash = MacTrash;
+        let mut ctx = UninstallApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: UninstallApplyOptions { permanent: true },
+            trash: &trash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            brew: Some(&brew),
+        };
+        let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(file.exists());
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_brew_fail_cask_gone_falls_back_delete() {
+        let _guard = test_env::lock();
+        let root = scratch("brew-fallback");
+        let file = root.join("Foo.app");
+        fs::create_dir_all(&file).unwrap();
+        let identity = capture_plan_entry_identity(&file).unwrap();
+        let entry = ProtoPlanEntry {
+            id: "1".into(),
+            path: file.clone(),
+            label: "Foo".into(),
+            size: 1,
+            rule_id: encode_brew_cask_rule_id(ZapMode::NoZap, "foo"),
+            skip_reason: None,
+            dev: identity.dev,
+            ino: identity.ino,
+            mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+        };
+        let plan = ProtoPlan {
+            schema_version: SCHEMA_VERSION,
+            created_at: SystemTime::now(),
+            ttl_secs: 900,
+            entries: vec![entry],
+            coverage_note: None,
+        };
+        let brew = RecordingBrew {
+            uninstall_ok: false,
+            install_state: CaskInstallState::NotInstalled,
+            last: Mutex::new(None),
+        };
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("uninstall");
+        let trash = MacTrash;
+        let mut ctx = UninstallApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: UninstallApplyOptions { permanent: true },
+            trash: &trash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            brew: Some(&brew),
+        };
+        let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 1);
+        assert!(!file.exists());
+        let last = brew.last.lock().unwrap().clone().unwrap();
+        assert!(!last.1); // nozap
         fs::remove_dir_all(&root).ok();
     }
 }

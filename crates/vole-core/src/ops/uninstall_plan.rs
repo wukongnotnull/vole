@@ -4,6 +4,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use crate::brew_cask::{
+    detect_cask_name, encode_brew_cask_rule_id, BrewDeps, LiveBrewDeps, ZapMode,
+};
 use crate::protection::{
     find_app_leftovers, find_bundle_siblings, official_uninstaller_vendor, read_bundle_id,
     read_display_name, should_protect_from_uninstall, AppIdentity, AppProtection,
@@ -62,6 +65,15 @@ pub fn build_uninstall_plan(
     protection: &AppProtection,
     opts: &UninstallPlanOptions<'_>,
 ) -> Result<ProtoPlan, OpsError> {
+    build_uninstall_plan_with_brew(catalog, protection, opts, &LiveBrewDeps)
+}
+
+pub fn build_uninstall_plan_with_brew(
+    catalog: &ProtectionCatalog,
+    protection: &AppProtection,
+    opts: &UninstallPlanOptions<'_>,
+    brew: &dyn BrewDeps,
+) -> Result<ProtoPlan, OpsError> {
     let apps = scan_applications(opts.applications_dirs)?;
     let target = opts
         .target_bundle_or_name
@@ -73,6 +85,7 @@ pub fn build_uninstall_plan(
     let mut skipped_official = 0u64;
     let mut skipped_filter = 0u64;
     let mut sibling_notes = 0u64;
+    let mut brew_cask = 0u64;
 
     let uninstall_protect = UninstallPathProtection::new(protection);
     let search_roots = opts.applications_dirs.to_vec();
@@ -118,11 +131,26 @@ pub fn build_uninstall_plan(
         }
 
         let leftovers = find_app_leftovers(&app, opts.home, &siblings);
-        let rule_app = format!("uninstall:{}", app.bundle_id);
+        let (rule_app, label) = if let Some(token) = detect_cask_name(brew, &app.app_path) {
+            brew_cask += 1;
+            let mode = if siblings.has_siblings() {
+                ZapMode::NoZap
+            } else {
+                ZapMode::Zap
+            };
+            let rule = encode_brew_cask_rule_id(mode, &token);
+            let label = format!("{} [Brew:{token}]", app.display_name);
+            (rule, label)
+        } else {
+            (
+                format!("uninstall:{}", app.bundle_id),
+                app.display_name.clone(),
+            )
+        };
 
         if let Some(entry) = try_plan_entry(
             &app.app_path,
-            &app.display_name,
+            &label,
             &rule_app,
             &uninstall_protect,
         ) {
@@ -138,8 +166,8 @@ pub fn build_uninstall_plan(
     }
 
     let coverage_note = Some(format!(
-        "vole uninstall M1: skipped protected={skipped_protected}, official_uninstaller={skipped_official}, filter_miss={skipped_filter}, sibling_leftovers_suppressed={sibling_notes}. \
-Long-tail not covered (use Mole): brew cask zap, login items, system LaunchDaemons, /Library sudo paths."
+        "vole uninstall: skipped protected={skipped_protected}, official_uninstaller={skipped_official}, filter_miss={skipped_filter}, sibling_leftovers_suppressed={sibling_notes}, brew_cask={brew_cask}. \
+Long-tail not covered (use Mole): login items, system LaunchDaemons, /Library sudo paths."
     ));
 
     Ok(ProtoPlan {
@@ -201,7 +229,45 @@ fn path_size(path: &Path) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::brew_cask::{CaskInstallState, ZapMode};
     use std::fs;
+
+    struct FakeBrew {
+        available: bool,
+        resolve: Option<PathBuf>,
+    }
+
+    impl BrewDeps for FakeBrew {
+        fn brew_available(&self) -> bool {
+            self.available
+        }
+        fn list_casks(&self) -> Result<Vec<String>, ()> {
+            Ok(vec![])
+        }
+        fn cask_info(&self, _: &str) -> Result<String, ()> {
+            Ok(String::new())
+        }
+        fn is_cask_installed(&self, _: &str) -> CaskInstallState {
+            CaskInstallState::Unknown
+        }
+        fn uninstall_cask(
+            &self,
+            _: &str,
+            _: ZapMode,
+            _: Option<&Path>,
+        ) -> Result<(), String> {
+            Ok(())
+        }
+        fn resolve_path(&self, _: &Path) -> Option<PathBuf> {
+            self.resolve.clone()
+        }
+        fn read_symlink(&self, _: &Path) -> Option<PathBuf> {
+            None
+        }
+        fn find_caskroom_apps(&self, _: &str) -> Vec<PathBuf> {
+            vec![]
+        }
+    }
 
     #[test]
     fn build_plan_includes_app_and_leftover_skips_safari() {
@@ -232,6 +298,88 @@ mod tests {
             .any(|e| e.path.ends_with("Library/Caches/com.example.foo")));
         assert!(!plan.entries.iter().any(|e| e.path.ends_with("Safari.app")));
         assert!(plan.coverage_note.as_ref().unwrap().contains("protected"));
+    }
+
+    #[test]
+    fn plan_marks_brew_cask_with_zap() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path();
+        let apps = home.join("Applications");
+        fs::create_dir_all(&apps).unwrap();
+        let foo = apps.join("Foo.app");
+        write_app(&foo, "com.example.foo", "Foo");
+
+        let brew = FakeBrew {
+            available: true,
+            resolve: Some(PathBuf::from("/opt/homebrew/Caskroom/foo/1.0/Foo.app")),
+        };
+        let catalog = ProtectionCatalog::embedded();
+        let protection = AppProtection::new();
+        let opts = UninstallPlanOptions {
+            applications_dirs: std::slice::from_ref(&apps),
+            home,
+            target_bundle_or_name: None,
+            ttl_secs: 900,
+        };
+        let plan = build_uninstall_plan_with_brew(&catalog, &protection, &opts, &brew).unwrap();
+        let entry = plan
+            .entries
+            .iter()
+            .find(|e| e.path.ends_with("Foo.app"))
+            .expect("foo app");
+        assert_eq!(entry.rule_id, "uninstall:brew-cask:zap:foo");
+        assert!(entry.label.contains("[Brew:foo]"));
+    }
+
+    #[test]
+    fn plan_marks_nozap_when_sibling() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path();
+        let apps = home.join("Applications");
+        fs::create_dir_all(&apps).unwrap();
+        write_app(&apps.join("Foo.app"), "com.example.foo", "Foo");
+        write_app(&apps.join("Foo Copy.app"), "com.example.foo", "Foo Copy");
+
+        let brew = FakeBrew {
+            available: true,
+            resolve: Some(PathBuf::from("/opt/homebrew/Caskroom/foo/1.0/Foo.app")),
+        };
+        let catalog = ProtectionCatalog::embedded();
+        let protection = AppProtection::new();
+        let opts = UninstallPlanOptions {
+            applications_dirs: std::slice::from_ref(&apps),
+            home,
+            target_bundle_or_name: None,
+            ttl_secs: 900,
+        };
+        let plan = build_uninstall_plan_with_brew(&catalog, &protection, &opts, &brew).unwrap();
+        let entry = plan
+            .entries
+            .iter()
+            .find(|e| e.path.ends_with("Foo.app"))
+            .expect("foo");
+        assert_eq!(entry.rule_id, "uninstall:brew-cask:nozap:foo");
+    }
+
+    #[test]
+    fn coverage_note_drops_brew_cask_long_tail() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path();
+        let apps = home.join("Applications");
+        fs::create_dir_all(&apps).unwrap();
+        write_app(&apps.join("Foo.app"), "com.example.foo", "Foo");
+        let catalog = ProtectionCatalog::embedded();
+        let protection = AppProtection::new();
+        let opts = UninstallPlanOptions {
+            applications_dirs: &[apps],
+            home,
+            target_bundle_or_name: None,
+            ttl_secs: 900,
+        };
+        let plan = build_uninstall_plan(&catalog, &protection, &opts).unwrap();
+        let note = plan.coverage_note.unwrap();
+        assert!(!note.to_ascii_lowercase().contains("brew cask zap"));
+        assert!(note.contains("login items"));
     }
 
     fn write_app(app: &Path, bundle_id: &str, name: &str) {

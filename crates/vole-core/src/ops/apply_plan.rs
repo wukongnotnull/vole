@@ -50,6 +50,10 @@ use crate::stubs::{
     recheck_container_stub_entry, remove_verified_container_stub, CONTAINER_STUB_RULE_ID,
 };
 use crate::sysorphan::{recheck_system_service_entry, SYSTEM_SERVICES_RULE_ID};
+use crate::tmbackup::{
+    path_allowed_for_tm_delete, LiveTmDeps, TmDeps, TmRunningState, TM_BACKUP_SAFE_HOURS,
+    TM_FAILED_BACKUPS_RULE_ID,
+};
 use crate::vole_proto::{
     Plan as ProtoPlan, PlanEntry as ProtoPlanEntry, Report, SkipReason, SkipSummary, StreamEvent,
     SCHEMA_VERSION,
@@ -84,6 +88,8 @@ pub struct ApplyPlanContext<'a> {
     pub privilege: Option<&'a dyn PrivilegeBackend>,
     /// 本轮 apply 是否已尝试过 `acquire_interactive`（至多一次）。
     pub privilege_acquire_attempted: bool,
+    /// Time Machine 探测；缺省 `None` → `LiveTmDeps`。
+    pub tm_deps: Option<&'a dyn TmDeps>,
 }
 
 impl<'a> ApplyPlanContext<'a> {
@@ -114,6 +120,7 @@ impl<'a> ApplyPlanContext<'a> {
             now: SystemTime::now(),
             privilege: None,
             privilege_acquire_attempted: false,
+            tm_deps: None,
         }
     }
 }
@@ -1779,6 +1786,73 @@ pub fn apply_plan(
                     skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 }
                 Err(_) => failed += 1,
+            }
+            continue;
+        }
+
+        // tm-failed-backups：门控重验 → allowlist → tmutil delete（非 sudo rm）。
+        if entry.rule_id == TM_FAILED_BACKUPS_RULE_ID {
+            let live = LiveTmDeps;
+            let deps = ctx.tm_deps.unwrap_or(&live);
+            if !path_allowed_for_tm_delete(&entry.path) || !entry.path.is_dir() {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            if !matches!(deps.running_state(), TmRunningState::Idle) {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            let age_ok = deps
+                .path_mtime(&entry.path)
+                .and_then(|mtime| ctx.now.duration_since(mtime).ok())
+                .is_some_and(|d| d.as_secs() / 3600 >= TM_BACKUP_SAFE_HOURS)
+                && deps.dir_size_bytes(&entry.path) > 0;
+            if !age_ok {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            let path = entry.path.display().to_string();
+            match deps.delete_backup(&entry.path) {
+                Ok(()) => {
+                    succeeded += 1;
+                    ctx.deletion_log.log("tmutil-delete", "0", "ok", &path);
+                    ctx.oplog
+                        .log("REMOVED", &entry.path, Some("tm-failed-backups"))
+                        .ok();
+                }
+                Err(err) => {
+                    skipped += 1;
+                    ctx.deletion_log
+                        .log("tmutil-delete", "0", &format!("skip:{err}"), &path);
+                    if let Some(event) = &ctx.on_event {
+                        event(StreamEvent::Skipped {
+                            rule_id: entry.rule_id.clone(),
+                            reason: SkipReason::PathVanished,
+                        });
+                    }
+                    skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                }
             }
             continue;
         }
@@ -4861,6 +4935,149 @@ mod tests {
         std::env::remove_var("VOLE_TEST_APPLICATIONS");
         std::env::remove_var("VOLE_TEST_SOFTWARE_UPDATE_PLIST");
         std::env::remove_var("VOLE_TEST_MACOS_MAJOR");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_tm_failed_deletes_when_idle() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::tmbackup::tests::happy as tm_happy;
+        use crate::tmbackup::TM_FAILED_BACKUPS_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("tm-ok");
+        let volumes = root.join("Volumes");
+        let ip = volumes.join("BackupVol/Backups.backupdb/Host/old.inProgress");
+        fs::create_dir_all(&ip).unwrap();
+        fs::write(ip.join("x"), b"x").unwrap();
+        let ancient = SystemTime::now() - Duration::from_secs(49 * 3600);
+        filetime::set_file_mtime(&ip, filetime::FileTime::from_system_time(ancient)).unwrap();
+
+        let plan = fresh_plan(vec![plan_entry(&ip, TM_FAILED_BACKUPS_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let tm = tm_happy(volumes.clone());
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.tm_deps = Some(&tm);
+        ctx.now = SystemTime::now();
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 1);
+        assert!(!ip.exists());
+        assert_eq!(tm.deleted.lock().unwrap().len(), 1);
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_tm_failed_skips_when_running() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::tmbackup::tests::happy as tm_happy;
+        use crate::tmbackup::{TmRunningState, TM_FAILED_BACKUPS_RULE_ID};
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("tm-busy");
+        let volumes = root.join("Volumes");
+        let ip = volumes.join("BackupVol/Backups.backupdb/Host/old.inProgress");
+        fs::create_dir_all(&ip).unwrap();
+        let ancient = SystemTime::now() - Duration::from_secs(49 * 3600);
+        filetime::set_file_mtime(&ip, filetime::FileTime::from_system_time(ancient)).unwrap();
+
+        let plan = fresh_plan(vec![plan_entry(&ip, TM_FAILED_BACKUPS_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let mut tm = tm_happy(volumes);
+        tm.running = TmRunningState::Running;
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.tm_deps = Some(&tm);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert!(ip.exists());
+        assert!(tm.deleted.lock().unwrap().is_empty());
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_tm_failed_rejects_off_shape() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::tmbackup::tests::happy as tm_happy;
+        use crate::tmbackup::TM_FAILED_BACKUPS_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("tm-off");
+        let volumes = root.join("Volumes");
+        fs::create_dir_all(&volumes).unwrap();
+        let evil = root.join("tmp/evil.inProgress");
+        fs::create_dir_all(&evil).unwrap();
+
+        let plan = fresh_plan(vec![plan_entry(&evil, TM_FAILED_BACKUPS_RULE_ID)]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let tm = tm_happy(volumes);
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.tm_deps = Some(&tm);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert!(evil.exists());
+        assert!(tm.deleted.lock().unwrap().is_empty());
         fs::remove_dir_all(&root).ok();
     }
 

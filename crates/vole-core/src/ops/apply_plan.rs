@@ -1991,6 +1991,58 @@ mod tests {
     }
 
     #[test]
+    fn apply_private_var_db_diagnostics_skips_three_tree_even_with_rule_id() {
+        use crate::orphan::FakeOrphanDeps;
+        use crate::privilege::PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID;
+        use std::collections::HashSet;
+
+        let _guard = test_env::lock();
+        let root = scratch("pvd-threetree");
+        let lib = root.join("Library");
+        let plist = lib.join("LaunchDaemons/com.example.plist");
+        fs::create_dir_all(plist.parent().unwrap()).unwrap();
+        fs::write(&plist, b"plist").unwrap();
+        let ancient = SystemTime::now() - Duration::from_secs(40 * 86400);
+        filetime::set_file_mtime(&plist, filetime::FileTime::from_system_time(ancient)).unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let plan = fresh_plan(vec![plan_entry(
+            &plist,
+            PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID,
+        )]);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps {
+            spotlight: true,
+            installed: HashSet::new(),
+            ..Default::default()
+        };
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.privilege = Some(&backend);
+
+        let report = apply_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert!(plist.exists());
+        assert!(backend.removed.lock().unwrap().is_empty());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
     fn apply_container_stub_carve_out_removes_without_trash() {
         use crate::orphan::FakeOrphanDeps;
         use std::sync::Mutex;

@@ -53,6 +53,8 @@ pub enum PlanNotice {
     GroupContainersTruncated,
     HandoffPasteboardInaccessible,
     HandoffPasteboardTruncated,
+    /// Time Machine 正在备份或状态未知，跳过失败中备份扫描。
+    TimeMachineBusy,
 }
 
 /// plan 生成配置。
@@ -172,6 +174,15 @@ impl Orchestrator {
                 crate::privilege::gpu_metal_caches_plan_candidates()
             } else if rule.id == crate::privilege::INSTALL_MACOS_APPS_RULE_ID {
                 crate::privilege::install_macos_apps_plan_candidates()
+            } else if rule.id == crate::tmbackup::TM_FAILED_BACKUPS_RULE_ID {
+                let result = crate::tmbackup::select_tm_failed_backups(
+                    &crate::tmbackup::LiveTmDeps,
+                    SystemTime::now(),
+                );
+                if result.skipped_busy && !notices.contains(&PlanNotice::TimeMachineBusy) {
+                    notices.push(PlanNotice::TimeMachineBusy);
+                }
+                result.paths
             } else {
                 collect_path_candidates(rule, &home)
             };

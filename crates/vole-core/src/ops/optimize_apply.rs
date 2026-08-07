@@ -1,5 +1,6 @@
 //! `optimize` apply：TTL + delete / action 分发。
 
+use std::io::{self, IsTerminal, Write};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use thiserror::Error;
@@ -12,6 +13,7 @@ use crate::oplog::OperationLogger;
 use crate::optimize::{
     apply_optimize_action, parse_optimize_rule_id, OptimizeActionError, OptimizeTaskKind,
 };
+use crate::privilege::{NoPrivilege, PrivilegeBackend, SudoNoninteractive};
 use crate::protection::AppProtection;
 use crate::safety::{
     verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity, ValidationError,
@@ -43,6 +45,34 @@ pub struct OptimizeApplyContext<'a> {
     pub oplog: &'a mut OperationLogger,
     pub on_event: Option<&'a dyn Fn(StreamEvent)>,
     pub now: SystemTime,
+    /// 缺省 `None` → `NoPrivilege`；CLI / `apply_optimize_plan` 注入 `SudoNoninteractive`。
+    pub privilege: Option<&'a dyn PrivilegeBackend>,
+    /// 本轮 apply 是否已尝试过 `acquire_interactive`（至多一次）。
+    pub privilege_acquire_attempted: bool,
+    /// 同 session DNS flush 去重（对齐 Mole `MOLE_DNS_FLUSHED`）。
+    pub dns_flushed: bool,
+}
+
+/// probe；失败则至多一次 `acquire_interactive` 后再 probe。
+fn ensure_privilege_ready(
+    ctx: &mut OptimizeApplyContext<'_>,
+    backend: &dyn PrivilegeBackend,
+) -> bool {
+    if backend.probe_noninteractive() {
+        return true;
+    }
+    if ctx.privilege_acquire_attempted {
+        return false;
+    }
+    ctx.privilege_acquire_attempted = true;
+    if io::stdin().is_terminal() {
+        let _ = writeln!(io::stderr(), "正在请求管理员权限以执行系统优化…");
+    }
+    backend.acquire_interactive() && backend.probe_noninteractive()
+}
+
+fn needs_dns_privilege(task_id: &str) -> bool {
+    matches!(task_id, "system_maintenance" | "network_optimization")
 }
 
 pub fn apply_optimize_plan(
@@ -54,6 +84,7 @@ pub fn apply_optimize_plan(
     let deletion_log = DeletionLogger::from_env();
     let mut oplog = OperationLogger::new("optimize");
     let _ = oplog.session_start();
+    let sudo = SudoNoninteractive;
     let mut ctx = OptimizeApplyContext {
         protection,
         whitelist_patterns: &[],
@@ -63,6 +94,9 @@ pub fn apply_optimize_plan(
         oplog: &mut oplog,
         on_event,
         now: SystemTime::now(),
+        privilege: Some(&sudo),
+        privilege_acquire_attempted: false,
+        dns_flushed: false,
     };
     let report = apply_optimize_proto_plan(plan, &mut ctx)?;
     let _ = oplog.session_end(
@@ -168,14 +202,28 @@ pub fn apply_optimize_proto_plan(
                     Err(_) => failed += 1,
                 }
             }
-            OptimizeTaskKind::Action => match apply_optimize_action(task_id, &entry.path) {
-                Ok(()) => succeeded += 1,
-                Err(OptimizeActionError::Skipped) => {
+            OptimizeTaskKind::Action => {
+                let fallback = NoPrivilege;
+                let backend: &dyn PrivilegeBackend = ctx.privilege.unwrap_or(&fallback);
+                if needs_dns_privilege(task_id) && !ensure_privilege_ready(ctx, backend) {
                     skipped += 1;
-                    skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                    skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+                    continue;
                 }
-                Err(OptimizeActionError::Failed) => failed += 1,
-            },
+                let privilege: Option<&dyn PrivilegeBackend> = Some(backend);
+                match apply_optimize_action(task_id, &entry.path, privilege, &mut ctx.dns_flushed) {
+                    Ok(()) => succeeded += 1,
+                    Err(OptimizeActionError::NeedsPrivilege) => {
+                        skipped += 1;
+                        skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+                    }
+                    Err(OptimizeActionError::Skipped) => {
+                        skipped += 1;
+                        skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                    }
+                    Err(OptimizeActionError::Failed) => failed += 1,
+                }
+            }
         }
     }
 
@@ -262,6 +310,7 @@ mod tests {
     use super::*;
     use crate::delete::DeletionLogger;
     use crate::oplog::OperationLogger;
+    use crate::privilege::{NoPrivilege, RecordingPrivilege};
     use crate::protection::AppProtection;
     use crate::safety::capture_plan_entry_identity;
     use crate::test_env;
@@ -275,6 +324,105 @@ mod tests {
         fs::remove_dir_all(&dir).ok();
         fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    fn dns_plan(home: &std::path::Path) -> ProtoPlan {
+        let sys = home.join(".vole-optimize-action/system_maintenance");
+        let net = home.join(".vole-optimize-action/network_optimization");
+        ProtoPlan {
+            schema_version: SCHEMA_VERSION,
+            created_at: SystemTime::now(),
+            ttl_secs: 900,
+            entries: vec![
+                ProtoPlanEntry {
+                    id: "system_maintenance-0".into(),
+                    path: sys,
+                    label: "DNS & Spotlight Check".into(),
+                    size: 0,
+                    rule_id: "optimize:action:system_maintenance".into(),
+                    skip_reason: None,
+                    dev: 0,
+                    ino: 0,
+                    mtime: UNIX_EPOCH,
+                },
+                ProtoPlanEntry {
+                    id: "network_optimization-0".into(),
+                    path: net,
+                    label: "Network Cache Refresh".into(),
+                    size: 0,
+                    rule_id: "optimize:action:network_optimization".into(),
+                    skip_reason: None,
+                    dev: 0,
+                    ino: 0,
+                    mtime: UNIX_EPOCH,
+                },
+            ],
+            coverage_note: None,
+        }
+    }
+
+    #[test]
+    fn apply_dns_tasks_skip_without_privilege() {
+        let _guard = test_env::lock();
+        let root = scratch("dns-deny");
+        let plan = dns_plan(&root);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("optimize");
+        let trash = MacTrash;
+        let backend = NoPrivilege;
+        let mut ctx = OptimizeApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: OptimizeApplyOptions { permanent: true },
+            trash: &trash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            privilege: Some(&backend),
+            privilege_acquire_attempted: false,
+            dns_flushed: false,
+        };
+        let report = apply_optimize_proto_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 2);
+        assert!(report
+            .skipped_by_reason
+            .iter()
+            .any(|s| s.reason == SkipReason::NeedsPrivilege && s.count == 2));
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_dns_tasks_flush_once_with_recording() {
+        let _guard = test_env::lock();
+        let root = scratch("dns-ok");
+        let plan = dns_plan(&root);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("optimize");
+        let trash = MacTrash;
+        let backend = RecordingPrivilege::allowing();
+        let mut ctx = OptimizeApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: OptimizeApplyOptions { permanent: true },
+            trash: &trash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            privilege: Some(&backend),
+            privilege_acquire_attempted: false,
+            dns_flushed: false,
+        };
+        let report = apply_optimize_proto_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 2);
+        assert_eq!(report.skipped, 0);
+        assert_eq!(*backend.flush_dns_calls.lock().unwrap(), 1);
+        assert!(ctx.dns_flushed);
+        fs::remove_dir_all(&root).ok();
     }
 
     #[test]
@@ -316,6 +464,9 @@ mod tests {
             oplog: &mut oplog,
             on_event: None,
             now: SystemTime::now(),
+            privilege: None,
+            privilege_acquire_attempted: false,
+            dns_flushed: false,
         };
         let report = apply_optimize_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 1);

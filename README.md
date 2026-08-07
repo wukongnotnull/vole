@@ -186,7 +186,7 @@ $ vole optimize --plan
 $ vole optimize --apply optimize-plan.json
 ```
 
-12 项无 sudo 主路径（缓存、saved state、坏 prefs、quarantine、sqlite vacuum、Dock、LaunchServices 等）。系统特权路径走 `sudo -n`；TTY 下可至多一次 `sudo -v` 缓存凭证。仍需桌面 Helper / 安装器长尾会诚实跳过，并写入 plan 的 `coverage_note`。
+14 项主路径（含无 sudo 缓存/saved state/坏 prefs/quarantine/sqlite/Dock/LaunchServices 等，以及需 `sudo -n` 的 `system_maintenance` / `network_optimization` DNS 刷新）。TTY 下可至多一次 `sudo -v` 缓存凭证。其余 optimize 长尾与桌面 Helper 会诚实跳过，并写入 plan 的 `coverage_note`。
 
 ### 磁盘分析
 

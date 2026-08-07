@@ -27,6 +27,7 @@ pub mod scan;
 pub mod status;
 pub mod stubs;
 pub mod sysorphan;
+pub mod tmbackup;
 pub mod units;
 pub mod whitelist;
 

@@ -2345,6 +2345,38 @@ mod tests {
     }
 
     #[test]
+    fn ensure_privilege_ready_failed_acquire_still_latches() {
+        let _guard = test_env::lock();
+        let root = scratch("ensure-priv-fail");
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let protection = AppProtection::new();
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = crate::orphan::FakeOrphanDeps::default();
+        let backend = crate::privilege::RecordingPrivilege::denying();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+
+        assert!(!ensure_privilege_ready(&mut ctx, &backend));
+        assert_eq!(*backend.acquire_calls.lock().unwrap(), 1);
+        assert!(ctx.privilege_acquire_attempted);
+        assert!(!ensure_privilege_ready(&mut ctx, &backend));
+        assert_eq!(*backend.acquire_calls.lock().unwrap(), 1);
+        assert!(backend.removed.lock().unwrap().is_empty());
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
     fn apply_rosetta_skips_when_probe_fails() {
         use crate::orphan::FakeOrphanDeps;
         use crate::privilege::ROSETTA_CACHE_RULE_ID;

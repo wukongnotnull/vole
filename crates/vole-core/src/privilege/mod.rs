@@ -1476,6 +1476,15 @@ mod tests {
         assert!(!b.probe_noninteractive());
     }
 
+    #[test]
+    fn sudo_acquire_interactive_skipped_under_test_no_auth() {
+        let _guard = crate::test_env::lock();
+        std::env::set_var("VOLE_TEST_NO_AUTH", "1");
+        assert!(!SudoNoninteractive.acquire_interactive());
+        assert!(!SudoNoninteractive.probe_noninteractive());
+        std::env::remove_var("VOLE_TEST_NO_AUTH");
+    }
+
     fn write_swu_plist(path: &Path, recommended: plist::Value) {
         let mut dict = plist::Dictionary::new();
         dict.insert("RecommendedUpdates".into(), recommended);

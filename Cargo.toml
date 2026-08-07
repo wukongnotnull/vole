@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/vole-proto", "crates/vole-sys", "crates/vole-core", "crates/vole-cli", "conformance"]
 
 [workspace.package]
-version = "1.25.0"
+version = "1.26.0"
 edition = "2021"
 license = "GPL-3.0-only"
 repository = "https://github.com/wukongnotnull/vole"

@@ -58,12 +58,13 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          idleassetsd `CFNetworkDownload_*.tmp`（*/T/* + ≥7 天 + sudo -n）、\
          `*.code_sign_clone`（*/X/* 目录 + sudo -n，跳过 EDR）、\
          GPU Metal caches（*/C/*/com.apple.metal* 目录 stale + sudo -n，跳过 EDR）、\
+         交互提权（TTY 下至多一次 `sudo -v` 缓存后仍 `sudo -n` 删）、\
          container stubs（CleanMyMac allowlist）、\
          Group Containers logs/caches（含受保护容器 Logs / bundle 命名日志）、\
          Handoff pasteboard（mtime>60min）、\
          Toolbox keep-N、Codex staging、not_running（精确名 + cmdline）、\
          FCP / 剪映 generated、XCTestDevices 已落地。\
-         仍未移植：system.sh 其余提权路径、交互提权 / 桌面特权助手。\
+         仍未移植：Install macOS*.app、桌面 SMAppService / 特权助手。\
          如需完整清理，请继续使用 Mole：https://github.com/tw93/Mole"
     )
 }
@@ -184,7 +185,12 @@ mod tests {
         assert!(note.contains("`/private/var/db/powerlog`"));
         assert!(note.contains("MemoryLimitViolations"));
         assert!(note.contains("Adobe 系统日志"));
-        assert!(unported.contains("交互提权") || unported.contains("桌面"));
+        assert!(note.contains("交互提权（TTY 下至多一次 `sudo -v`"));
+        assert!(
+            !unported.contains("交互提权"),
+            "CLI sudo -v credential cache must not remain unported"
+        );
+        assert!(unported.contains("Install macOS") || unported.contains("SMAppService"));
         assert!(
             !unported.contains("Rosetta"),
             "Rosetta /Library must not remain unported"

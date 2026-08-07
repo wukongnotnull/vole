@@ -2,7 +2,7 @@
 
 use std::fs;
 use std::os::unix::fs::MetadataExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// 折叠 `//`、去掉末尾 `/`（对齐 `_mole_normalize_deletion_policy_path`）。
 pub fn normalize_policy_path(path: &str) -> String {
@@ -258,6 +258,52 @@ pub fn is_system_diagnostic_report_leaf(path: &str) -> bool {
     false
 }
 
+/// `/private/var/log`（1.15.0）：深度 ≤5、`.log`/`.gz`/`.asl`。
+pub const PRIVATE_VAR_LOG_LIVE: &str = "/private/var/log";
+pub const PRIVATE_VAR_LOG_MAX_DEPTH: usize = 5;
+
+fn private_var_log_mapped_root() -> Option<PathBuf> {
+    let base = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY")?;
+    Some(PathBuf::from(base).parent()?.join("private/var/log"))
+}
+
+/// 是否为本规则允许的 clean 目标路径形状（不检查存在性 / 年龄）。
+pub fn is_private_var_log_clean_target(path: &str) -> bool {
+    let path = normalize_policy_path(path);
+    let roots: Vec<String> = {
+        let mut v = vec![PRIVATE_VAR_LOG_LIVE.to_string()];
+        if let Some(mapped) = private_var_log_mapped_root() {
+            if let Some(s) = mapped.to_str() {
+                v.push(normalize_policy_path(s));
+            }
+        }
+        v
+    };
+    for root in roots {
+        let prefix = if root.ends_with('/') {
+            root.clone()
+        } else {
+            format!("{root}/")
+        };
+        let Some(rest) = path.strip_prefix(&prefix) else {
+            continue;
+        };
+        if rest.is_empty() {
+            return false;
+        }
+        let comps: Vec<&str> = rest.split('/').filter(|s| !s.is_empty()).collect();
+        if comps.is_empty() || comps.len() > PRIVATE_VAR_LOG_MAX_DEPTH {
+            return false;
+        }
+        if comps.iter().any(|c| *c == ".." || c.is_empty()) {
+            return false;
+        }
+        let name = *comps.last().expect("non-empty");
+        return name.ends_with(".log") || name.ends_with(".gz") || name.ends_with(".asl");
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -348,5 +394,25 @@ mod tests {
         assert!(!is_critical_deletion_path(
             "/Library/Logs/DiagnosticReports/App.crash"
         ));
+    }
+
+    #[test]
+    fn private_var_log_clean_target_shape() {
+        assert!(is_private_var_log_clean_target(
+            "/private/var/log/system.log"
+        ));
+        assert!(is_private_var_log_clean_target(
+            "/private/var/log/a/b/c/d/e.log"
+        ));
+        assert!(!is_private_var_log_clean_target(
+            "/private/var/log/a/b/c/d/e/f.log"
+        ));
+        assert!(!is_private_var_log_clean_target("/private/var/log"));
+        assert!(!is_private_var_log_clean_target(
+            "/private/var/log/notes.txt"
+        ));
+        assert!(!is_private_var_log_clean_target("/var/log/system.log"));
+        assert!(is_private_var_log_clean_target("/private/var/log/x.gz"));
+        assert!(is_private_var_log_clean_target("/private/var/log/x.asl"));
     }
 }

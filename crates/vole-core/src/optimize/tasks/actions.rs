@@ -319,6 +319,14 @@ pub fn plan_launch_services_rebuild(home: &Path) -> OptimizeCandidate {
     )
 }
 
+pub fn plan_system_maintenance(home: &Path) -> OptimizeCandidate {
+    action_sentinel(home, "system_maintenance", "DNS & Spotlight Check")
+}
+
+pub fn plan_network_optimization(home: &Path) -> OptimizeCandidate {
+    action_sentinel(home, "network_optimization", "Network Cache Refresh")
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OptimizeActionError {
     Failed,

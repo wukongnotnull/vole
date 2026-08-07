@@ -9,9 +9,9 @@ use crate::optimize::{
     discover_cache_refresh, discover_fix_broken_configs, discover_launch_agents_cleanup,
     discover_saved_state_cleanup, optimize_action_rule_id, optimize_catalog,
     optimize_delete_rule_id, plan_coreduet_cleanup, plan_dock_refresh,
-    plan_launch_services_rebuild, plan_legacy_overrides_audit, plan_notification_cleanup,
-    plan_prevent_network_dsstore, plan_quarantine_cleanup, plan_sqlite_vacuum, OptimizeCandidate,
-    OptimizeTaskKind,
+    plan_launch_services_rebuild, plan_legacy_overrides_audit, plan_network_optimization,
+    plan_notification_cleanup, plan_prevent_network_dsstore, plan_quarantine_cleanup,
+    plan_sqlite_vacuum, plan_system_maintenance, OptimizeCandidate, OptimizeTaskKind,
 };
 use crate::protection::{AppProtection, ProtectionCatalog};
 use crate::safety::capture_plan_entry_identity;
@@ -97,6 +97,12 @@ pub fn build_optimize_plan(
     }
     if allow("launch_services_rebuild") {
         candidates.push(plan_launch_services_rebuild(opts.home));
+    }
+    if allow("system_maintenance") {
+        candidates.push(plan_system_maintenance(opts.home));
+    }
+    if allow("network_optimization") {
+        candidates.push(plan_network_optimization(opts.home));
     }
 
     let mut entries = Vec::new();
@@ -204,6 +210,36 @@ mod tests {
             .iter()
             .any(|e| e.rule_id == "optimize:action:dock_refresh"));
         let note = plan.coverage_note.unwrap();
+        assert!(note.contains("Memory Optimization") || note.contains("memory"));
+    }
+
+    #[test]
+    fn build_plan_includes_system_and_network_sentinels() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path();
+        let catalog = ProtectionCatalog::embedded();
+        let protection = AppProtection::new();
+        let plan = build_optimize_plan(
+            &catalog,
+            &protection,
+            &OptimizePlanOptions {
+                home,
+                ttl_secs: 900,
+                only_task: None,
+            },
+        )
+        .unwrap();
+        assert!(plan
+            .entries
+            .iter()
+            .any(|e| e.rule_id == "optimize:action:system_maintenance"));
+        assert!(plan
+            .entries
+            .iter()
+            .any(|e| e.rule_id == "optimize:action:network_optimization"));
+        let note = plan.coverage_note.unwrap();
+        assert!(!note.contains("DNS & Spotlight Check"));
+        assert!(!note.contains("Network Cache Refresh"));
         assert!(note.contains("Memory Optimization") || note.contains("memory"));
     }
 }

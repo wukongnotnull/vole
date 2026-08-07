@@ -1448,4 +1448,124 @@ mod tests {
         std::env::remove_var("VOLE_TEST_HOME");
         let _ = fs::remove_dir_all(&home);
     }
+
+    fn privilege_rule(id: &str, label: &str, paths: Vec<String>, days: Option<u32>) -> Rule {
+        Rule {
+            id: id.into(),
+            category: Some("user-devtools".into()),
+            label: label.into(),
+            platform: vec!["macos".into()],
+            paths,
+            impact: None,
+            disabled: false,
+            last_verified: None,
+            strategy: if let Some(d) = days {
+                StrategyConfig {
+                    kind: crate::rules::StrategyKind::OlderThanDays,
+                    keep: None,
+                    env_override: None,
+                    days: Some(d),
+                    names: None,
+                    handler: None,
+                }
+            } else {
+                StrategyConfig::default()
+            },
+            guards: Default::default(),
+        }
+    }
+
+    #[test]
+    fn plan_rosetta_system_enters_under_test_library() {
+        let _guard = test_env::lock();
+        let root = scratch("plan-rosetta");
+        let lib = root.join("Library");
+        let bundle = lib.join("Apple/usr/share/rosetta/rosetta_update_bundle");
+        touch(&bundle);
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+        std::env::set_var("VOLE_TEST_FORCE_UNAME_M", "arm64");
+
+        let rule = privilege_rule(
+            crate::privilege::ROSETTA_CACHE_RULE_ID,
+            "Rosetta 2 cache",
+            vec!["/Library/Apple/usr/share/rosetta/rosetta_update_bundle".into()],
+            None,
+        );
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), None);
+        let plan = orch
+            .build_plan(&[rule], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert_eq!(plan.entries.len(), 1);
+        assert_eq!(plan.entries[0].path, bundle);
+        assert_eq!(
+            plan.entries[0].rule_id,
+            crate::privilege::ROSETTA_CACHE_RULE_ID
+        );
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        std::env::remove_var("VOLE_TEST_FORCE_UNAME_M");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn plan_icon_services_system_enters_under_test_library() {
+        let _guard = test_env::lock();
+        let root = scratch("plan-icon");
+        let lib = root.join("Library");
+        let store = lib.join("Caches/com.apple.iconservices.store");
+        fs::create_dir_all(&store).unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let rule = privilege_rule(
+            crate::privilege::ICON_SERVICES_SYSTEM_CACHE_RULE_ID,
+            "Icon services system cache",
+            vec!["/Library/Caches/com.apple.iconservices.store".into()],
+            None,
+        );
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), None);
+        let plan = orch
+            .build_plan(&[rule], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert_eq!(plan.entries.len(), 1);
+        assert_eq!(plan.entries[0].path, store);
+        assert_eq!(
+            plan.entries[0].rule_id,
+            crate::privilege::ICON_SERVICES_SYSTEM_CACHE_RULE_ID
+        );
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn plan_diagnostic_reports_system_enters_old_leaf() {
+        let _guard = test_env::lock();
+        let root = scratch("plan-diag");
+        let lib = root.join("Library");
+        let leaf = lib.join("Logs/DiagnosticReports/App.crash");
+        touch(&leaf);
+        let ancient = SystemTime::now() - Duration::from_secs(10 * 86400);
+        filetime::set_file_mtime(&leaf, filetime::FileTime::from_system_time(ancient)).unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let rule = privilege_rule(
+            crate::privilege::DIAGNOSTIC_REPORTS_SYSTEM_RULE_ID,
+            "Diagnostic reports (system)",
+            vec!["/Library/Logs/DiagnosticReports/*".into()],
+            Some(7),
+        );
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), None);
+        let plan = orch
+            .build_plan(&[rule], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert_eq!(plan.entries.len(), 1);
+        assert_eq!(plan.entries[0].path, leaf);
+        assert_eq!(
+            plan.entries[0].rule_id,
+            crate::privilege::DIAGNOSTIC_REPORTS_SYSTEM_RULE_ID
+        );
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        let _ = fs::remove_dir_all(&root);
+    }
 }

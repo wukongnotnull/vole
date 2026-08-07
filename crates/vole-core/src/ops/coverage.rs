@@ -45,12 +45,13 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          Claude Desktop workspace VM orphan、Claude pending-uploads、\
          system services orphan（/Library LaunchDaemons/Agents/PHT 可读子集 plan + sudo -n apply 真删）、\
          Rosetta `/Library` update bundle（arm64 + sudo -n）、\
+         Icon Services 系统缓存（sudo -n）、\
          container stubs（CleanMyMac allowlist）、\
          Group Containers logs/caches（含受保护容器 Logs / bundle 命名日志）、\
          Handoff pasteboard（mtime>60min）、\
          Toolbox keep-N、Codex staging、not_running（精确名 + cmdline）、\
          FCP / 剪映 generated、XCTestDevices 已落地。\
-         仍未移植：交互提权 / 桌面特权助手。\
+         仍未移植：system.sh 其余提权路径、交互提权 / 桌面特权助手。\
          如需完整清理，请继续使用 Mole：https://github.com/tw93/Mole"
     )
 }
@@ -163,6 +164,7 @@ mod tests {
             !note.contains("仍未移植：orphaned apps"),
             "must not claim user-domain orphaned is still unported"
         );
+        assert!(note.contains("Icon Services 系统缓存"));
         assert!(unported.contains("交互提权") || unported.contains("桌面"));
         assert!(
             !unported.contains("Rosetta"),

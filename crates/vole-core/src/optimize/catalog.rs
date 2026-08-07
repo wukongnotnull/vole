@@ -22,7 +22,7 @@ const CATALOG: &[OptimizeTask] = &[
         kind: OptimizeTaskKind::Action,
         title: "DNS & Spotlight Check",
         description: "Refresh DNS cache & verify Spotlight status",
-        in_m3: false,
+        in_m3: true,
     },
     OptimizeTask {
         id: "cache_refresh",
@@ -50,7 +50,7 @@ const CATALOG: &[OptimizeTask] = &[
         kind: OptimizeTaskKind::Action,
         title: "Network Cache Refresh",
         description: "Optimize DNS cache & restart mDNSResponder",
-        in_m3: false,
+        in_m3: true,
     },
     OptimizeTask {
         id: "sqlite_vacuum",
@@ -248,9 +248,11 @@ mod tests {
             .collect();
         assert!(main.contains(&"cache_refresh"));
         assert!(main.contains(&"saved_state_cleanup"));
+        assert!(main.contains(&"system_maintenance"));
+        assert!(main.contains(&"network_optimization"));
         assert!(!main.contains(&"memory_pressure_relief"));
-        assert!(!main.contains(&"system_maintenance"));
-        assert_eq!(main.len(), 12);
+        assert!(!main.contains(&"spotlight_index_optimize"));
+        assert_eq!(main.len(), 14);
     }
 
     #[test]

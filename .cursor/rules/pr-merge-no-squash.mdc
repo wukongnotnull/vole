@@ -1,0 +1,19 @@
+---
+description: GitHub PR 合并必须用 Merge commit，禁止 squash
+alwaysApply: true
+---
+
+# PR 合并方式
+
+合并 GitHub PR 时一律使用 **Merge pull request**（merge commit）：
+
+```bash
+gh pr merge <N> --merge --delete-branch
+```
+
+**禁止**使用：
+
+- `gh pr merge --squash`
+- Squash and merge（GitHub UI）
+
+除非用户在当次对话中明确要求改用 squash。

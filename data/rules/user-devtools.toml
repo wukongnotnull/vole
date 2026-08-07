@@ -3130,6 +3130,19 @@ last_verified = "2026-08"
 kind = "all"
 
 [[rule]]
+id = "tm-failed-backups"
+category = "user-devtools"
+label = "Incomplete Time Machine backups"
+platform = ["macos"]
+paths = ["/Volumes"]
+impact = "Stale *.inProgress under Backups.backupdb / mounted backup bundles (≥48h); tmutil delete"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
 id = "arc-profile-code-cache"
 category = "user-devtools"
 label = "Arc profile code cache"

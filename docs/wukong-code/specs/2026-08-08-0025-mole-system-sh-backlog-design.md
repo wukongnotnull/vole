@@ -4,6 +4,7 @@
 - 状态：已批准（盘点文档）；**不开实现**，供后续选刀
 - 依据：Mole `third_party/mole-1.48.1/lib/clean/system.sh`；Vole privilege 规则至 **1.27.0**；用户确认桌面 SMAppService 暂缓
 - 范围：**仅** `system.sh` 收口；不含 purge / installer 子命令 / 宽开发者长尾 / 营销
+- 更广路线图（uninstall / optimize 长尾、子命令与桌面边界、并行波次）：见 [`2026-08-08-0119-mole-parity-roadmap-design.md`](2026-08-08-0119-mole-parity-roadmap-design.md)
 
 ## 1. 结论
 

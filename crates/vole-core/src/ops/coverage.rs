@@ -32,6 +32,10 @@ pub const HANDOFF_PASTEBOARD_WARN: &str = "注意：handoff-pasteboard-cache 已
 pub const HANDOFF_PASTEBOARD_TRUNCATED_WARN: &str =
     "注意：handoff-pasteboard-cache 因条目过多已截断（整规则 >2000）。可用 Mole 清理或稍后再试。";
 
+/// Time Machine 忙或状态未知时追加。
+pub const TIME_MACHINE_BUSY_WARN: &str =
+    "注意：tm-failed-backups 已跳过（Time Machine 正在备份或状态未知）。请待备份空闲后重试。";
+
 /// 已启用、未 `disabled` 的规则数。
 pub fn enabled_rule_count(rules: &[Rule]) -> usize {
     rules.iter().filter(|r| !r.disabled).count()
@@ -59,13 +63,14 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          `*.code_sign_clone`（*/X/* 目录 + sudo -n，跳过 EDR）、\
          GPU Metal caches（*/C/*/com.apple.metal* 目录 stale + sudo -n，跳过 EDR）、\
          Install macOS*.app（≥14 天 + SWU fail-closed + 当前大版本 keep + sudo -n）、\
+         Time Machine 失败中备份（≥48h inProgress + tmutil delete）、\
          交互提权（TTY 下至多一次 `sudo -v` 缓存后仍 `sudo -n` 删）、\
          container stubs（CleanMyMac allowlist）、\
          Group Containers logs/caches（含受保护容器 Logs / bundle 命名日志）、\
          Handoff pasteboard（mtime>60min）、\
          Toolbox keep-N、Codex staging、not_running（精确名 + cmdline）、\
          FCP / 剪映 generated、XCTestDevices 已落地。\
-         仍未移植：Time Machine 失败中备份清理、本地快照报告、桌面 SMAppService / 特权助手。\
+         仍未移植：本地快照报告、桌面 SMAppService / 特权助手。\
          如需完整清理，请继续使用 Mole：https://github.com/tw93/Mole"
     )
 }
@@ -93,6 +98,9 @@ pub fn coverage_with_orphan_notices(base: &str, notices: &[PlanNotice]) -> Strin
     }
     if notices.contains(&PlanNotice::HandoffPasteboardTruncated) {
         out = format!("{out}\n{HANDOFF_PASTEBOARD_TRUNCATED_WARN}");
+    }
+    if notices.contains(&PlanNotice::TimeMachineBusy) {
+        out = format!("{out}\n{TIME_MACHINE_BUSY_WARN}");
     }
     out
 }
@@ -196,17 +204,18 @@ mod tests {
             !unported.contains("Install macOS"),
             "Install macOS*.app must not remain unported"
         );
+        assert!(note.contains("Time Machine 失败中备份（≥48h"));
         assert!(
-            unported.contains("SMAppService"),
-            "desktop SMAppService must remain listed as unported"
-        );
-        assert!(
-            unported.contains("Time Machine") || unported.contains("失败中备份"),
-            "TM failed backups must remain listed as unported until implemented"
+            !unported.contains("失败中备份") && !unported.contains("Time Machine 失败"),
+            "TM failed backups must not remain unported"
         );
         assert!(
             unported.contains("快照"),
             "local snapshot reporting must remain listed as unported until implemented"
+        );
+        assert!(
+            unported.contains("SMAppService"),
+            "desktop SMAppService must remain listed as unported"
         );
         assert!(
             !unported.contains("Rosetta"),

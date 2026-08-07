@@ -14,6 +14,7 @@ pub mod delete;
 pub mod groupcaches;
 pub mod handoff;
 pub mod history;
+pub mod localsnapshots;
 pub mod mutex;
 pub mod oplog;
 pub mod ops;

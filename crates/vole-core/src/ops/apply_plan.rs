@@ -1,5 +1,6 @@
 //! plan apply 阶段：TTL 校验、TOCTOU 身份重验、`mole_delete` 执行。
 
+use std::io::{self, IsTerminal, Write};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use thiserror::Error;
@@ -78,6 +79,8 @@ pub struct ApplyPlanContext<'a> {
     pub now: SystemTime,
     /// 缺省 `None` → `NoPrivilege`；CLI apply 注入 `SudoNoninteractive`。
     pub privilege: Option<&'a dyn PrivilegeBackend>,
+    /// 本轮 apply 是否已尝试过 `acquire_interactive`（至多一次）。
+    pub privilege_acquire_attempted: bool,
 }
 
 impl<'a> ApplyPlanContext<'a> {
@@ -107,8 +110,24 @@ impl<'a> ApplyPlanContext<'a> {
             on_event,
             now: SystemTime::now(),
             privilege: None,
+            privilege_acquire_attempted: false,
         }
     }
+}
+
+/// probe；失败则至多一次 `acquire_interactive` 后再 probe。
+fn ensure_privilege_ready(ctx: &mut ApplyPlanContext<'_>, backend: &dyn PrivilegeBackend) -> bool {
+    if backend.probe_noninteractive() {
+        return true;
+    }
+    if ctx.privilege_acquire_attempted {
+        return false;
+    }
+    ctx.privilege_acquire_attempted = true;
+    if io::stdin().is_terminal() {
+        let _ = writeln!(io::stderr(), "正在请求管理员权限以清理系统路径…");
+    }
+    backend.acquire_interactive() && backend.probe_noninteractive()
 }
 
 pub fn apply_proto_plan(
@@ -262,7 +281,7 @@ pub fn apply_plan(
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 continue;
             }
-            if !backend.probe_noninteractive() {
+            if !ensure_privilege_ready(ctx, backend) {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -353,7 +372,7 @@ pub fn apply_plan(
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 continue;
             }
-            if !backend.probe_noninteractive() {
+            if !ensure_privilege_ready(ctx, backend) {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -443,7 +462,7 @@ pub fn apply_plan(
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 continue;
             }
-            if !backend.probe_noninteractive() {
+            if !ensure_privilege_ready(ctx, backend) {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -535,7 +554,7 @@ pub fn apply_plan(
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 continue;
             }
-            if !backend.probe_noninteractive() {
+            if !ensure_privilege_ready(ctx, backend) {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -627,7 +646,7 @@ pub fn apply_plan(
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 continue;
             }
-            if !backend.probe_noninteractive() {
+            if !ensure_privilege_ready(ctx, backend) {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -720,7 +739,7 @@ pub fn apply_plan(
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 continue;
             }
-            if !backend.probe_noninteractive() {
+            if !ensure_privilege_ready(ctx, backend) {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -815,7 +834,7 @@ pub fn apply_plan(
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 continue;
             }
-            if !backend.probe_noninteractive() {
+            if !ensure_privilege_ready(ctx, backend) {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -907,7 +926,7 @@ pub fn apply_plan(
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 continue;
             }
-            if !backend.probe_noninteractive() {
+            if !ensure_privilege_ready(ctx, backend) {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -1002,7 +1021,7 @@ pub fn apply_plan(
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 continue;
             }
-            if !backend.probe_noninteractive() {
+            if !ensure_privilege_ready(ctx, backend) {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -1094,7 +1113,7 @@ pub fn apply_plan(
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 continue;
             }
-            if !backend.probe_noninteractive() {
+            if !ensure_privilege_ready(ctx, backend) {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -1183,7 +1202,7 @@ pub fn apply_plan(
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 continue;
             }
-            if !backend.probe_noninteractive() {
+            if !ensure_privilege_ready(ctx, backend) {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -1278,7 +1297,7 @@ pub fn apply_plan(
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 continue;
             }
-            if !backend.probe_noninteractive() {
+            if !ensure_privilege_ready(ctx, backend) {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -1370,7 +1389,7 @@ pub fn apply_plan(
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 continue;
             }
-            if !backend.probe_noninteractive() {
+            if !ensure_privilege_ready(ctx, backend) {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -1458,7 +1477,7 @@ pub fn apply_plan(
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 continue;
             }
-            if !backend.probe_noninteractive() {
+            if !ensure_privilege_ready(ctx, backend) {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -1550,7 +1569,7 @@ pub fn apply_plan(
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 continue;
             }
-            if !backend.probe_noninteractive() {
+            if !ensure_privilege_ready(ctx, backend) {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -2145,6 +2164,39 @@ mod tests {
         assert_eq!(backend.removed.lock().unwrap().len(), 1);
         assert!(!plist.exists());
         std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn ensure_privilege_ready_acquires_once_then_probes() {
+        let _guard = test_env::lock();
+        let root = scratch("ensure-priv");
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let protection = AppProtection::new();
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = crate::orphan::FakeOrphanDeps::default();
+        let backend = crate::privilege::RecordingPrivilege {
+            acquire_ok: true,
+            ..crate::privilege::RecordingPrivilege::denying()
+        };
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+
+        assert!(ensure_privilege_ready(&mut ctx, &backend));
+        assert_eq!(*backend.acquire_calls.lock().unwrap(), 1);
+        assert!(ensure_privilege_ready(&mut ctx, &backend));
+        assert_eq!(*backend.acquire_calls.lock().unwrap(), 1);
         fs::remove_dir_all(&root).ok();
     }
 

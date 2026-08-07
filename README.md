@@ -186,7 +186,7 @@ $ vole optimize --plan
 $ vole optimize --apply optimize-plan.json
 ```
 
-12 项无 sudo 主路径（缓存、saved state、坏 prefs、quarantine、sqlite vacuum、Dock、LaunchServices 等）。需要 sudo 的长尾会诚实跳过，并写入 plan 的 `coverage_note`。
+12 项无 sudo 主路径（缓存、saved state、坏 prefs、quarantine、sqlite vacuum、Dock、LaunchServices 等）。系统特权路径走 `sudo -n`；TTY 下可至多一次 `sudo -v` 缓存凭证。仍需桌面 Helper / 安装器长尾会诚实跳过，并写入 plan 的 `coverage_note`。
 
 ### 磁盘分析
 
@@ -225,7 +225,7 @@ $ vole completions zsh > ~/.zfunc/_vole
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | **1.6.0**：v2 CLI + orphaned + system-services 可读子集 + container stubs（CleanMyMac allowlist）+ 权限响亮提示 | 成熟、功能最全 |
+| 成熟度 | **1.26.0**：v2 CLI + privilege `sudo -n`（TTY 可 `sudo -v`）+ orphaned / system caches | 成熟、功能最全 |
 | 核心命令 | `status` / `analyze` / `clean` / `history` / `uninstall` / `optimize` | 另有 `purge` / `installer` 等 |
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓；orphaned 启发式 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |
@@ -264,7 +264,7 @@ vole/
 
 - 原生 SwiftUI，本地运行；需授予完全磁盘访问（FDA）
 - 与本仓共用 Plan / Report / NDJSON 事件与操作日志口径
-- 非 App Sandbox（开发期）；不宣称 root / sudo 能力
+- 非 App Sandbox（开发期）；特权删仅 `sudo -n`（TTY 可先 `sudo -v`）；不宣称常驻 root / SMAppService
 
 详细说明见 [vole-macos 仓库](https://github.com/wukongnotnull/vole-macos)。
 

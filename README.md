@@ -33,7 +33,7 @@
 - **磁盘洞察**：目录体积下钻，硬链接去重、折叠目录、`jwalk` 并行遍历
 - **实时监控**：CPU / 内存 / 磁盘等健康面板；`--json` / `--json-stream` 可脚本化
 - **冻结 NDJSON 协议**：CLI、脚本与未来桌面 app 共用同一编排层
-- **规则数据化**：**522** 条高价值清理规则以 TOML 声明，可 diff、可禁用、可 fixture 回归（含用户域 orphaned app data）
+- **规则数据化**：**523** 条高价值清理规则以 TOML 声明，可 diff、可禁用、可 fixture 回归（含用户域 orphaned app data）
 
 适合：想要更现代、更可脚本化、更偏「安全预览再执行」的日常清理与磁盘洞察。若你需要成熟全家桶（`purge` / `installer` / 交互提权 / 完整 `/Library` 扫描），请继续用 [Mole](https://github.com/tw93/Mole)。
 
@@ -165,7 +165,7 @@ $ vole clean --apply plan.json
 # 报告区分 trashed_bytes / deleted_bytes
 ```
 
-**522** 条高价值规则以 TOML 声明，覆盖浏览器缓存、开发工具、应用残留与用户域 orphaned 数据等常见目标。
+**523** 条高价值规则以 TOML 声明，覆盖浏览器缓存、开发工具、应用残留与用户域 orphaned 数据等常见目标。
 
 ### 智能卸载
 
@@ -230,7 +230,7 @@ $ vole completions zsh > ~/.zfunc/_vole
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓；orphaned 启发式 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |
 | 外部依赖 | 无第三方 CLI 依赖 | 部分场景推荐 `fd` 等 |
-| 规则规模 | **522** 条高价值规则 | 全量数百条 `safe_clean` 目标 |
+| 规则规模 | **523** 条高价值规则 | 全量数百条 `safe_clean` 目标 |
 | 桌面端路线 | [vole-macos](https://github.com/wukongnotnull/vole-macos) Clean MVP（内嵌 sidecar） | 另有商业 [Mole for Mac](https://mole.fit) |
 | 许可证 | GPL-3.0 | GPL-3.0 |
 
@@ -245,7 +245,7 @@ vole/
 │   ├── vole-core/         # 清理 / 卸载 / 优化编排
 │   ├── vole-sys/          # macOS 系统调用（仅 darwin）
 │   └── vole-proto/        # 冻结 NDJSON / Plan / Report
-├── data/rules/            # 522 条 TOML 清理规则
+├── data/rules/            # 523 条 TOML 清理规则
 ├── conformance/           # mole ↔ vole 对照 harness
 ├── Formula/               # Homebrew tap formula
 ├── scripts/               # 校验、发布、本地 verify

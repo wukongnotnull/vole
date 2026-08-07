@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 use super::critical::{
-    is_coresymbolicationd_cache, is_critical_deletion_path, is_private_allowlisted,
-    is_rosetta_update_bundle, normalize_policy_path,
+    is_coresymbolicationd_cache, is_critical_deletion_path, is_gpu_metal_cache_clean_target,
+    is_private_allowlisted, is_rosetta_update_bundle, normalize_policy_path,
 };
 use super::endpoint::is_endpoint_security_cache_path;
 
@@ -71,6 +71,21 @@ pub fn validate_path_for_deletion(
 
     let policy_path = normalize_policy_path(path);
 
+    // EDR first — GPU metal shapes can nest under Crowdstrike-like C/*/com.apple.metal*.
+    if is_endpoint_security_cache_path(&policy_path) {
+        return Err(ValidationError::EndpointSecurityCache);
+    }
+
+    // Exact privileged carve-outs (live + remapped fixtures) before symlink/ancestor
+    // checks: remapped trees under /var/folders or /tmp can canonicalize into
+    // /private and otherwise trip AppProtection on `com.apple.*` leaf names.
+    if is_coresymbolicationd_cache(&policy_path)
+        || is_rosetta_update_bundle(&policy_path)
+        || is_gpu_metal_cache_clean_target(&policy_path)
+    {
+        return Ok(());
+    }
+
     if let Ok(meta) = fs::symlink_metadata(path) {
         if meta.file_type().is_symlink() {
             if let Some(resolved) =
@@ -89,18 +104,6 @@ pub fn validate_path_for_deletion(
 
     if ancestor_symlink_redirects_to_critical(path, protection) {
         return Err(ValidationError::AncestorResolvesToCritical);
-    }
-
-    if is_coresymbolicationd_cache(&policy_path) {
-        return Ok(());
-    }
-
-    if is_rosetta_update_bundle(&policy_path) {
-        return Ok(());
-    }
-
-    if is_endpoint_security_cache_path(&policy_path) {
-        return Err(ValidationError::EndpointSecurityCache);
     }
 
     if is_private_allowlisted(&policy_path) {

@@ -1568,4 +1568,276 @@ mod tests {
         std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
         let _ = fs::remove_dir_all(&root);
     }
+
+    fn touch_old(path: &Path, days: u64) {
+        touch(path);
+        let ancient = SystemTime::now() - Duration::from_secs(days * 86400);
+        filetime::set_file_mtime(path, filetime::FileTime::from_system_time(ancient)).unwrap();
+    }
+
+    fn assert_plan_selects_privilege(rule: Rule, expected: &Path, rule_id: &str) {
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), None);
+        let plan = orch
+            .build_plan(&[rule], &AppProtection::new(), &[])
+            .unwrap();
+        assert_eq!(plan.entries.len(), 1, "entries={:?}", plan.entries);
+        assert_eq!(plan.entries[0].path, expected);
+        assert_eq!(plan.entries[0].rule_id, rule_id);
+    }
+
+    #[test]
+    fn plan_private_var_log_enters_old_leaf() {
+        let _guard = test_env::lock();
+        let root = scratch("plan-pvl");
+        let lib = root.join("Library");
+        let leaf = root.join("private/var/log/system.log");
+        touch_old(&leaf, 10);
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        assert_plan_selects_privilege(
+            privilege_rule(
+                crate::privilege::PRIVATE_VAR_LOG_RULE_ID,
+                "System private var logs",
+                vec!["/private/var/log".into()],
+                Some(7),
+            ),
+            &leaf,
+            crate::privilege::PRIVATE_VAR_LOG_RULE_ID,
+        );
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn plan_private_var_db_diagnostics_enters_old_leaf() {
+        let _guard = test_env::lock();
+        let root = scratch("plan-pvdd");
+        let lib = root.join("Library");
+        let leaf = root.join("private/var/db/diagnostics/log.data");
+        touch_old(&leaf, 10);
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        assert_plan_selects_privilege(
+            privilege_rule(
+                crate::privilege::PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID,
+                "System diagnostics db logs",
+                vec!["/private/var/db/diagnostics".into()],
+                Some(7),
+            ),
+            &leaf,
+            crate::privilege::PRIVATE_VAR_DB_DIAGNOSTICS_RULE_ID,
+        );
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn plan_private_var_db_diagnostic_pipeline_enters_old_leaf() {
+        let _guard = test_env::lock();
+        let root = scratch("plan-pvdp");
+        let lib = root.join("Library");
+        let leaf = root.join("private/var/db/DiagnosticPipeline/pipe.data");
+        touch_old(&leaf, 10);
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        assert_plan_selects_privilege(
+            privilege_rule(
+                crate::privilege::PRIVATE_VAR_DB_DIAGNOSTIC_PIPELINE_RULE_ID,
+                "System DiagnosticPipeline logs",
+                vec!["/private/var/db/DiagnosticPipeline".into()],
+                Some(7),
+            ),
+            &leaf,
+            crate::privilege::PRIVATE_VAR_DB_DIAGNOSTIC_PIPELINE_RULE_ID,
+        );
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn plan_private_var_db_powerlog_enters_old_leaf() {
+        let _guard = test_env::lock();
+        let root = scratch("plan-pvp");
+        let lib = root.join("Library");
+        let leaf = root.join("private/var/db/powerlog/x.data");
+        touch_old(&leaf, 10);
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        assert_plan_selects_privilege(
+            privilege_rule(
+                crate::privilege::PRIVATE_VAR_DB_POWERLOG_RULE_ID,
+                "System powerlog",
+                vec!["/private/var/db/powerlog".into()],
+                Some(7),
+            ),
+            &leaf,
+            crate::privilege::PRIVATE_VAR_DB_POWERLOG_RULE_ID,
+        );
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn plan_memory_limit_violations_enters_old_leaf() {
+        let _guard = test_env::lock();
+        let root = scratch("plan-mlv");
+        let lib = root.join("Library");
+        let leaf = root.join("private/var/db/reportmemoryexception/MemoryLimitViolations/x.data");
+        touch_old(&leaf, 40);
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        assert_plan_selects_privilege(
+            privilege_rule(
+                crate::privilege::PRIVATE_VAR_DB_MEMORY_LIMIT_VIOLATIONS_RULE_ID,
+                "Memory limit violation reports",
+                vec!["/private/var/db/reportmemoryexception/MemoryLimitViolations".into()],
+                Some(30),
+            ),
+            &leaf,
+            crate::privilege::PRIVATE_VAR_DB_MEMORY_LIMIT_VIOLATIONS_RULE_ID,
+        );
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn plan_adobe_system_logs_enters_old_leaf() {
+        let _guard = test_env::lock();
+        let root = scratch("plan-adobe");
+        let lib = root.join("Library");
+        let leaf = lib.join("Logs/Adobe/old.log");
+        touch_old(&leaf, 10);
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        assert_plan_selects_privilege(
+            privilege_rule(
+                crate::privilege::ADOBE_SYSTEM_LOGS_RULE_ID,
+                "Adobe system logs",
+                vec!["/Library/Logs/Adobe".into()],
+                Some(7),
+            ),
+            &leaf,
+            crate::privilege::ADOBE_SYSTEM_LOGS_RULE_ID,
+        );
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn plan_private_tmp_enters_old_depth1() {
+        let _guard = test_env::lock();
+        let root = scratch("plan-ptmp");
+        let lib = root.join("Library");
+        let leaf = root.join("private/tmp/old.file");
+        touch_old(&leaf, 10);
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        assert_plan_selects_privilege(
+            privilege_rule(
+                crate::privilege::PRIVATE_TMP_RULE_ID,
+                "Private tmp files",
+                vec!["/private/tmp".into()],
+                Some(7),
+            ),
+            &leaf,
+            crate::privilege::PRIVATE_TMP_RULE_ID,
+        );
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn plan_library_caches_temp_enters_old_leaf() {
+        let _guard = test_env::lock();
+        let root = scratch("plan-lct");
+        let lib = root.join("Library");
+        let leaf = lib.join("Caches/Vendor/foo.cache");
+        touch_old(&leaf, 10);
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        assert_plan_selects_privilege(
+            privilege_rule(
+                crate::privilege::LIBRARY_CACHES_TEMP_RULE_ID,
+                "Library caches temp",
+                vec!["/Library/Caches".into()],
+                Some(7),
+            ),
+            &leaf,
+            crate::privilege::LIBRARY_CACHES_TEMP_RULE_ID,
+        );
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn plan_idleassetsd_cfnetwork_tmp_enters_old_leaf() {
+        let _guard = test_env::lock();
+        let root = scratch("plan-idle");
+        let lib = root.join("Library");
+        let leaf = root
+            .join("private/var/folders/zz/uid/T/com.apple.idleassetsd/CFNetworkDownload_abc.tmp");
+        touch_old(&leaf, 10);
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        assert_plan_selects_privilege(
+            privilege_rule(
+                crate::privilege::IDLEASSETSD_CFNETWORK_TMP_RULE_ID,
+                "idleassetsd CFNetwork tmp",
+                vec!["/private/var/folders".into()],
+                Some(7),
+            ),
+            &leaf,
+            crate::privilege::IDLEASSETSD_CFNETWORK_TMP_RULE_ID,
+        );
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn plan_code_sign_clone_enters_dir() {
+        let _guard = test_env::lock();
+        let root = scratch("plan-csc");
+        let lib = root.join("Library");
+        let dir = root.join("private/var/folders/zz/uid/X/Foo.app.code_sign_clone");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("blob"), b"x").unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        assert_plan_selects_privilege(
+            privilege_rule(
+                crate::privilege::CODE_SIGN_CLONE_RULE_ID,
+                "Code sign clone",
+                vec!["/private/var/folders".into()],
+                None,
+            ),
+            &dir,
+            crate::privilege::CODE_SIGN_CLONE_RULE_ID,
+        );
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn plan_gpu_metal_caches_enters_stale_dir() {
+        let _guard = test_env::lock();
+        let root = scratch("plan-gpu");
+        let lib = root.join("Library");
+        let dir = root.join("private/var/folders/zz/uid/C/com.example.App/com.apple.metal");
+        fs::create_dir_all(&dir).unwrap();
+        touch_old(&dir.join("shader.bin"), 10);
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        assert_plan_selects_privilege(
+            privilege_rule(
+                crate::privilege::GPU_METAL_CACHES_RULE_ID,
+                "GPU Metal caches",
+                vec!["/private/var/folders".into()],
+                None,
+            ),
+            &dir,
+            crate::privilege::GPU_METAL_CACHES_RULE_ID,
+        );
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        let _ = fs::remove_dir_all(&root);
+    }
 }

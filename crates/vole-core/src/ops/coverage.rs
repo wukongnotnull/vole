@@ -52,6 +52,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          `/private/var/db/DiagnosticPipeline`（≥7 天 + sudo -n）、\
          `/private/var/db/powerlog`（≥7 天 + sudo -n）、\
          MemoryLimitViolations（≥30 天 + sudo -n）、\
+         Adobe 系统日志（Adobe/CreativeCloud/adobegc ≥7 天 + sudo -n）、\
          container stubs（CleanMyMac allowlist）、\
          Group Containers logs/caches（含受保护容器 Logs / bundle 命名日志）、\
          Handoff pasteboard（mtime>60min）、\
@@ -177,6 +178,7 @@ mod tests {
         assert!(note.contains("`/private/var/db/DiagnosticPipeline`"));
         assert!(note.contains("`/private/var/db/powerlog`"));
         assert!(note.contains("MemoryLimitViolations"));
+        assert!(note.contains("Adobe 系统日志"));
         assert!(unported.contains("交互提权") || unported.contains("桌面"));
         assert!(
             !unported.contains("Rosetta"),

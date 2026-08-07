@@ -501,6 +501,69 @@ pub fn is_private_var_db_memory_limit_violations_clean_target(path: &str) -> boo
     false
 }
 
+/// Adobe 系统日志（1.20.0）：Logs/Adobe、Logs/CreativeCloud 深度 ≤5，或 exact adobegc.log。
+pub const ADOBE_SYSTEM_LOGS_MAX_DEPTH: usize = 5;
+pub const ADOBE_LOGS_LIVE: &str = "/Library/Logs/Adobe";
+pub const CREATIVE_CLOUD_LOGS_LIVE: &str = "/Library/Logs/CreativeCloud";
+pub const ADOBEGC_LOG_LIVE: &str = "/Library/Logs/adobegc.log";
+
+fn adobe_system_log_tree_roots() -> Vec<String> {
+    let mut v = vec![
+        ADOBE_LOGS_LIVE.to_string(),
+        CREATIVE_CLOUD_LOGS_LIVE.to_string(),
+    ];
+    if let Some(base) = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY") {
+        let base = PathBuf::from(base);
+        for leaf in ["Adobe", "CreativeCloud"] {
+            if let Some(s) = base.join("Logs").join(leaf).to_str() {
+                v.push(normalize_policy_path(s));
+            }
+        }
+    }
+    v
+}
+
+fn adobegc_log_paths() -> Vec<String> {
+    let mut v = vec![ADOBEGC_LOG_LIVE.to_string()];
+    if let Some(base) = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY") {
+        let mapped = PathBuf::from(base).join("Logs/adobegc.log");
+        if let Some(s) = mapped.to_str() {
+            v.push(normalize_policy_path(s));
+        }
+    }
+    v
+}
+
+fn path_under_tree_max_depth(path: &str, root: &str, max_depth: usize) -> bool {
+    let prefix = if root.ends_with('/') {
+        root.to_string()
+    } else {
+        format!("{root}/")
+    };
+    let Some(rest) = path.strip_prefix(&prefix) else {
+        return false;
+    };
+    if rest.is_empty() {
+        return false;
+    }
+    let comps: Vec<&str> = rest.split('/').filter(|s| !s.is_empty()).collect();
+    if comps.is_empty() || comps.len() > max_depth {
+        return false;
+    }
+    !comps.iter().any(|c| *c == ".." || c.is_empty())
+}
+
+/// Adobe/CreativeCloud 树叶或 exact `adobegc.log`（不检查存在性 / 年龄）。
+pub fn is_adobe_system_log_clean_target(path: &str) -> bool {
+    let path = normalize_policy_path(path);
+    if adobegc_log_paths().contains(&path) {
+        return true;
+    }
+    adobe_system_log_tree_roots()
+        .iter()
+        .any(|root| path_under_tree_max_depth(&path, root, ADOBE_SYSTEM_LOGS_MAX_DEPTH))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -689,6 +752,29 @@ mod tests {
         ));
         assert!(!is_private_var_db_memory_limit_violations_clean_target(
             "/private/var/db/powerlog/x"
+        ));
+    }
+
+    #[test]
+    fn adobe_system_log_clean_target_shape() {
+        assert!(is_adobe_system_log_clean_target(
+            "/Library/Logs/Adobe/Installer/foo.log"
+        ));
+        assert!(is_adobe_system_log_clean_target(
+            "/Library/Logs/CreativeCloud/a/b/c/d/e.log"
+        ));
+        assert!(!is_adobe_system_log_clean_target(
+            "/Library/Logs/CreativeCloud/a/b/c/d/e/f.log"
+        ));
+        assert!(!is_adobe_system_log_clean_target("/Library/Logs/Adobe"));
+        assert!(is_adobe_system_log_clean_target(
+            "/Library/Logs/adobegc.log"
+        ));
+        assert!(!is_adobe_system_log_clean_target(
+            "/Library/Logs/adobegc.log.bak"
+        ));
+        assert!(!is_adobe_system_log_clean_target(
+            "/Library/Logs/DiagnosticReports/App.crash"
         ));
     }
 }

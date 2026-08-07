@@ -3031,6 +3031,24 @@ kind = "older_than_days"
 days = 30
 
 [[rule]]
+id = "adobe-system-logs"
+category = "user-devtools"
+label = "Adobe system logs"
+platform = ["macos"]
+paths = [
+  "/Library/Logs/Adobe",
+  "/Library/Logs/CreativeCloud",
+  "/Library/Logs/adobegc.log",
+]
+impact = "Old Adobe/CreativeCloud system logs and adobegc.log (≥7d); safe to rebuild"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "older_than_days"
+days = 7
+
+[[rule]]
 id = "arc-profile-code-cache"
 category = "user-devtools"
 label = "Arc profile code cache"

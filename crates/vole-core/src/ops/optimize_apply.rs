@@ -54,7 +54,10 @@ pub struct OptimizeApplyContext<'a> {
 }
 
 /// probe；失败则至多一次 `acquire_interactive` 后再 probe。
-fn ensure_privilege_ready(ctx: &mut OptimizeApplyContext<'_>, backend: &dyn PrivilegeBackend) -> bool {
+fn ensure_privilege_ready(
+    ctx: &mut OptimizeApplyContext<'_>,
+    backend: &dyn PrivilegeBackend,
+) -> bool {
     if backend.probe_noninteractive() {
         return true;
     }

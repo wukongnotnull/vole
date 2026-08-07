@@ -3017,6 +3017,20 @@ kind = "older_than_days"
 days = 7
 
 [[rule]]
+id = "private-var-db-memory-limit-violations"
+category = "user-devtools"
+label = "Memory limit violation reports"
+platform = ["macos"]
+paths = ["/private/var/db/reportmemoryexception/MemoryLimitViolations"]
+impact = "Old MemoryLimitViolations files (≤5 deep, ≥30d); safe to rebuild"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "older_than_days"
+days = 30
+
+[[rule]]
 id = "arc-profile-code-cache"
 category = "user-devtools"
 label = "Arc profile code cache"

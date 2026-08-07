@@ -156,6 +156,8 @@ impl Orchestrator {
                 crate::privilege::private_var_db_diagnostic_pipeline_plan_candidates()
             } else if rule.id == crate::privilege::PRIVATE_VAR_DB_POWERLOG_RULE_ID {
                 crate::privilege::private_var_db_powerlog_plan_candidates()
+            } else if rule.id == crate::privilege::PRIVATE_VAR_DB_MEMORY_LIMIT_VIOLATIONS_RULE_ID {
+                crate::privilege::private_var_db_memory_limit_violations_plan_candidates()
             } else {
                 collect_path_candidates(rule, &home)
             };

@@ -21,4 +21,8 @@
 
 ## 长尾（coverage_note）
 
-brew cask / login items / 系统 LaunchDaemons / `/Library` sudo — 未实现。
+| 顺序 | 项 | 状态 |
+|---|---|---|
+| ① | brew cask 卸载联动 | ✅ **1.33.0** |
+| ② | login items | 未实现 |
+| ③ | 系统 LaunchDaemons / `/Library` sudo | 未实现 |

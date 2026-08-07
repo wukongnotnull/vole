@@ -9,6 +9,7 @@ pub use vole_sys::vole_proto;
 mod clean_fixture;
 
 pub mod analyze;
+pub mod brew_cask;
 pub mod cancel;
 pub mod delete;
 pub mod groupcaches;

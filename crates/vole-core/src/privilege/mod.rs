@@ -122,6 +122,10 @@ pub enum PrivilegeError {
 
 pub trait PrivilegeBackend: Send + Sync {
     fn probe_noninteractive(&self) -> bool;
+    /// 尝试交互缓存凭证（如 `sudo -v`）。默认 no-op。
+    fn acquire_interactive(&self) -> bool {
+        false
+    }
     fn remove_permanent(&self, path: &Path) -> Result<(), PrivilegeError>;
     fn launchctl_unload(&self, plist: &Path) -> Result<(), PrivilegeError>;
 }
@@ -1260,5 +1264,27 @@ mod tests {
         b.remove_permanent(Path::new("/Library/LaunchDaemons/com.x.plist"))
             .unwrap();
         assert_eq!(b.removed.lock().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn recording_acquire_flips_probe_when_ok() {
+        let b = RecordingPrivilege {
+            acquire_ok: true,
+            ..RecordingPrivilege::denying()
+        };
+        assert!(!b.probe_noninteractive());
+        assert!(b.acquire_interactive());
+        assert_eq!(*b.acquire_calls.lock().unwrap(), 1);
+        assert!(b.probe_noninteractive());
+        assert!(b.acquire_interactive());
+        assert_eq!(*b.acquire_calls.lock().unwrap(), 2);
+    }
+
+    #[test]
+    fn recording_acquire_can_fail_without_flipping_probe() {
+        let b = RecordingPrivilege::denying();
+        assert!(!b.acquire_interactive());
+        assert_eq!(*b.acquire_calls.lock().unwrap(), 1);
+        assert!(!b.probe_noninteractive());
     }
 }

@@ -38,6 +38,21 @@ impl PrivilegeBackend for SudoNoninteractive {
             .unwrap_or(false)
     }
 
+    fn acquire_interactive(&self) -> bool {
+        use std::io::IsTerminal;
+        if test_no_auth() {
+            return false;
+        }
+        if !std::io::stdin().is_terminal() {
+            return false;
+        }
+        Command::new("sudo")
+            .args(["-v"])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+    }
+
     fn remove_permanent(&self, path: &Path) -> Result<(), PrivilegeError> {
         if test_no_auth() {
             return Err(PrivilegeError::Unavailable);
@@ -81,7 +96,9 @@ impl PrivilegeBackend for SudoNoninteractive {
 
 /// 测试用：记录 remove 调用，不执行真 sudo。
 pub struct RecordingPrivilege {
-    pub probe: bool,
+    pub probe: Mutex<bool>,
+    pub acquire_ok: bool,
+    pub acquire_calls: Mutex<u32>,
     pub removed: Mutex<Vec<PathBuf>>,
     pub unloaded: Mutex<Vec<PathBuf>>,
 }
@@ -89,7 +106,19 @@ pub struct RecordingPrivilege {
 impl RecordingPrivilege {
     pub fn allowing() -> Self {
         Self {
-            probe: true,
+            probe: Mutex::new(true),
+            acquire_ok: false,
+            acquire_calls: Mutex::new(0),
+            removed: Mutex::new(Vec::new()),
+            unloaded: Mutex::new(Vec::new()),
+        }
+    }
+
+    pub fn denying() -> Self {
+        Self {
+            probe: Mutex::new(false),
+            acquire_ok: false,
+            acquire_calls: Mutex::new(0),
             removed: Mutex::new(Vec::new()),
             unloaded: Mutex::new(Vec::new()),
         }
@@ -98,11 +127,19 @@ impl RecordingPrivilege {
 
 impl PrivilegeBackend for RecordingPrivilege {
     fn probe_noninteractive(&self) -> bool {
-        self.probe
+        *self.probe.lock().unwrap()
+    }
+
+    fn acquire_interactive(&self) -> bool {
+        *self.acquire_calls.lock().unwrap() += 1;
+        if self.acquire_ok {
+            *self.probe.lock().unwrap() = true;
+        }
+        self.acquire_ok
     }
 
     fn remove_permanent(&self, path: &Path) -> Result<(), PrivilegeError> {
-        if !self.probe {
+        if !*self.probe.lock().unwrap() {
             return Err(PrivilegeError::Unavailable);
         }
         if !path_allowed_for_privilege(path) {
@@ -116,7 +153,7 @@ impl PrivilegeBackend for RecordingPrivilege {
     }
 
     fn launchctl_unload(&self, plist: &Path) -> Result<(), PrivilegeError> {
-        if !self.probe {
+        if !*self.probe.lock().unwrap() {
             return Err(PrivilegeError::Unavailable);
         }
         if !path_allowed_for_privilege(plist) {

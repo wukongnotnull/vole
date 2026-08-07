@@ -15,12 +15,19 @@ pub fn render_analyze(
     selected: usize,
     scanning: bool,
     theme: &Theme,
+    local_snapshots_tip: Option<&str>,
 ) {
     let area = frame.area();
+    let tip_h = if local_snapshots_tip.is_some() {
+        1u16
+    } else {
+        0
+    };
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(2),
+            Constraint::Length(tip_h),
             Constraint::Min(6),
             Constraint::Length(5),
         ])
@@ -45,6 +52,10 @@ pub fn render_analyze(
     };
     frame.render_widget(Paragraph::new(header), chunks[0]);
 
+    if let Some(tip) = local_snapshots_tip {
+        frame.render_widget(Paragraph::new(Line::from(tip.to_string())), chunks[1]);
+    }
+
     let items: Vec<ListItem> = out
         .entries
         .iter()
@@ -62,7 +73,7 @@ pub fn render_analyze(
         .collect();
 
     let list = List::new(items);
-    frame.render_widget(list, chunks[1]);
+    frame.render_widget(list, chunks[2]);
 
     let large_lines: Vec<Line> = out
         .large_files
@@ -76,7 +87,7 @@ pub fn render_analyze(
     if out.large_files.is_empty() {
         block_lines.push(Line::from("—"));
     }
-    frame.render_widget(Paragraph::new(block_lines), chunks[2]);
+    frame.render_widget(Paragraph::new(block_lines), chunks[3]);
 }
 
 fn human(bytes: u64) -> String {

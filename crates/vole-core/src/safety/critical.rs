@@ -564,6 +564,39 @@ pub fn is_adobe_system_log_clean_target(path: &str) -> bool {
         .any(|root| path_under_tree_max_depth(&path, root, ADOBE_SYSTEM_LOGS_MAX_DEPTH))
 }
 
+/// `/private/tmp` + `/private/var/tmp`（1.21.0）：仅相对根深度 1 普通文件叶。
+///
+/// 故意严于 Mole `safe_sudo_find_delete` 的默认 maxdepth 5，对齐 probe 的 maxdepth 1。
+pub const PRIVATE_TMP_MAX_DEPTH: usize = 1;
+pub const PRIVATE_TMP_LIVE: &str = "/private/tmp";
+pub const PRIVATE_VAR_TMP_LIVE: &str = "/private/var/tmp";
+
+fn private_tmp_mapped_roots() -> Vec<String> {
+    let mut v = vec![
+        PRIVATE_TMP_LIVE.to_string(),
+        PRIVATE_VAR_TMP_LIVE.to_string(),
+    ];
+    if let Some(base) = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY") {
+        let parent = PathBuf::from(base).parent().map(PathBuf::from);
+        if let Some(parent) = parent {
+            for leaf in ["private/tmp", "private/var/tmp"] {
+                if let Some(s) = parent.join(leaf).to_str() {
+                    v.push(normalize_policy_path(s));
+                }
+            }
+        }
+    }
+    v
+}
+
+/// 是否为本规则允许的 clean 目标路径形状（不检查存在性 / 年龄）。
+pub fn is_private_tmp_clean_target(path: &str) -> bool {
+    let path = normalize_policy_path(path);
+    private_tmp_mapped_roots()
+        .iter()
+        .any(|root| path_under_tree_max_depth(&path, root, PRIVATE_TMP_MAX_DEPTH))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -776,5 +809,16 @@ mod tests {
         assert!(!is_adobe_system_log_clean_target(
             "/Library/Logs/DiagnosticReports/App.crash"
         ));
+    }
+
+    #[test]
+    fn private_tmp_clean_target_shape() {
+        assert!(is_private_tmp_clean_target("/private/tmp/old.file"));
+        assert!(is_private_tmp_clean_target("/private/var/tmp/old.file"));
+        assert!(!is_private_tmp_clean_target("/private/tmp/sub/old.file"));
+        assert!(!is_private_tmp_clean_target("/private/var/tmp/a/b"));
+        assert!(!is_private_tmp_clean_target("/private/tmp"));
+        assert!(!is_private_tmp_clean_target("/private/var/tmp"));
+        assert!(!is_private_tmp_clean_target("/tmp/old.file"));
     }
 }

@@ -3049,6 +3049,20 @@ kind = "older_than_days"
 days = 7
 
 [[rule]]
+id = "private-tmp"
+category = "user-devtools"
+label = "Private temp files"
+platform = ["macos"]
+paths = ["/private/tmp", "/private/var/tmp"]
+impact = "Old files directly under /private/tmp and /private/var/tmp (≥7d, depth 1); safe to rebuild"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "older_than_days"
+days = 7
+
+[[rule]]
 id = "arc-profile-code-cache"
 category = "user-devtools"
 label = "Arc profile code cache"

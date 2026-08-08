@@ -236,4 +236,29 @@ mod tests {
         run_shared_file_list_repair(&path, &fake).unwrap();
         assert!(fake.removed.lock().unwrap().is_empty());
     }
+
+    #[test]
+    fn plan_test_mode_emits_nothing() {
+        let home = tempdir().unwrap();
+        let fake = FakeSharedFileListDeps {
+            list_error: Mutex::new(Some(SharedFileListError::TestMode)),
+            files: Mutex::new(vec![home.path().join("bad.sfl2")]),
+            corrupt: Mutex::new(vec![home.path().join("bad.sfl2")]),
+            ..Default::default()
+        };
+        assert!(plan_shared_file_list_repair(home.path(), &fake).is_empty());
+    }
+
+    #[test]
+    fn module_source_forbids_sfltool_invocation() {
+        let src = include_str!("shared_file_list.rs");
+        assert!(
+            !src.contains("Command::new(\"sfltool\")"),
+            "shared_file_list_repair must not invoke sfltool"
+        );
+        assert!(
+            !src.contains(".arg(\"sfltool\")") && !src.contains("\"sfltool\","),
+            "shared_file_list_repair must not pass sfltool as a command argument"
+        );
+    }
 }

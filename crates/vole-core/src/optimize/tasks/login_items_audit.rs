@@ -453,9 +453,17 @@ pub fn plan_login_items_audit(
 }
 
 pub fn is_unavailable_audit_path(path: &Path) -> bool {
+    // Sentinel is exactly `…/.vole-optimize-action/login_items_audit`.
+    // Broken items live one level deeper (`…/login_items_audit/<name>`), including
+    // when the login-item name itself is `login_items_audit`.
     path.file_name()
         .and_then(|s| s.to_str())
         .is_some_and(|n| n == "login_items_audit")
+        && path
+            .parent()
+            .and_then(|p| p.file_name())
+            .and_then(|s| s.to_str())
+            .is_some_and(|n| n == ".vole-optimize-action")
 }
 
 /// Hermetic fake for plan/apply tests.
@@ -585,6 +593,32 @@ mod tests {
         assert_eq!(
             extract_app_path(line).as_deref(),
             Some("/Users/x/Applications/Foo.app")
+        );
+    }
+
+    #[test]
+    fn unavailable_path_not_confused_with_broken_item_named_like_task() {
+        let home = tempfile::tempdir().unwrap();
+        let sentinel = unavailable_sentinel(home.path());
+        assert!(is_unavailable_audit_path(&sentinel.path));
+
+        let broken = broken_candidate(home.path(), "login_items_audit");
+        assert!(
+            !is_unavailable_audit_path(&broken.path),
+            "broken item whose name equals the task id must still apply as report-only noop"
+        );
+    }
+
+    #[test]
+    fn module_source_forbids_unprivileged_sfltool() {
+        let src = include_str!("login_items_audit.rs");
+        assert!(
+            !src.contains("Command::new(\"sfltool\")"),
+            "must not invoke unprivileged sfltool (macOS admin GUI)"
+        );
+        assert!(
+            src.contains("[\"-n\", \"sfltool\", \"dumpbtm\"]"),
+            "privileged dumpbtm must go through sudo -n"
         );
     }
 }

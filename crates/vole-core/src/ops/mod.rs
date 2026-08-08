@@ -3,6 +3,7 @@
 mod apply_plan;
 mod clean_hints;
 mod coverage;
+mod install_origin;
 mod installer_apply;
 mod installer_plan;
 mod optimize_apply;
@@ -37,6 +38,9 @@ pub use coverage::{
     GROUP_CONTAINERS_TRUNCATED_WARN, GROUP_CONTAINERS_WARN, HANDOFF_PASTEBOARD_TRUNCATED_WARN,
     HANDOFF_PASTEBOARD_WARN, MOLE_INVENTORY_TOTAL, ORPHAN_LIBRARY_WARN, SYSTEM_SERVICES_WARN,
     TIME_MACHINE_BUSY_WARN,
+};
+pub use install_origin::{
+    default_config_dir, detect_install_layout, InstallLayout, InstallOrigin,
 };
 pub use installer_apply::{
     apply_installer_plan, apply_installer_proto_plan, InstallerApplyContext, InstallerApplyError,

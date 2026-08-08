@@ -2,6 +2,7 @@
 
 mod actions;
 mod delete_paths;
+mod login_items_audit;
 
 pub use actions::{
     apply_optimize_action, has_active_vpn, is_memory_pressure_high, needs_disk_permissions_repair,
@@ -15,4 +16,8 @@ pub use actions::{
 pub use delete_paths::{
     discover_cache_refresh, discover_fix_broken_configs, discover_launch_agents_cleanup,
     discover_saved_state_cleanup, OptimizeCandidate, SAVED_STATE_AGE_DAYS,
+};
+pub use login_items_audit::{
+    plan_login_items_audit, FakeLoginItemsAuditDeps, LiveLoginItemsAuditDeps, LoginItemSnapshot,
+    LoginItemsAuditDeps, LoginItemsAuditError,
 };

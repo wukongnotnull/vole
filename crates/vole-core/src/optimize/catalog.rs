@@ -148,7 +148,7 @@ const CATALOG: &[OptimizeTask] = &[
         kind: OptimizeTaskKind::Action,
         title: "Login Items",
         description: "Audit login items for broken entries",
-        in_m3: false,
+        in_m3: true,
     },
     OptimizeTask {
         id: "quarantine_cleanup",
@@ -254,11 +254,12 @@ mod tests {
         assert!(main.contains(&"network_stack_optimize"));
         assert!(main.contains(&"disk_permissions_repair"));
         assert!(main.contains(&"periodic_maintenance"));
+        assert!(main.contains(&"login_items_audit"));
         assert!(!main.contains(&"spotlight_index_optimize"));
         assert!(!main.contains(&"disk_verify"));
-        assert!(!main.contains(&"login_items_audit"));
         assert!(!main.contains(&"shared_file_list_repair"));
-        assert_eq!(main.len(), 18);
+        assert!(!main.contains(&"spotlight_orphan_rules_cleanup"));
+        assert_eq!(main.len(), 19);
     }
 
     #[test]

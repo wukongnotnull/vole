@@ -238,7 +238,9 @@ mod tests {
             .any(|e| e.rule_id == "optimize:action:dock_refresh"));
         let note = plan.coverage_note.unwrap();
         assert!(!note.contains("Memory Optimization"));
-        assert!(note.contains("Network Stack") || note.contains("Spotlight"));
+        assert!(!note.contains("Spotlight Optimization"));
+        assert!(!note.contains("Spotlight Orphan Rules"));
+        assert!(note.contains("Disk Health") || note.contains("Shared File Lists"));
     }
 
     #[test]
@@ -289,6 +291,12 @@ mod tests {
         assert!(!note.contains("Permission Repair"));
         assert!(!note.contains("Periodic Maintenance"));
         assert!(!note.contains("Login Items"));
-        assert!(note.contains("Spotlight") || note.contains("Shared File Lists"));
+        assert!(!note.contains("Spotlight Optimization"));
+        assert!(!note.contains("Spotlight Orphan Rules"));
+        assert!(note.contains("Disk Health") || note.contains("Shared File Lists"));
+        assert!(plan
+            .entries
+            .iter()
+            .any(|e| e.rule_id == "optimize:action:spotlight_index_optimize"));
     }
 }

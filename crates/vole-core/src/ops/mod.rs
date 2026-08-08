@@ -15,6 +15,7 @@ mod purge_plan;
 mod touchid;
 mod uninstall_apply;
 mod uninstall_plan;
+mod update;
 
 use crate::vole_proto::StreamEvent;
 use crossbeam_channel::Sender;
@@ -70,6 +71,10 @@ pub use touchid::{
     pam_paths_injected, plan_touchid, resolve_touchid_paths, touchid_auth_blocked, FakePamInstall,
     LivePamInstall, PamInstall, TouchIdAction, TouchIdError, TouchIdOutcome, TouchIdPaths,
     TouchIdPlan, PAM_TID_LINE,
+};
+pub use update::{
+    run_update, verify_sha256, CurlUpdateTransport, ExecVersionProbe, FakeUpdateTransport,
+    UpdateError, UpdateOptions, UpdateOutcome, UpdateTransport, VersionProbe,
 };
 pub use uninstall_apply::{
     apply_uninstall_plan, apply_uninstall_proto_plan, UninstallApplyContext, UninstallApplyError,

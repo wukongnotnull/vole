@@ -40,9 +40,7 @@ pub use coverage::{
     HANDOFF_PASTEBOARD_WARN, MOLE_INVENTORY_TOTAL, ORPHAN_LIBRARY_WARN, SYSTEM_SERVICES_WARN,
     TIME_MACHINE_BUSY_WARN,
 };
-pub use install_origin::{
-    default_config_dir, detect_install_layout, InstallLayout, InstallOrigin,
-};
+pub use install_origin::{default_config_dir, detect_install_layout, InstallLayout, InstallOrigin};
 pub use installer_apply::{
     apply_installer_plan, apply_installer_proto_plan, InstallerApplyContext, InstallerApplyError,
     InstallerApplyOptions,
@@ -72,10 +70,6 @@ pub use touchid::{
     LivePamInstall, PamInstall, TouchIdAction, TouchIdError, TouchIdOutcome, TouchIdPaths,
     TouchIdPlan, PAM_TID_LINE,
 };
-pub use update::{
-    run_update, verify_sha256, CurlUpdateTransport, ExecVersionProbe, FakeUpdateTransport,
-    UpdateError, UpdateOptions, UpdateOutcome, UpdateTransport, VersionProbe,
-};
 pub use uninstall_apply::{
     apply_uninstall_plan, apply_uninstall_proto_plan, UninstallApplyContext, UninstallApplyError,
     UninstallApplyOptions,
@@ -83,6 +77,10 @@ pub use uninstall_apply::{
 pub use uninstall_plan::{
     build_uninstall_plan, build_uninstall_plan_with_brew, default_applications_dirs,
     scan_applications, UninstallPlanOptions,
+};
+pub use update::{
+    run_update, verify_sha256, CurlUpdateTransport, ExecVersionProbe, FakeUpdateTransport,
+    UpdateError, UpdateOptions, UpdateOutcome, UpdateTransport, VersionProbe,
 };
 
 #[derive(Debug, Error)]

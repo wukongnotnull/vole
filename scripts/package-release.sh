@@ -50,4 +50,11 @@ build_arch x86_64-apple-darwin
 echo "Artifacts:"
 package_arch aarch64-apple-darwin
 package_arch x86_64-apple-darwin
-echo "Done. Upload dist/*.tar.gz to GitHub Release (tag v${VERSION})."
+(
+  cd "$OUT_DIR"
+  shasum -a 256 \
+    "vole-${VERSION}-aarch64-apple-darwin.tar.gz" \
+    "vole-${VERSION}-x86_64-apple-darwin.tar.gz" > SHA256SUMS
+)
+echo "  $OUT_DIR/SHA256SUMS"
+echo "Done. Upload dist/*.tar.gz and dist/SHA256SUMS to GitHub Release (tag v${VERSION})."

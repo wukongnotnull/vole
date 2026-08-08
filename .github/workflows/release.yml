@@ -58,6 +58,8 @@ jobs:
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/vole-*.tar.gz
+          files: |
+            dist/vole-*.tar.gz
+            dist/SHA256SUMS
           body_path: docs/releases/${{ github.ref_name }}.md
           fail_on_unmatched_files: true

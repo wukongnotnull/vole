@@ -42,9 +42,7 @@ pub struct UpdateOptions {
 
 impl UpdateOptions {
     pub fn arch(&self) -> String {
-        self.arch_triple
-            .clone()
-            .unwrap_or_else(host_arch_triple)
+        self.arch_triple.clone().unwrap_or_else(host_arch_triple)
     }
 }
 
@@ -58,14 +56,18 @@ fn host_arch_triple() -> String {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpdateOutcome {
-    AlreadyLatest { version: String },
+    AlreadyLatest {
+        version: String,
+    },
     Check {
         current: String,
         latest: Option<String>,
         origin: InstallOrigin,
         channel: String,
     },
-    Updated { version: String },
+    Updated {
+        version: String,
+    },
     BrewPreferred,
     NightlyBrewRejected,
     Failed(String),
@@ -96,9 +98,8 @@ impl VersionProbe for ExecVersionProbe {
             )));
         }
         let text = String::from_utf8_lossy(&out.stdout);
-        parse_version_token(text.lines().next().unwrap_or("")).ok_or_else(|| {
-            UpdateError::msg(format!("unable to parse --version output: {text}"))
-        })
+        parse_version_token(text.lines().next().unwrap_or(""))
+            .ok_or_else(|| UpdateError::msg(format!("unable to parse --version output: {text}")))
     }
 }
 
@@ -171,10 +172,7 @@ impl CurlUpdateTransport {
 
 impl UpdateTransport for CurlUpdateTransport {
     fn latest_stable_tag(&self) -> Result<String, UpdateError> {
-        let url = format!(
-            "https://api.github.com/repos/{}/releases/latest",
-            self.repo
-        );
+        let url = format!("https://api.github.com/repos/{}/releases/latest", self.repo);
         let body = curl_to_string(&url)?;
         let tag = body
             .lines()
@@ -203,10 +201,7 @@ impl UpdateTransport for CurlUpdateTransport {
     }
 
     fn latest_main_commit(&self) -> Result<String, UpdateError> {
-        let url = format!(
-            "https://api.github.com/repos/{}/commits/main",
-            self.repo
-        );
+        let url = format!("https://api.github.com/repos/{}/commits/main", self.repo);
         let body = curl_to_string(&url)?;
         let key = "\"sha\"";
         let idx = body
@@ -235,7 +230,14 @@ impl UpdateTransport for CurlUpdateTransport {
             fs::create_dir_all(parent)?;
         }
         let status = Command::new("curl")
-            .args(["-fsSL", "--connect-timeout", "10", "--max-time", "120", "-o"])
+            .args([
+                "-fsSL",
+                "--connect-timeout",
+                "10",
+                "--max-time",
+                "120",
+                "-o",
+            ])
             .arg(dest)
             .arg(url)
             .status()
@@ -344,11 +346,9 @@ fn run_stable(
     let tarball_path = tmp.join(&asset);
     let sums_path = tmp.join("SHA256SUMS");
 
-    transport.download(&sums_url, &sums_path).map_err(|e| {
-        UpdateError::msg(format!(
-            "SHA256SUMS download failed (fail-closed): {e}"
-        ))
-    })?;
+    transport
+        .download(&sums_url, &sums_path)
+        .map_err(|e| UpdateError::msg(format!("SHA256SUMS download failed (fail-closed): {e}")))?;
     let sums_text = fs::read_to_string(&sums_path)?;
     transport.download(&tarball_url, &tarball_path)?;
 
@@ -421,7 +421,9 @@ fn run_nightly(
 
 pub fn verify_sha256(file: &Path, sums_text: &str, asset_name: &str) -> Result<(), UpdateError> {
     let expected = extract_checksum(sums_text, asset_name).ok_or_else(|| {
-        UpdateError::msg(format!("checksum missing for asset {asset_name} (fail-closed)"))
+        UpdateError::msg(format!(
+            "checksum missing for asset {asset_name} (fail-closed)"
+        ))
     })?;
     let actual = file_sha256_hex(file)?;
     if !actual.eq_ignore_ascii_case(&expected) {
@@ -668,7 +670,8 @@ mod tests {
         let latest = "9.9.9";
         let tar_bytes = make_tarball(latest, arch);
         let asset = format!("vole-{latest}-{arch}.tar.gz");
-        let sums = format!("deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef  {asset}\n");
+        let sums =
+            format!("deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef  {asset}\n");
         let base = format!("https://github.com/wukongnotnull/vole/releases/download/v{latest}");
         let transport = FakeUpdateTransport::new(latest)
             .with_file(format!("{base}/{asset}"), tar_bytes)

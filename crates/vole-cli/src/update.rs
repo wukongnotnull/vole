@@ -31,8 +31,7 @@ fn run_update_inner(opts: UpdateCliOptions) -> io::Result<i32> {
     let config_dir = std::env::var_os("VOLE_CONFIG_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(default_config_dir);
-    let repo = std::env::var("VOLE_UPDATE_REPO")
-        .unwrap_or_else(|_| "wukongnotnull/vole".into());
+    let repo = std::env::var("VOLE_UPDATE_REPO").unwrap_or_else(|_| "wukongnotnull/vole".into());
 
     let mut update_opts = UpdateOptions {
         force: opts.force,
@@ -79,11 +78,7 @@ fn resolve_binary_path() -> io::Result<PathBuf> {
 
 fn transport_for(repo: &str) -> Box<dyn UpdateTransport> {
     if let Ok(tag) = std::env::var("VOLE_UPDATE_FAKE") {
-        let mut fake = FakeUpdateTransport::new(if tag.is_empty() {
-            "0.0.0".into()
-        } else {
-            tag
-        });
+        let mut fake = FakeUpdateTransport::new(if tag.is_empty() { "0.0.0".into() } else { tag });
         if let Ok(commit) = std::env::var("VOLE_UPDATE_FAKE_COMMIT") {
             fake.latest_commit = commit;
         }

@@ -48,7 +48,8 @@ pub fn detect_install_layout(binary_path: &Path, config_dir: Option<&Path>) -> I
         };
     }
 
-    let canonical = std::fs::canonicalize(binary_path).unwrap_or_else(|_| binary_path.to_path_buf());
+    let canonical =
+        std::fs::canonicalize(binary_path).unwrap_or_else(|_| binary_path.to_path_buf());
     let prefix_bin = canonical
         .parent()
         .map(Path::to_path_buf)

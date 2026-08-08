@@ -225,8 +225,8 @@ $ vole completions zsh > ~/.zfunc/_vole
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | **2.3.0**（产品 v2）：`touchid` + `installer` + `clean` hints + `purge` + 命令别名（`optimise`/`analyse`/`completion`）+ 近满配 optimize/uninstall/clean；余项：`update`/`remove`、Mole 广谱 `/Library` 边缘 / 桌面 Helper | 成熟、功能最全 |
-| 核心命令 | `status` / `analyze` / `clean` / `history` / `uninstall` / `optimize` / `purge` / `installer` / `touchid` | 另有 `update` / `remove` 等 |
+| 成熟度 | **2.4.0**（产品 v2）：自更新 `update` + `touchid` + `installer` + `clean` hints + `purge` + 命令别名（`optimise`/`analyse`/`completion`）+ 近满配 optimize/uninstall/clean；余项：`remove`、Mole 广谱 `/Library` 边缘 / 桌面 Helper | 成熟、功能最全 |
+| 核心命令 | `status` / `analyze` / `clean` / `history` / `uninstall` / `optimize` / `purge` / `installer` / `touchid` / `update` | 另有 `remove` 等 |
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓；orphaned 启发式 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |
 | 外部依赖 | 无第三方 CLI 依赖 | 部分场景推荐 `fd` 等 |

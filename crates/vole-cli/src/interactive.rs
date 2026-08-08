@@ -14,13 +14,13 @@ pub fn run() -> i32 {
     loop {
         if writeln!(
             stdout,
-            "\nVole\n  1) status (--json snapshot)\n  2) clean --plan\n  3) uninstall --plan\n  4) optimize --plan\n  5) history\n  6) quit"
+            "\nVole\n  1) status (--json snapshot)\n  2) clean --plan\n  3) uninstall --plan\n  4) optimize --plan\n  5) purge --plan\n  6) history\n  7) quit"
         )
         .is_err()
         {
             return 1;
         }
-        if write!(stdout, "Select [1-6]: ").is_err() || stdout.flush().is_err() {
+        if write!(stdout, "Select [1-7]: ").is_err() || stdout.flush().is_err() {
             return 1;
         }
 
@@ -55,11 +55,16 @@ pub fn run() -> i32 {
                 }
             }
             "5" => {
+                if let Err(msg) = run_child(&["purge", "--plan"]) {
+                    let _ = writeln!(stdout, "{msg}");
+                }
+            }
+            "6" => {
                 if let Err(msg) = run_child(&["history"]) {
                     let _ = writeln!(stdout, "{msg}");
                 }
             }
-            "6" | "q" | "quit" | "exit" => return 0,
+            "7" | "q" | "quit" | "exit" => return 0,
             other => {
                 let _ = writeln!(stdout, "Unknown choice: {other}");
             }
@@ -80,11 +85,8 @@ fn run_child(args: &[&str]) -> Result<(), String> {
     } else {
         Err(format!(
             "vole {}: exited {}",
-            args.first().unwrap_or(&"?"),
-            status
-                .code()
-                .map(|c| c.to_string())
-                .unwrap_or_else(|| "signal".into())
+            args.join(" "),
+            status.code().unwrap_or(-1)
         ))
     }
 }

@@ -6,6 +6,8 @@ mod optimize_apply;
 mod optimize_plan;
 mod plan;
 mod proto_plan;
+mod purge_apply;
+mod purge_plan;
 mod uninstall_apply;
 mod uninstall_plan;
 
@@ -35,6 +37,13 @@ pub use optimize_apply::{
 pub use optimize_plan::{build_optimize_plan, OptimizePlanError, OptimizePlanOptions};
 pub use plan::{Plan, PlanBuilder, PlanEntry, PlanNotice, DEFAULT_PLAN_TTL};
 pub use proto_plan::{plan_to_proto, ProtoPlanError};
+pub use purge_apply::{
+    apply_purge_plan, apply_purge_proto_plan, PurgeApplyContext, PurgeApplyError, PurgeApplyOptions,
+};
+pub use purge_plan::{
+    build_purge_plan, is_protected_purge_artifact, PurgePlanError, PurgePlanOptions,
+    DEFAULT_PURGE_MIN_AGE_DAYS, PURGE_TARGETS,
+};
 pub use uninstall_apply::{
     apply_uninstall_plan, apply_uninstall_proto_plan, UninstallApplyContext, UninstallApplyError,
     UninstallApplyOptions,

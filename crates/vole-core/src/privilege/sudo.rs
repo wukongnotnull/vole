@@ -138,7 +138,9 @@ impl PrivilegeBackend for SudoNoninteractive {
         if status.success() {
             Ok(())
         } else {
-            Err(PrivilegeError::CommandFailed(format!("purge exit {status}")))
+            Err(PrivilegeError::CommandFailed(format!(
+                "purge exit {status}"
+            )))
         }
     }
 }

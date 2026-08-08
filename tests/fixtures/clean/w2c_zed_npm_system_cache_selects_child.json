@@ -1,0 +1,14 @@
+{
+  "id": "w2c_zed_npm_system_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "zed-npm-system-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Application Support/Zed/node/cache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Application Support/Zed/node/cache/item|Zed system-node npm cache"
+  ],
+  "expect_not_selected": []
+}

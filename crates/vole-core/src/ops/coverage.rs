@@ -68,6 +68,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          optimize memory_pressure_relief（高压时 sudo -n purge）、\
          本地快照报告（status/analyze · 仅 list）、\
          Filo production Cache、\
+         Zed system-node npm cache、\
          uninstall Homebrew Cask 联动（`brew uninstall --cask`/`--zap`，sibling→nozap）、\
          uninstall Login Items（按名 osascript + LoginItems helper `launchctl bootout`，sibling/名冲突守卫）、\
          uninstall 系统 LaunchDaemons/`/Library` sudo 残留主路径（`PrivilegeBackend` unload + permanent）、\
@@ -158,6 +159,13 @@ mod tests {
     }
 
     #[test]
+    fn coverage_note_mentions_zed_system_node_npm_cache() {
+        let note = coverage_note(535);
+        assert!(note.contains("Zed system-node npm cache"));
+        assert!(note.contains("已落地"));
+    }
+
+    #[test]
     fn coverage_note_mentions_mole_and_count() {
         let note = coverage_note(150);
         assert!(note.contains("150"));
@@ -220,6 +228,7 @@ mod tests {
         );
         assert!(note.contains("本地快照报告（status/analyze"));
         assert!(note.contains("Filo production Cache"));
+        assert!(note.contains("Zed system-node npm cache"));
         assert!(note.contains("uninstall Homebrew Cask 联动"));
         assert!(note.contains("uninstall Login Items"));
         assert!(

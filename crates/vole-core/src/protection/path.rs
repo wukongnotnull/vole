@@ -44,9 +44,8 @@ fn is_container_cache_or_tmp(path: &str) -> bool {
 /// QQ Music Mac 容器内可再生 AS 缓存（对齐 Mole `iRRCache`/`iLog`/`iCache`/`iTemp`）。
 /// 不含 `iDownloadProxy`（离线下载）。
 fn is_qq_music_mac_as_cache_path(path: &str) -> bool {
-    qq_music_mac_as_leaf_dir(path).is_some_and(|dir| {
-        matches!(dir, "iRRCache" | "iLog" | "iCache" | "iTemp")
-    })
+    qq_music_mac_as_leaf_dir(path)
+        .is_some_and(|dir| matches!(dir, "iRRCache" | "iLog" | "iCache" | "iTemp"))
 }
 
 /// 容器 AS 下非上述四目录的路径（如 `iDownloadProxy`）须保护。

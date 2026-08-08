@@ -134,7 +134,7 @@ const CATALOG: &[OptimizeTask] = &[
         kind: OptimizeTaskKind::Action,
         title: "Shared File Lists",
         description: "Repair corrupted Finder favorites and recent documents",
-        in_m3: false,
+        in_m3: true,
     },
     OptimizeTask {
         id: "disk_verify",
@@ -257,9 +257,9 @@ mod tests {
         assert!(main.contains(&"login_items_audit"));
         assert!(main.contains(&"spotlight_orphan_rules_cleanup"));
         assert!(main.contains(&"spotlight_index_optimize"));
+        assert!(main.contains(&"shared_file_list_repair"));
         assert!(!main.contains(&"disk_verify"));
-        assert!(!main.contains(&"shared_file_list_repair"));
-        assert_eq!(main.len(), 21);
+        assert_eq!(main.len(), 22);
     }
 
     #[test]

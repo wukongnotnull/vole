@@ -3,6 +3,7 @@
 mod actions;
 mod delete_paths;
 mod login_items_audit;
+mod shared_file_list;
 mod spotlight_index;
 mod spotlight_orphan_rules;
 
@@ -22,6 +23,10 @@ pub use delete_paths::{
 pub use login_items_audit::{
     plan_login_items_audit, FakeLoginItemsAuditDeps, LiveLoginItemsAuditDeps, LoginItemSnapshot,
     LoginItemsAuditDeps, LoginItemsAuditError,
+};
+pub use shared_file_list::{
+    plan_shared_file_list_repair, FakeSharedFileListDeps, LiveSharedFileListDeps,
+    SharedFileListDeps, SharedFileListError,
 };
 pub use spotlight_index::plan_spotlight_index_optimize;
 pub use spotlight_orphan_rules::{

@@ -2,6 +2,7 @@
 
 mod actions;
 mod delete_paths;
+mod disk_verify;
 mod login_items_audit;
 mod shared_file_list;
 mod spotlight_index;
@@ -19,6 +20,9 @@ pub use actions::{
 pub use delete_paths::{
     discover_cache_refresh, discover_fix_broken_configs, discover_launch_agents_cleanup,
     discover_saved_state_cleanup, OptimizeCandidate, SAVED_STATE_AGE_DAYS,
+};
+pub use disk_verify::{
+    plan_disk_verify, DiskVerifyDeps, DiskVerifyError, FakeDiskVerifyDeps, LiveDiskVerifyDeps,
 };
 pub use login_items_audit::{
     plan_login_items_audit, FakeLoginItemsAuditDeps, LiveLoginItemsAuditDeps, LoginItemSnapshot,

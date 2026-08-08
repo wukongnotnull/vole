@@ -558,6 +558,7 @@ pub fn apply_optimize_action(
         "spotlight_orphan_rules_cleanup" => apply_spotlight_orphan_rules_cleanup(),
         "spotlight_index_optimize" => apply_spotlight_index_optimize(privilege),
         "shared_file_list_repair" => apply_shared_file_list_repair(path),
+        "disk_verify" => apply_disk_verify(),
         _ => Err(OptimizeActionError::Failed),
     }
 }
@@ -611,6 +612,22 @@ fn apply_shared_file_list_repair(path: &Path) -> Result<(), OptimizeActionError>
         Ok(()) => Ok(()),
         Err(SharedFileListError::TestMode) => Err(OptimizeActionError::Skipped),
         Err(SharedFileListError::Unavailable) => Err(OptimizeActionError::Failed),
+    }
+}
+
+fn apply_disk_verify() -> Result<(), OptimizeActionError> {
+    use super::disk_verify::{run_disk_verify, DiskVerifyError, LiveDiskVerifyDeps};
+    use crate::delete::test_no_auth;
+
+    if test_no_auth() {
+        return Err(OptimizeActionError::Skipped);
+    }
+    match run_disk_verify(&LiveDiskVerifyDeps) {
+        Ok(_) => Ok(()),
+        Err(DiskVerifyError::TestMode) => Err(OptimizeActionError::Skipped),
+        Err(DiskVerifyError::Unavailable) | Err(DiskVerifyError::TimedOut) => {
+            Err(OptimizeActionError::Failed)
+        }
     }
 }
 
@@ -1230,5 +1247,26 @@ mod tests {
         std::env::remove_var("VOLE_TEST_SPOTLIGHT_STATUS");
         std::env::remove_var("VOLE_TEST_AC_POWER");
         std::env::remove_var("VOLE_TEST_SPOTLIGHT_SLOW");
+    }
+
+    #[test]
+    fn apply_disk_verify_test_no_auth_skipped() {
+        let _guard = super::super::disk_verify::test_env_lock();
+        std::env::set_var("VOLE_ENABLE_DISK_VERIFY", "1");
+        std::env::set_var("VOLE_TEST_NO_AUTH", "1");
+        let path = Path::new("/tmp/.vole-optimize-action/disk_verify");
+        let err = apply_optimize_action("disk_verify", path, None, &mut false).unwrap_err();
+        assert_eq!(err, OptimizeActionError::Skipped);
+        std::env::remove_var("VOLE_ENABLE_DISK_VERIFY");
+        std::env::remove_var("VOLE_TEST_NO_AUTH");
+    }
+
+    #[test]
+    fn apply_disk_verify_noop_without_opt_in() {
+        let _guard = super::super::disk_verify::test_env_lock();
+        std::env::remove_var("VOLE_ENABLE_DISK_VERIFY");
+        std::env::remove_var("VOLE_TEST_NO_AUTH");
+        let path = Path::new("/tmp/.vole-optimize-action/disk_verify");
+        apply_optimize_action("disk_verify", path, None, &mut false).unwrap();
     }
 }

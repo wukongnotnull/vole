@@ -71,6 +71,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          optimize spotlight_orphan_rules_cleanup（仅删确认已卸载 app 的 Spotlight 搜索规则；System/Apple/不确定 keep）、\
          optimize spotlight_index_optimize（AC+慢探针才 sudo -n mdutil -E；与 system_maintenance 只读检查去重）、\
          optimize shared_file_list_repair（仅删 plutil -lint 失败的 .sfl2/.sfl3；跳过 ApplicationRecentDocuments；禁 sfltool）、\
+         optimize disk_verify（须 VOLE_ENABLE_DISK_VERIFY=1；超时 diskutil verifyVolume /；禁 repair；可能卡住）、\
          本地快照报告（status/analyze · 仅 list）、\
          Filo production Cache、\
          Zed system-node npm cache、\
@@ -258,6 +259,7 @@ mod tests {
         assert!(note.contains("optimize spotlight_orphan_rules_cleanup"));
         assert!(note.contains("optimize spotlight_index_optimize"));
         assert!(note.contains("optimize shared_file_list_repair"));
+        assert!(note.contains("optimize disk_verify"));
         assert!(
             !unported.contains("失败中备份") && !unported.contains("Time Machine 失败"),
             "TM failed backups must not remain unported"

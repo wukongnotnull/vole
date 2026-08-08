@@ -8,13 +8,13 @@ use thiserror::Error;
 use crate::optimize::{
     discover_cache_refresh, discover_fix_broken_configs, discover_launch_agents_cleanup,
     discover_saved_state_cleanup, optimize_action_rule_id, optimize_catalog,
-    optimize_delete_rule_id, plan_coreduet_cleanup, plan_disk_permissions_repair,
+    optimize_delete_rule_id, plan_coreduet_cleanup, plan_disk_permissions_repair, plan_disk_verify,
     plan_dock_refresh, plan_launch_services_rebuild, plan_legacy_overrides_audit,
     plan_login_items_audit, plan_memory_pressure_relief, plan_network_optimization,
     plan_network_stack_optimize, plan_notification_cleanup, plan_periodic_maintenance,
     plan_prevent_network_dsstore, plan_quarantine_cleanup, plan_shared_file_list_repair,
     plan_spotlight_index_optimize, plan_spotlight_orphan_rules_cleanup, plan_sqlite_vacuum,
-    plan_system_maintenance, LiveLoginItemsAuditDeps, LiveSharedFileListDeps,
+    plan_system_maintenance, LiveDiskVerifyDeps, LiveLoginItemsAuditDeps, LiveSharedFileListDeps,
     LiveSpotlightOrphanDeps, OptimizeCandidate, OptimizeTaskKind,
 };
 use crate::protection::{AppProtection, ProtectionCatalog};
@@ -138,6 +138,9 @@ pub fn build_optimize_plan(
             &LiveSharedFileListDeps,
         ));
     }
+    if allow("disk_verify") {
+        candidates.extend(plan_disk_verify(opts.home, &LiveDiskVerifyDeps));
+    }
 
     let mut entries = Vec::new();
     for (idx, c) in candidates.into_iter().enumerate() {
@@ -243,12 +246,8 @@ mod tests {
             .entries
             .iter()
             .any(|e| e.rule_id == "optimize:action:dock_refresh"));
-        let note = plan.coverage_note.unwrap();
-        assert!(!note.contains("Memory Optimization"));
-        assert!(!note.contains("Spotlight Optimization"));
-        assert!(!note.contains("Spotlight Orphan Rules"));
-        assert!(!note.contains("Shared File Lists"));
-        assert!(note.contains("Disk Health"));
+        // All 23 catalog tasks are in_m3 → no long-tail coverage note.
+        assert!(plan.coverage_note.is_none());
     }
 
     #[test]
@@ -291,18 +290,7 @@ mod tests {
             .entries
             .iter()
             .any(|e| e.rule_id == "optimize:action:periodic_maintenance"));
-        let note = plan.coverage_note.unwrap();
-        assert!(!note.contains("DNS & Spotlight Check"));
-        assert!(!note.contains("Network Cache Refresh"));
-        assert!(!note.contains("Memory Optimization"));
-        assert!(!note.contains("Network Stack Refresh"));
-        assert!(!note.contains("Permission Repair"));
-        assert!(!note.contains("Periodic Maintenance"));
-        assert!(!note.contains("Login Items"));
-        assert!(!note.contains("Spotlight Optimization"));
-        assert!(!note.contains("Spotlight Orphan Rules"));
-        assert!(!note.contains("Shared File Lists"));
-        assert!(note.contains("Disk Health"));
+        assert!(plan.coverage_note.is_none());
         assert!(plan
             .entries
             .iter()

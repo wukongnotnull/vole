@@ -28,7 +28,7 @@
 
 - **单一 Rust 二进制**：不依赖 bash 运行时，也不要求用户额外安装 `fd` / `jq` / `sqlite3`
 - **plan → apply 两阶段**：先预览候选，再按不可信 plan 重新过安全闸口；默认进废纸篓
-- **智能卸载**：移除应用本体 + 用户域残留（LaunchAgents、Preferences、Caches 等）
+- **智能卸载**：移除应用本体 + 用户域/系统残留（含 LaunchDaemons/`/Library` sudo 主路径）
 - **系统优化**：缓存重建、偏好修复、LaunchServices 等有界维护任务
 - **磁盘洞察**：目录体积下钻，硬链接去重、折叠目录、`jwalk` 并行遍历
 - **实时监控**：CPU / 内存 / 磁盘等健康面板；`--json` / `--json-stream` 可脚本化
@@ -177,7 +177,7 @@ $ vole uninstall --plan "Some App"
 $ vole uninstall --apply uninstall-plan.json
 ```
 
-移除应用本体 + 用户域残留（Application Support、Caches、Preferences、LaunchAgents 等）。`rule_id` 前缀为 `uninstall:` / `uninstall:leftover:`——勿用 `vole clean --apply` 执行卸载 plan。
+移除应用本体 + 用户域残留（Application Support、Caches、Preferences、LaunchAgents 等），以及可读的系统 LaunchDaemons/Agents/PHT 与窄 `/Library` 叶（需 `sudo -n`；TTY 可先 `sudo -v`）。`rule_id` 前缀为 `uninstall:` / `uninstall:leftover:` / `uninstall:system-leftover:`——勿用 `vole clean --apply` 执行卸载 plan。
 
 ### 系统优化
 
@@ -225,7 +225,7 @@ $ vole completions zsh > ~/.zfunc/_vole
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | **1.34.0**：uninstall Login Items + brew cask 联动 + Filo production Cache + optimize DNS/mDNS + 本地快照报告 + TM 失败备份 + system.sh 主链；余项：LaunchDaemons/`/Library` sudo / 桌面 Helper | 成熟、功能最全 |
+| 成熟度 | **1.35.0**：uninstall 系统 LaunchDaemons/`/Library` sudo 主路径 + Login Items + brew cask + Filo + optimize DNS/mDNS + 本地快照报告 + TM 失败备份 + system.sh 主链；余项：Mole 广谱 `/Library` 边缘 / 桌面 Helper | 成熟、功能最全 |
 | 核心命令 | `status` / `analyze` / `clean` / `history` / `uninstall` / `optimize` | 另有 `purge` / `installer` 等 |
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓；orphaned 启发式 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |

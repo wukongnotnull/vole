@@ -25,4 +25,4 @@
 |---|---|---|
 | ① | brew cask 卸载联动 | ✅ **1.33.0** |
 | ② | login items | ✅ **1.34.0** |
-| ③ | 系统 LaunchDaemons / `/Library` sudo | 未实现 |
+| ③ | 系统 LaunchDaemons / `/Library` sudo | ✅ **1.35.0** |

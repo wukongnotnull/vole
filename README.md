@@ -35,7 +35,7 @@
 - **冻结 NDJSON 协议**：CLI、脚本与未来桌面 app 共用同一编排层
 - **规则数据化**：**540** 条高价值清理规则以 TOML 声明，可 diff、可禁用、可 fixture 回归（含用户域 orphaned app data）
 
-适合：想要更现代、更可脚本化、更偏「安全预览再执行」的日常清理与磁盘洞察。若你需要交互提权 / 完整 `/Library` 扫描或尚未移植的 `touchid` / 自更新，请继续用 [Mole](https://github.com/tw93/Mole)。
+适合：想要更现代、更可脚本化、更偏「安全预览再执行」的日常清理与磁盘洞察。若你需要完整 `/Library` 扫描或尚未移植的自更新 / 自卸载，请继续用 [Mole](https://github.com/tw93/Mole)。
 
 ---
 
@@ -225,8 +225,8 @@ $ vole completions zsh > ~/.zfunc/_vole
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | **2.2.0**（产品 v2）：`installer` + `clean` hints + `purge` + 命令别名（`optimise`/`analyse`/`completion`）+ 近满配 optimize/uninstall/clean；余项：`touchid`/`update`/`remove`、Mole 广谱 `/Library` 边缘 / 桌面 Helper | 成熟、功能最全 |
-| 核心命令 | `status` / `analyze` / `clean` / `history` / `uninstall` / `optimize` / `purge` / `installer` | 另有 `touchid` / `update` / `remove` 等 |
+| 成熟度 | **2.3.0**（产品 v2）：`touchid` + `installer` + `clean` hints + `purge` + 命令别名（`optimise`/`analyse`/`completion`）+ 近满配 optimize/uninstall/clean；余项：`update`/`remove`、Mole 广谱 `/Library` 边缘 / 桌面 Helper | 成熟、功能最全 |
+| 核心命令 | `status` / `analyze` / `clean` / `history` / `uninstall` / `optimize` / `purge` / `installer` / `touchid` | 另有 `update` / `remove` 等 |
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓；orphaned 启发式 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |
 | 外部依赖 | 无第三方 CLI 依赖 | 部分场景推荐 `fd` 等 |

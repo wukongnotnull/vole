@@ -7,7 +7,7 @@ Vole is a **macOS-only** Rust CLI (`vole`, produced by `crates/vole-cli`). `crat
 ### What works on Linux (this VM)
 
 - Lint: `cargo fmt --all -- --check`.
-- Repo guardrail scripts (part of CI): `./scripts/check-license.sh`, `./scripts/check-dep-direction.sh`, `./scripts/check-protocol-doc.sh`.
+- Repo guardrail scripts (part of CI): `./scripts/check-license.sh`, `./scripts/check-dep-direction.sh`, `./scripts/check-protocol-doc.sh`, `./scripts/check-command-surface.sh --enforce`.
 - Build + test the platform-independent crates only: `cargo test -p vole-proto -p conformance` (the rest of the workspace pulls in `vole-sys` and will not compile).
 - Run the `conformance` harness binary: it requires `--fixture`, `--mole <clean.sh>`, `--vole <binary>`, and env `VOLE_TEST_ROOT` (a disposable dir — see design §7.0, never point it at a real `$HOME`). Because the real `vole` binary is macOS-only, on Linux you can only run it against stub `--vole`/`--mole` executables to exercise the harness pipeline (fixture materialize, guard, diff), not a real mole↔vole comparison.
 

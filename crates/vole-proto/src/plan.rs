@@ -63,7 +63,6 @@ pub struct Plan {
     pub coverage_note: Option<String>,
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -18,9 +18,7 @@ use vole_core::ops::{
 use vole_core::protection::AppProtection;
 use vole_core::rules::{default_rules_dir, load_rules_from_dir, LoadError, PgrepProcessProbe};
 use vole_core::units;
-use vole_core::vole_proto::{
-    HintNotice, Plan as ProtoPlan, Report, StreamEvent, SCHEMA_VERSION,
-};
+use vole_core::vole_proto::{HintNotice, Plan as ProtoPlan, Report, StreamEvent, SCHEMA_VERSION};
 use vole_core::whitelist;
 
 use crate::signals;
@@ -159,7 +157,10 @@ fn hint_items_to_notices(items: &[HintItem]) -> Vec<HintNotice> {
         .collect()
 }
 
-fn plan_json_with_hints(proto: &ProtoPlan, notices: &[HintNotice]) -> io::Result<serde_json::Value> {
+fn plan_json_with_hints(
+    proto: &ProtoPlan,
+    notices: &[HintNotice],
+) -> io::Result<serde_json::Value> {
     let mut value = serde_json::to_value(proto).map_err(io::Error::other)?;
     if !notices.is_empty() {
         let hints = serde_json::to_value(notices).map_err(io::Error::other)?;

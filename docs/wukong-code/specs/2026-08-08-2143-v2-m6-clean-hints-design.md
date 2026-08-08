@@ -43,7 +43,7 @@
 | 路径 | 行为 |
 |---|---|
 | `vole clean` / `--plan` / `--dry-run` 人读 | plan 列表与既有 coverage/notices 之后，打印 hints 行（无命中且未 skip → 不打印） |
-| `--json` / `--plan-out` | ProtoPlan **追加可选** `hints: [{kind, summary, detail?}]`（`serde default` + `skip_serializing_if empty`）；**不 bump** `schema_version`（纯追加可选字段） |
+| `--json` / `--plan-out` | plan JSON **追加可选** `hints: [{kind, summary, detail?}]`（序列化层注入；`HintNotice` 在 `vole-proto`；空则省略）；**不 bump** `schema_version` |
 | `--json-stream` | 不另发明细事件；Done 后的 plan JSON（若写出）可含 hints；stream 主路径可省略 hints 以避免拖慢 |
 | `--apply` | **不**跑 hints（只读提示挂在发现/plan 侧） |
 

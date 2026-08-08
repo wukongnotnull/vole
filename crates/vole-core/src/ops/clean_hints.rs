@@ -126,8 +126,11 @@ pub fn collect_clean_hints(opts: &CleanHintsOptions<'_>) -> CleanHints {
         });
     }
 
-    out.items
-        .extend(probe_system_data(opts.home, opts.du_timeout, probe.as_ref()));
+    out.items.extend(probe_system_data(
+        opts.home,
+        opts.du_timeout,
+        probe.as_ref(),
+    ));
     out
 }
 
@@ -443,7 +446,11 @@ fn display_under_home(path: &Path, home: &Path) -> String {
     }
 }
 
-fn list_child_dirs(parent: &Path, _timeout: Duration, deadline: Instant) -> Result<Vec<PathBuf>, ()> {
+fn list_child_dirs(
+    parent: &Path,
+    _timeout: Duration,
+    deadline: Instant,
+) -> Result<Vec<PathBuf>, ()> {
     if Instant::now() >= deadline {
         return Err(());
     }
@@ -597,10 +604,7 @@ mod tests {
                 kb: Mutex::new(1024),
             })),
         });
-        assert!(!small
-            .items
-            .iter()
-            .any(|h| h.kind == HintKind::SystemData));
+        assert!(!small.items.iter().any(|h| h.kind == HintKind::SystemData));
 
         let large = collect_clean_hints(&CleanHintsOptions {
             home: home.path(),

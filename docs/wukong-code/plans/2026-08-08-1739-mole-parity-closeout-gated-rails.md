@@ -14,8 +14,8 @@
 
 - 规格权威：[`docs/wukong-code/specs/2026-08-08-1727-mole-parity-roadmap-design.md`](../specs/2026-08-08-1727-mole-parity-roadmap-design.md)
 - Mole 钉版：`third_party/mole-1.48.1`
-- 快照版本：**1.42.0**（G1 已合入 PR #92 / `af69af8`）；收口轨核对时为 1.41.0
-- **默认下一项实现：无**（规格 §1 / §4.1；G2–G4 仍未批准；D1 骨架部分完成、可用通道仍阻塞）
+- 快照版本：**1.45.0**（G2–G4 已合入；G1=1.42.0 / #92；收口轨核对时为 1.41.0）
+- **默认下一项实现：无**（规格 §1 / §4.1；G2–G4 已完成；仅 G5 `disk_verify` 默认永不升必做；D1 骨架部分完成、可用通道仍阻塞）
 - 闸控轨开跑前：该轨必须已有（或本会话当场完成）**专用 design**，再按单轨单 PR
 - `disk_verify`：**默认拒绝升必做**（规格 §3.3 P5）
 - 本代际禁止实现：`purge` / `installer` / `touchid` / `hints` / Mole 式 `update`；禁止 `clean --apply` 删本地快照；禁止删 `/Library/Updates`、`/macOS Install Data`
@@ -29,7 +29,7 @@
 | `scripts/inventory-mole-rules.py` | Mole `safe_clean` vs `data/rules` 核对 |
 | `data/rules/*.toml` | 启用规则计数（期望 540） |
 | `crates/vole-core/src/ops/coverage.rs` | coverage 诚实面；「仍未移植」仅桌面特权助手 |
-| `crates/vole-core/src/optimize/catalog.rs` | 23 task；19 `in_m3: true`；4 长尾 `false`（G1 后） |
+| `crates/vole-core/src/optimize/catalog.rs` | 23 task；22 `in_m3: true`；1 长尾 `false`（仅 `disk_verify`） |
 | `crates/vole-core/src/optimize/tasks/actions.rs` | 闸控轨启用后的 plan/apply handler |
 | `crates/vole-core/src/ops/optimize_plan.rs` / `optimize_apply.rs` | 闸控轨接线 |
 | `docs/findings/2026-08-mole-parity-closeout.md` | 收口 findings |
@@ -298,9 +298,9 @@ EOF
 
 ### Task G2: `spotlight_orphan_rules_cleanup`（P2 · 闸控）
 
-> **状态：未批准 · SKIP**
+> **状态：已完成 · 1.43.0 / PR #93**（merge `d059eb7`）。专用 design：[`2026-08-08-1822-optimize-spotlight-orphan-rules-cleanup-design.md`](../specs/2026-08-08-1822-optimize-spotlight-orphan-rules-cleanup-design.md)。主路径 **20**。
 
-**Gate:** 未收到「批准执行轨 G2」→ 停。
+**Gate:** 已收到「批准执行轨 G2」并合入 main。
 
 **Files（批准后）：**
 - Modify: `catalog.rs`（`spotlight_orphan_rules_cleanup.in_m3: true`）
@@ -310,13 +310,13 @@ EOF
 **Interfaces:**
 - Produces: 主路径 +1（在 G1 已合入后为 20，否则相对当时 baseline +1；design 写死期望 `main.len`）
 
-- [ ] **Step 0: 闸门** — 无「批准执行轨 G2」则 `SKIP G2`
-- [ ] **Step 1: 专用 design 批准** — 须含误伤模型与回滚/skip 策略
-- [ ] **Step 2: RED catalog 单测** — `assert!(main.contains(&"spotlight_orphan_rules_cleanup"));`
-- [ ] **Step 3: GREEN 翻转 `in_m3`**
-- [ ] **Step 4: RED/GREEN plan/apply** — fail-closed；禁止静默大范围删 Spotlight 规则
-- [ ] **Step 5: coverage / 发版（版本以 design 为准）**
-- [ ] **Step 6: Commit + PR**
+- [x] **Step 0: 闸门** — 已收到「批准执行轨 G2」
+- [x] **Step 1: 专用 design 批准** — [`2026-08-08-1822-optimize-spotlight-orphan-rules-cleanup-design.md`](../specs/2026-08-08-1822-optimize-spotlight-orphan-rules-cleanup-design.md)
+- [x] **Step 2: RED catalog 单测** — `main.contains("spotlight_orphan_rules_cleanup")`；`main.len()==20`
+- [x] **Step 3: GREEN 翻转 `in_m3`**
+- [x] **Step 4: RED/GREEN plan/apply** — fail-closed；`defaults` 重写 keep；禁静默大范围删
+- [x] **Step 5: coverage / 发版** — **1.43.0**
+- [x] **Step 6: Commit + PR** — PR [#93](https://github.com/wukongnotnull/vole/pull/93)
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -330,9 +330,9 @@ EOF
 
 ### Task G3: `spotlight_index_optimize`（P3 · 闸控）
 
-> **状态：未批准 · SKIP**
+> **状态：已完成 · 1.44.0 / PR #95**（merge `cf0eb24`）。专用 design：[`2026-08-08-1836-optimize-spotlight-index-optimize-design.md`](../specs/2026-08-08-1836-optimize-spotlight-index-optimize-design.md)。主路径 **21**。
 
-**Gate:** 未收到「批准执行轨 G3」→ 停。
+**Gate:** 已收到「批准执行轨 G3」并合入 main。
 
 **Files（批准后）：**
 - Modify: `catalog.rs` / `actions.rs` / privilege 若需 `sudo -n mdutil`
@@ -342,11 +342,11 @@ EOF
 - Consumes: 既有 `PrivilegeBackend` / `sudo -n`（禁止新交互 sudo 体系）
 - Produces: 智能检测后重建索引；低压/健康状态 noop
 
-- [ ] **Step 0: 闸门** — 无「批准执行轨 G3」则 `SKIP G3`
-- [ ] **Step 1: 专用 design** — 必须写清：何时 `mdutil -E`、副作用、与 `system_maintenance` Spotlight 检查的去重
-- [ ] **Step 2–4: catalog 翻转 + plan/apply TDD**（`VOLE_TEST_NO_AUTH=1` 下永不真 sudo）
-- [ ] **Step 5: coverage / 发版**
-- [ ] **Step 6: Commit + PR**
+- [x] **Step 0: 闸门** — 已收到「批准执行轨 G3」
+- [x] **Step 1: 专用 design** — [`2026-08-08-1836-optimize-spotlight-index-optimize-design.md`](../specs/2026-08-08-1836-optimize-spotlight-index-optimize-design.md)（与 `system_maintenance` 去重）
+- [x] **Step 2–4: catalog 翻转 + plan/apply TDD** — `PrivilegeBackend::rebuild_spotlight_index`；`VOLE_TEST_NO_AUTH` 下永不真 sudo
+- [x] **Step 5: coverage / 发版** — **1.44.0**
+- [x] **Step 6: Commit + PR** — PR [#95](https://github.com/wukongnotnull/vole/pull/95)
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -360,9 +360,9 @@ EOF
 
 ### Task G4: `shared_file_list_repair`（P4 · 闸控）
 
-> **状态：未批准 · SKIP**
+> **状态：已完成 · 1.45.0 / PR #97**（merge `23813ab`）。专用 design：[`2026-08-08-1902-optimize-shared-file-list-repair-design.md`](../specs/2026-08-08-1902-optimize-shared-file-list-repair-design.md)。主路径 **22**（仅 `disk_verify` 仍长尾）。
 
-**Gate:** 未收到「批准执行轨 G4」→ 停。
+**Gate:** 已收到「批准执行轨 G4」并合入 main。
 
 **Files（批准后）：**
 - Modify: `catalog.rs` / `actions.rs` / optimize plan/apply
@@ -371,11 +371,11 @@ EOF
 **Interfaces:**
 - Produces: Finder favorites / recent documents 修复；高复杂 → design 可决定仅 plan 报告、apply 仍 coverage
 
-- [ ] **Step 0: 闸门** — 无「批准执行轨 G4」则 `SKIP G4`
-- [ ] **Step 1: 专用 design** — 数据损坏模型、备份/skip、与 `recent-items-list` clean 规则边界
-- [ ] **Step 2–4: TDD 接线**
-- [ ] **Step 5: coverage / 发版**
-- [ ] **Step 6: Commit + PR**
+- [x] **Step 0: 闸门** — 已收到「批准执行轨 G4」
+- [x] **Step 1: 专用 design** — [`2026-08-08-1902-optimize-shared-file-list-repair-design.md`](../specs/2026-08-08-1902-optimize-shared-file-list-repair-design.md)
+- [x] **Step 2–4: TDD 接线** — `plutil -lint` 失败才删；跳过 ApplicationRecentDocuments；禁 sfltool
+- [x] **Step 5: coverage / 发版** — **1.45.0**
+- [x] **Step 6: Commit + PR** — PR [#97](https://github.com/wukongnotnull/vole/pull/97)
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -480,9 +480,9 @@ Task 1 → Task 2 → Task 3 → Task G5 Step1–2（保持 false）→ Task N1
 STOP
 ```
 
-> **进度（2026-08-08）：** 上列默认顺序已全部完成（findings + `9a780f0`）。闸控轨：**G1 已完成**（1.42.0 / PR #92 / `af69af8`）；**D1 部分完成**（vole-macos Helper 骨架；coverage 仍保留「仍未移植」）；G2–G4 仍未批准 · SKIP。
+> **进度（2026-08-08）：** 上列默认顺序已全部完成（findings + `9a780f0`）。闸控轨：**G1–G4 已完成**（1.42.0–1.45.0 / PR #92 #93 #95 #97）；**G5** 保持 `disk_verify` false；**D1 部分完成**（vole-macos Helper 骨架；coverage 仍保留「仍未移植」）。
 
-之后仅在显式批准后按优先级：`G2 → G3 → G4`；`D1` 与 G* 可并行但分仓分 PR。  
+之后仅在显式批准后：`D1`（分仓）或推翻默认的 `G5`。  
 **永不**默认进入：`purge` / `installer` / `touchid` / `hints` / `update` 实现任务（本计划不下发此类 Task）。
 
 ## Spec coverage

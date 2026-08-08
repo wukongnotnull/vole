@@ -17,6 +17,7 @@ use crate::protection::{
     ProtectionCatalog, UninstallPathProtection,
 };
 use crate::safety::{capture_plan_entry_identity, validate_path_for_deletion};
+use crate::system_leftovers::{encode_system_leftover_rule_id, find_system_leftovers};
 use crate::vole_proto::{Plan as ProtoPlan, PlanEntry as ProtoPlanEntry, SCHEMA_VERSION};
 
 use super::plan::DEFAULT_PLAN_TTL;
@@ -91,6 +92,7 @@ pub fn build_uninstall_plan_with_brew(
     let mut sibling_notes = 0u64;
     let mut brew_cask = 0u64;
     let mut login_items = 0u64;
+    let mut system_leftovers = 0u64;
 
     let uninstall_protect = UninstallPathProtection::new(protection);
     let search_roots = opts.applications_dirs.to_vec();
@@ -190,11 +192,20 @@ pub fn build_uninstall_plan_with_brew(
                 entries.push(entry);
             }
         }
+
+        for hit in find_system_leftovers(&app, &siblings) {
+            let rule = encode_system_leftover_rule_id(hit.kind, &app.bundle_id, &hit.path);
+            let label = format!("System leftover: {}", hit.label);
+            if let Some(entry) = try_plan_entry(&hit.path, &label, &rule, &uninstall_protect) {
+                entries.push(entry);
+                system_leftovers += 1;
+            }
+        }
     }
 
     let coverage_note = Some(format!(
-        "vole uninstall: skipped protected={skipped_protected}, official_uninstaller={skipped_official}, filter_miss={skipped_filter}, sibling_leftovers_suppressed={sibling_notes}, brew_cask={brew_cask}, login_items={login_items}. \
-Long-tail not covered (use Mole): system LaunchDaemons, /Library sudo paths."
+        "vole uninstall: skipped protected={skipped_protected}, official_uninstaller={skipped_official}, filter_miss={skipped_filter}, sibling_leftovers_suppressed={sibling_notes}, brew_cask={brew_cask}, login_items={login_items}, system_leftovers={system_leftovers}. \
+Long-tail not covered (use Mole): broad /Library system leftovers (Frameworks/kext/Plug-Ins/…) beyond LaunchDaemons/Agents/PHT and exact leaves."
     ));
 
     Ok(ProtoPlan {
@@ -428,8 +439,82 @@ mod tests {
         let note = plan.coverage_note.unwrap();
         assert!(!note.to_ascii_lowercase().contains("brew cask zap"));
         assert!(!note.to_ascii_lowercase().contains("login items"));
-        assert!(note.contains("LaunchDaemons") || note.contains("/Library"));
-        assert!(note.contains("login_items="));
+        assert!(!note.contains("system LaunchDaemons"));
+        assert!(note.contains("system_leftovers="));
+        assert!(note.contains("Frameworks") || note.contains("Plug-Ins"));
+    }
+
+    #[test]
+    fn plan_emits_system_leftover_sidecar() {
+        let _guard = crate::test_env::lock();
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path();
+        let apps = home.join("Applications");
+        fs::create_dir_all(&apps).unwrap();
+        write_app(&apps.join("Foo.app"), "com.example.foo", "FooApp");
+
+        let lib = home.join("Library");
+        fs::create_dir_all(lib.join("LaunchDaemons")).unwrap();
+        fs::write(lib.join("LaunchDaemons/com.example.foo.plist"), b"{}").unwrap();
+        fs::create_dir_all(lib.join("Application Support/FooApp")).unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let catalog = ProtectionCatalog::embedded();
+        let protection = AppProtection::new();
+        let opts = UninstallPlanOptions {
+            applications_dirs: std::slice::from_ref(&apps),
+            home,
+            target_bundle_or_name: None,
+            ttl_secs: 900,
+        };
+        let plan = build_uninstall_plan(&catalog, &protection, &opts).unwrap();
+        assert!(plan
+            .entries
+            .iter()
+            .any(|e| e.rule_id.starts_with("uninstall:system-leftover:launchd:")));
+        assert!(plan
+            .entries
+            .iter()
+            .any(|e| e.rule_id.starts_with("uninstall:system-leftover:library:")));
+        assert!(plan
+            .coverage_note
+            .as_ref()
+            .unwrap()
+            .contains("system_leftovers="));
+
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+    }
+
+    #[test]
+    fn plan_skips_system_leftovers_when_sibling() {
+        let _guard = crate::test_env::lock();
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path();
+        let apps = home.join("Applications");
+        fs::create_dir_all(&apps).unwrap();
+        write_app(&apps.join("Foo.app"), "com.example.foo", "FooApp");
+        write_app(&apps.join("Foo Copy.app"), "com.example.foo", "Foo Copy");
+
+        let lib = home.join("Library");
+        fs::create_dir_all(lib.join("LaunchDaemons")).unwrap();
+        fs::write(lib.join("LaunchDaemons/com.example.foo.plist"), b"{}").unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let catalog = ProtectionCatalog::embedded();
+        let protection = AppProtection::new();
+        let opts = UninstallPlanOptions {
+            applications_dirs: std::slice::from_ref(&apps),
+            home,
+            target_bundle_or_name: None,
+            ttl_secs: 900,
+        };
+        let plan = build_uninstall_plan(&catalog, &protection, &opts).unwrap();
+        assert!(!plan
+            .entries
+            .iter()
+            .any(|e| e.rule_id.starts_with("uninstall:system-leftover:")));
+
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
     }
 
     #[test]

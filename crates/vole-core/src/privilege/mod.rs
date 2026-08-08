@@ -156,6 +156,63 @@ fn privilege_prefixes() -> Vec<String> {
     LIVE_PREFIXES.iter().map(|s| (*s).to_string()).collect()
 }
 
+/// uninstall W2a③：`/Library` exact 叶 + receipts（单层）。
+const UNINSTALL_LIBRARY_LEAF_PREFIXES: &[&str] = &[
+    "/Library/Application Support/",
+    "/Library/Preferences/",
+    "/Library/Caches/",
+    "/Library/Logs/",
+    "/Library/Receipts/",
+    "/private/var/db/receipts/",
+];
+
+fn uninstall_library_leaf_prefixes() -> Vec<String> {
+    if let Some(base) = std::env::var_os("VOLE_TEST_SYSTEM_LIBRARY") {
+        let base = PathBuf::from(base);
+        let mut out = vec![
+            format!("{}/", base.join("Application Support").display()),
+            format!("{}/", base.join("Preferences").display()),
+            format!("{}/", base.join("Caches").display()),
+            format!("{}/", base.join("Logs").display()),
+            format!("{}/", base.join("Receipts").display()),
+        ];
+        if let Some(parent) = base.parent() {
+            out.push(format!(
+                "{}/",
+                parent.join("private/var/db/receipts").display()
+            ));
+        }
+        return out;
+    }
+    UNINSTALL_LIBRARY_LEAF_PREFIXES
+        .iter()
+        .map(|s| (*s).to_string())
+        .collect()
+}
+
+fn is_uninstall_library_leaf_allowed(path_str: &str) -> bool {
+    for prefix in uninstall_library_leaf_prefixes() {
+        let Some(rest) = path_str.strip_prefix(&prefix) else {
+            continue;
+        };
+        if rest.is_empty() || rest.contains('/') {
+            return false;
+        }
+        if rest.starts_with("com.apple.") {
+            return false;
+        }
+        // 不得把 clean 系统日志根目录等误开提权删口
+        if matches!(
+            rest,
+            "DiagnosticReports" | "Adobe" | "CreativeCloud" | "Apple" | "Updates" | "adobegc.log"
+        ) {
+            return false;
+        }
+        return true;
+    }
+    false
+}
+
 /// 运行时是否 Apple Silicon 原生进程（对齐 Mole `uname -m == arm64`）。
 pub fn is_arm64_host() -> bool {
     if let Ok(v) = std::env::var("VOLE_TEST_FORCE_UNAME_M") {
@@ -1120,7 +1177,7 @@ pub fn path_allowed_for_privilege(path: &Path) -> bool {
         }
         return !rest.starts_with("com.apple.");
     }
-    false
+    is_uninstall_library_leaf_allowed(s)
 }
 
 #[cfg(test)]
@@ -1140,7 +1197,7 @@ mod tests {
             "/Library/PrivilegedHelperTools/com.example.helper"
         )));
         assert!(!path_allowed_for_privilege(Path::new(
-            "/Library/Caches/foo"
+            "/Library/FooBar/not-a-leaf"
         )));
         assert!(!path_allowed_for_privilege(Path::new(
             "/Library/LaunchDaemons/../Preferences/com.apple.plist"
@@ -1315,6 +1372,37 @@ mod tests {
     }
 
     #[test]
+    fn allowlist_accepts_uninstall_library_and_receipt_leaves() {
+        assert!(path_allowed_for_privilege(Path::new(
+            "/Library/Application Support/Foo"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/Library/Application Support/com.apple.Foo"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/Library/Application Support/a/b"
+        )));
+        assert!(path_allowed_for_privilege(Path::new(
+            "/Library/Preferences/com.example.app.plist"
+        )));
+        assert!(path_allowed_for_privilege(Path::new(
+            "/Library/Caches/ExampleApp"
+        )));
+        assert!(path_allowed_for_privilege(Path::new(
+            "/Library/Logs/ExampleApp"
+        )));
+        assert!(path_allowed_for_privilege(Path::new(
+            "/Library/Receipts/com.example.app.bom"
+        )));
+        assert!(path_allowed_for_privilege(Path::new(
+            "/private/var/db/receipts/com.example.app.bom"
+        )));
+        assert!(!path_allowed_for_privilege(Path::new(
+            "/private/var/db/receipts/com.apple.pkg.bom"
+        )));
+    }
+
+    #[test]
     fn allowlist_accepts_library_caches_temp_targets() {
         assert!(path_allowed_for_privilege(Path::new(
             "/Library/Caches/foo.cache"
@@ -1328,7 +1416,8 @@ mod tests {
         assert!(!path_allowed_for_privilege(Path::new(
             "/Library/Caches/a/b/c/d/e/f.log"
         )));
-        assert!(!path_allowed_for_privilege(Path::new(
+        // 单层叶现纳入 uninstall allowlist（W2a③）；*.dat 亦为单层叶
+        assert!(path_allowed_for_privilege(Path::new(
             "/Library/Caches/foo.dat"
         )));
         assert!(!path_allowed_for_privilege(Path::new("/Library/Caches")));

@@ -557,6 +557,7 @@ pub fn apply_optimize_action(
         "login_items_audit" => apply_login_items_audit(path),
         "spotlight_orphan_rules_cleanup" => apply_spotlight_orphan_rules_cleanup(),
         "spotlight_index_optimize" => apply_spotlight_index_optimize(privilege),
+        "shared_file_list_repair" => apply_shared_file_list_repair(path),
         _ => Err(OptimizeActionError::Failed),
     }
 }
@@ -595,6 +596,22 @@ fn apply_spotlight_index_optimize(
         return Err(OptimizeActionError::NeedsPrivilege);
     };
     map_privilege_result(backend.rebuild_spotlight_index())
+}
+
+fn apply_shared_file_list_repair(path: &Path) -> Result<(), OptimizeActionError> {
+    use super::shared_file_list::{
+        run_shared_file_list_repair, LiveSharedFileListDeps, SharedFileListError,
+    };
+    use crate::delete::test_no_auth;
+
+    if test_no_auth() {
+        return Err(OptimizeActionError::Skipped);
+    }
+    match run_shared_file_list_repair(path, &LiveSharedFileListDeps) {
+        Ok(()) => Ok(()),
+        Err(SharedFileListError::TestMode) => Err(OptimizeActionError::Skipped),
+        Err(SharedFileListError::Unavailable) => Err(OptimizeActionError::Failed),
+    }
 }
 
 fn apply_memory_pressure_relief(

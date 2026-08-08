@@ -16,7 +16,7 @@ pub mod status;
 
 pub use analyze::{AnalyzeEntry, AnalyzeFileEntry, AnalyzeOutput};
 pub use events::StreamEvent;
-pub use plan::{Plan, PlanEntry};
+pub use plan::{HintNotice, Plan, PlanEntry};
 pub use report::{Report, SkipSummary};
 pub use status::StatusSnapshot;
 

@@ -142,13 +142,14 @@ pub fn build_uninstall_plan_with_brew(
 
         // Login Item / helper 侧车先于本体，便于 apply 在删包前执行（且 PathVanished 仍可动作）。
         if !name_collides {
-            let rule = encode_login_item_name_rule_id(&app.display_name);
-            let label = format!("Login Item: {}", app.display_name);
-            if let Some(entry) =
-                try_plan_entry_sized(&app.app_path, &label, &rule, &uninstall_protect, 0)
-            {
-                entries.push(entry);
-                login_items += 1;
+            if let Some(rule) = encode_login_item_name_rule_id(&app.display_name) {
+                let label = format!("Login Item: {}", app.display_name);
+                if let Some(entry) =
+                    try_plan_entry_sized(&app.app_path, &label, &rule, &uninstall_protect, 0)
+                {
+                    entries.push(entry);
+                    login_items += 1;
+                }
             }
         }
         if !siblings.has_siblings() {

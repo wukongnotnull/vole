@@ -70,6 +70,8 @@ pub struct UninstallApplyContext<'a> {
     pub privilege: Option<&'a dyn PrivilegeBackend>,
     /// TTY `sudo -v` 本会话是否已尝试（至多一次）。
     pub privilege_acquire_attempted: bool,
+    /// 与 plan 一致的 Applications 搜索根（sibling 守卫用）。
+    pub applications_dirs: &'a [PathBuf],
 }
 
 pub fn apply_uninstall_plan(
@@ -84,6 +86,10 @@ pub fn apply_uninstall_plan(
     let live = LiveBrewDeps;
     let live_login = LiveLoginItemDeps;
     let sudo = SudoNoninteractive;
+    let home = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("/"));
+    let apps_dirs = applications_dirs_for_apply(&home);
     let mut ctx = UninstallApplyContext {
         protection,
         whitelist_patterns: &[],
@@ -97,6 +103,7 @@ pub fn apply_uninstall_plan(
         login_items: Some(&live_login),
         privilege: Some(&sudo),
         privilege_acquire_attempted: false,
+        applications_dirs: &apps_dirs,
     };
     let report = apply_uninstall_proto_plan(plan, &mut ctx)?;
     let _ = oplog.session_end(
@@ -210,7 +217,10 @@ pub fn apply_uninstall_proto_plan(
         };
 
         if let Some(name) = parse_login_item_name_rule_id(&entry.rule_id) {
-            if login_item_name_blocked(entry.path.as_path(), &name) {
+            // plan 不可信：rule_id 名必须与 entry.path 现读显示名一致（路径已消失则 skip）。
+            if !login_item_name_matches_path(entry.path.as_path(), &name)
+                || login_item_name_blocked(entry.path.as_path(), &name, ctx.applications_dirs)
+            {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -250,7 +260,9 @@ pub fn apply_uninstall_proto_plan(
         }
 
         if let Some(helper_id) = parse_login_helper_rule_id(&entry.rule_id) {
-            if !is_bootout_allowed(&helper_id) || login_helper_blocked(entry.path.as_path()) {
+            if !is_bootout_allowed(&helper_id)
+                || login_helper_blocked(entry.path.as_path(), ctx.applications_dirs)
+            {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {
                     event(StreamEvent::Skipped {
@@ -534,14 +546,31 @@ fn current_uid() -> u32 {
         .unwrap_or(0)
 }
 
-fn sibling_presence_for_app(app_path: &Path) -> SiblingPresence {
+fn applications_dirs_for_apply(home: &Path) -> Vec<PathBuf> {
+    if let Ok(raw) = std::env::var("VOLE_APPLICATIONS_DIR") {
+        let dirs: Vec<PathBuf> = raw
+            .split(':')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(PathBuf::from)
+            .collect();
+        if !dirs.is_empty() {
+            return dirs;
+        }
+    }
+    crate::ops::uninstall_plan::default_applications_dirs(home)
+}
+
+fn sibling_presence_for_app(app_path: &Path, search_roots: &[PathBuf]) -> SiblingPresence {
     let Some(bundle_id) = read_bundle_id(app_path) else {
         return SiblingPresence::default();
     };
-    let roots: Vec<PathBuf> = app_path
-        .parent()
-        .map(|p| vec![p.to_path_buf()])
-        .unwrap_or_default();
+    let mut roots: Vec<PathBuf> = search_roots.to_vec();
+    if let Some(parent) = app_path.parent() {
+        if !roots.iter().any(|r| r == parent) {
+            roots.push(parent.to_path_buf());
+        }
+    }
     find_bundle_siblings(&bundle_id, app_path, &roots)
 }
 
@@ -561,20 +590,36 @@ fn sibling_display_names(siblings: &SiblingPresence) -> Vec<String> {
         .collect()
 }
 
-fn login_item_name_blocked(app_path: &Path, display_name: &str) -> bool {
+fn login_item_name_matches_path(app_path: &Path, rule_name: &str) -> bool {
     if !app_path.exists() {
         return false;
     }
-    let siblings = sibling_presence_for_app(app_path);
+    let expected = read_display_name(app_path).unwrap_or_else(|| {
+        app_path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_string()
+    });
+    let expected = expected.strip_suffix(".app").unwrap_or(expected.as_str());
+    let got = rule_name.strip_suffix(".app").unwrap_or(rule_name);
+    !expected.is_empty() && expected == got
+}
+
+fn login_item_name_blocked(app_path: &Path, display_name: &str, search_roots: &[PathBuf]) -> bool {
+    if !app_path.exists() {
+        return false;
+    }
+    let siblings = sibling_presence_for_app(app_path, search_roots);
     let names = sibling_display_names(&siblings);
     login_name_collides(display_name, &names)
 }
 
-fn login_helper_blocked(app_path: &Path) -> bool {
+fn login_helper_blocked(app_path: &Path, search_roots: &[PathBuf]) -> bool {
     if !app_path.exists() {
         return false;
     }
-    sibling_presence_for_app(app_path).has_siblings()
+    sibling_presence_for_app(app_path, search_roots).has_siblings()
 }
 
 fn system_leftover_sibling_blocks(bundle_id: &str) -> bool {
@@ -733,6 +778,7 @@ mod tests {
             login_items: None,
             privilege: None,
             privilege_acquire_attempted: false,
+            applications_dirs: &[],
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 1);
@@ -798,6 +844,7 @@ mod tests {
             login_items: None,
             privilege: None,
             privilege_acquire_attempted: false,
+            applications_dirs: &[],
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 1);
@@ -857,6 +904,7 @@ mod tests {
             login_items: None,
             privilege: None,
             privilege_acquire_attempted: false,
+            applications_dirs: &[],
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 0);
@@ -913,6 +961,7 @@ mod tests {
             login_items: None,
             privilege: None,
             privilege_acquire_attempted: false,
+            applications_dirs: &[],
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 1);
@@ -971,6 +1020,7 @@ mod tests {
             login_items: None,
             privilege: None,
             privilege_acquire_attempted: false,
+            applications_dirs: &[],
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 0);
@@ -997,7 +1047,7 @@ mod tests {
         )
         .unwrap();
         let identity = capture_plan_entry_identity(&app).unwrap();
-        let rule = encode_login_item_name_rule_id("Foo");
+        let rule = encode_login_item_name_rule_id("Foo").unwrap();
         let entry = ProtoPlanEntry {
             id: "1".into(),
             path: app.clone(),
@@ -1034,6 +1084,7 @@ mod tests {
             login_items: Some(&fake),
             privilege: None,
             privilege_acquire_attempted: false,
+            applications_dirs: &[],
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 1);
@@ -1095,6 +1146,7 @@ mod tests {
             login_items: Some(&fake),
             privilege: None,
             privilege_acquire_attempted: false,
+            applications_dirs: &[],
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 1);
@@ -1133,7 +1185,7 @@ mod tests {
                     path: app.clone(),
                     label: "Login Item".into(),
                     size: 0,
-                    rule_id: encode_login_item_name_rule_id("Foo"),
+                    rule_id: encode_login_item_name_rule_id("Foo").unwrap(),
                     skip_reason: None,
                     dev: id_app.dev,
                     ino: id_app.ino,
@@ -1172,6 +1224,7 @@ mod tests {
             login_items: Some(&fake),
             privilege: None,
             privilege_acquire_attempted: false,
+            applications_dirs: &[],
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 1);
@@ -1181,6 +1234,138 @@ mod tests {
             .iter()
             .any(|s| s.reason == SkipReason::NeedsPrivilege));
         assert!(!leftover.exists());
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_skips_login_item_when_rule_name_mismatches_path() {
+        let _guard = test_env::lock();
+        let root = scratch("login-mismatch");
+        let app = root.join("Foo.app");
+        fs::create_dir_all(app.join("Contents")).unwrap();
+        fs::write(
+            app.join("Contents/Info.plist"),
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>com.example.foo</string>
+<key>CFBundleName</key><string>Foo</string>
+</dict></plist>"#,
+        )
+        .unwrap();
+        let identity = capture_plan_entry_identity(&app).unwrap();
+        let plan = ProtoPlan {
+            schema_version: SCHEMA_VERSION,
+            created_at: SystemTime::now(),
+            ttl_secs: 900,
+            entries: vec![ProtoPlanEntry {
+                id: "1".into(),
+                path: app.clone(),
+                label: "evil".into(),
+                size: 0,
+                rule_id: encode_login_item_name_rule_id("VictimOtherApp").unwrap(),
+                skip_reason: None,
+                dev: identity.dev,
+                ino: identity.ino,
+                mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+            }],
+            coverage_note: None,
+        };
+        let fake = FakeLoginItemDeps::default();
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("uninstall");
+        let trash = MacTrash;
+        let mut ctx = UninstallApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: UninstallApplyOptions { permanent: true },
+            trash: &trash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            brew: None,
+            login_items: Some(&fake),
+            privilege: None,
+            privilege_acquire_attempted: false,
+            applications_dirs: &[],
+        };
+        let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(fake.removed_names.lock().unwrap().is_empty());
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_skips_bootout_when_sibling_in_other_apps_root() {
+        let _guard = test_env::lock();
+        let root = scratch("login-sib-roots");
+        let apps_a = root.join("ApplicationsA");
+        let apps_b = root.join("ApplicationsB");
+        fs::create_dir_all(&apps_a).unwrap();
+        fs::create_dir_all(&apps_b).unwrap();
+        let foo = apps_a.join("Foo.app");
+        let copy = apps_b.join("Foo Copy.app");
+        for (app, name) in [(&foo, "Foo"), (&copy, "Foo Copy")] {
+            fs::create_dir_all(app.join("Contents")).unwrap();
+            fs::write(
+                app.join("Contents/Info.plist"),
+                format!(
+                    r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>com.example.foo</string>
+<key>CFBundleName</key><string>{name}</string>
+</dict></plist>"#
+                ),
+            )
+            .unwrap();
+        }
+        let identity = capture_plan_entry_identity(&foo).unwrap();
+        let plan = ProtoPlan {
+            schema_version: SCHEMA_VERSION,
+            created_at: SystemTime::now(),
+            ttl_secs: 900,
+            entries: vec![ProtoPlanEntry {
+                id: "h".into(),
+                path: foo.clone(),
+                label: "helper".into(),
+                size: 0,
+                rule_id: encode_login_helper_rule_id("com.example.foo.helper"),
+                skip_reason: None,
+                dev: identity.dev,
+                ino: identity.ino,
+                mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+            }],
+            coverage_note: None,
+        };
+        let fake = FakeLoginItemDeps::default();
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("uninstall");
+        let trash = MacTrash;
+        let roots = [apps_a.clone(), apps_b.clone()];
+        let mut ctx = UninstallApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: UninstallApplyOptions { permanent: true },
+            trash: &trash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            brew: None,
+            login_items: Some(&fake),
+            privilege: None,
+            privilege_acquire_attempted: false,
+            applications_dirs: &roots,
+        };
+        let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(fake.booted_helpers.lock().unwrap().is_empty());
         fs::remove_dir_all(&root).ok();
     }
 
@@ -1243,6 +1428,7 @@ mod tests {
             login_items: Some(&fake),
             privilege: None,
             privilege_acquire_attempted: false,
+            applications_dirs: &[],
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 0);
@@ -1304,6 +1490,7 @@ mod tests {
             login_items: None,
             privilege: Some(&fake),
             privilege_acquire_attempted: false,
+            applications_dirs: &[],
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 1);
@@ -1365,6 +1552,7 @@ mod tests {
             login_items: None,
             privilege: Some(&fake),
             privilege_acquire_attempted: false,
+            applications_dirs: &[],
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 0);
@@ -1443,6 +1631,7 @@ mod tests {
             login_items: None,
             privilege: Some(&fake),
             privilege_acquire_attempted: false,
+            applications_dirs: &[],
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 0);

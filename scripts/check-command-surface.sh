@@ -39,11 +39,11 @@ vole_cmds=$(
     if grep -Eq '^\s+Completions\b' "$VOLE_MAIN"; then
       echo completions
     fi
-    if grep -Eqi 'visible_alias.*"completion"|alias.*"completion"|#\[command\(.*alias.*"completion"' "$VOLE_MAIN"; then
+    if grep -Eq 'visible_alias = "completion"' "$VOLE_MAIN"; then
       echo completion
     fi
-    if grep -Eqi 'optimise' "$VOLE_MAIN"; then echo optimise; fi
-    if grep -Eqi 'analyse' "$VOLE_MAIN"; then echo analyse; fi
+    if grep -Eq 'visible_alias = "optimise"' "$VOLE_MAIN"; then echo optimise; fi
+    if grep -Eq 'visible_alias = "analyse"' "$VOLE_MAIN"; then echo analyse; fi
     if grep -Eq '^\s+Purge\b' "$VOLE_MAIN"; then echo purge; fi
     if grep -Eq '^\s+Installer\b' "$VOLE_MAIN"; then echo installer; fi
     if grep -Eqi '^\s+Touchid\b|^\s+TouchId\b' "$VOLE_MAIN"; then echo touchid; fi

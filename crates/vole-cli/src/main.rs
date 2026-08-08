@@ -5,6 +5,7 @@ mod clean;
 mod history_cmd;
 mod interactive;
 mod optimize;
+mod purge;
 mod signals;
 mod terminal;
 mod tui;
@@ -115,6 +116,7 @@ enum Command {
         target: Option<String>,
     },
     /// 系统优化任务（plan → apply；特权 DNS 经 sudo -n；其余长尾进 coverage_note）。
+    #[command(visible_alias = "optimise")]
     Optimize {
         /// 只产出候选集，不改动任何文件（默认）。
         #[arg(long, conflicts_with = "apply")]
@@ -151,6 +153,7 @@ enum Command {
         json_stream: bool,
     },
     /// 目录体积分析（对齐 mole analyze）。
+    #[command(visible_alias = "analyse")]
     Analyze {
         /// 目标目录（默认 `$HOME`）。
         path: Option<PathBuf>,
@@ -167,7 +170,35 @@ enum Command {
         #[arg(long, default_value_t = 20)]
         limit: u32,
     },
+    /// 清理陈旧项目构建物（plan → apply；对齐 mole purge）。
+    Purge {
+        /// 只产出候选集，不改动任何文件（默认）。
+        #[arg(long, conflicts_with = "apply")]
+        plan: bool,
+        /// 同 `--plan`。
+        #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
+        dry_run: bool,
+        /// 执行 plan 文件中的条目。
+        #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
+        apply: Option<PathBuf>,
+        /// 永久删除而非移入废纸篓（仅与 `--apply` 联用）。
+        #[arg(long, requires = "apply")]
+        permanent: bool,
+        /// 输出 JSON。
+        #[arg(long)]
+        json: bool,
+        /// NDJSON 事件流。
+        #[arg(long = "json-stream")]
+        json_stream: bool,
+        /// 将 plan JSON 写入文件。
+        #[arg(long, conflicts_with = "apply")]
+        plan_out: Option<PathBuf>,
+        /// 纳入零大小产物目录。
+        #[arg(long = "include-empty")]
+        include_empty: bool,
+    },
     /// 生成 shell 补全脚本（stdout）。
+    #[command(visible_alias = "completion")]
     Completions {
         /// 目标 shell：bash / zsh / fish / elvish / powershell
         shell: CompletionShell,
@@ -279,6 +310,26 @@ fn main() {
         }
         Some(Command::History { json, limit }) => {
             std::process::exit(history_cmd::run(json, limit));
+        }
+        Some(Command::Purge {
+            plan: _,
+            dry_run: _,
+            apply,
+            permanent,
+            json,
+            json_stream,
+            plan_out,
+            include_empty,
+        }) => {
+            let code = purge::run_purge(purge::PurgeOptions {
+                json,
+                json_stream,
+                plan_out,
+                apply_plan: apply,
+                permanent,
+                include_empty,
+            });
+            std::process::exit(code);
         }
         Some(Command::Completions { shell }) => {
             let mut cmd = Cli::command();

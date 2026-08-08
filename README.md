@@ -56,14 +56,14 @@ brew install vole
 
 源码 HEAD：`brew install --HEAD wukongnotnull/vole/vole`
 
-**预编译包**（当前 GitHub Latest：[v1.28.0](https://github.com/wukongnotnull/vole/releases/tag/v1.28.0)，Developer ID 签名 + 公证；产品包线 **`2.5.0` 已在 `main` 收口，待打 `v2.5.0` tag / Release**）
+**预编译包**（[v2.5.0](https://github.com/wukongnotnull/vole/releases/tag/v2.5.0)，Developer ID 签名 + 公证）
 
 ```bash
 # Apple Silicon；Intel 将 aarch64 换为 x86_64
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v1.28.0/vole-1.28.0-aarch64-apple-darwin.tar.gz
-tar xzf vole-1.28.0-aarch64-apple-darwin.tar.gz
-install -m 755 vole-1.28.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-mkdir -p ~/.local/share/vole && cp -R vole-1.28.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v2.5.0/vole-2.5.0-aarch64-apple-darwin.tar.gz
+tar xzf vole-2.5.0-aarch64-apple-darwin.tar.gz
+install -m 755 vole-2.5.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+mkdir -p ~/.local/share/vole && cp -R vole-2.5.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 ```
 
 保持 `bin` + `share/vole/rules` 相对布局即可；自定义规则目录时再设 `VOLE_RULES_DIR`。

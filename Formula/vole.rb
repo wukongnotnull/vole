@@ -20,11 +20,11 @@ class Vole < Formula
   on_macos do
     on_arm do
       url "https://github.com/wukongnotnull/vole/releases/download/v2.5.0/vole-2.5.0-aarch64-apple-darwin.tar.gz"
-      sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+      sha256 "1b5d26e0e62f8a86c991bd846e41f9166cd26a177ff70f54fb716dbf8a70e367"
     end
     on_intel do
       url "https://github.com/wukongnotnull/vole/releases/download/v2.5.0/vole-2.5.0-x86_64-apple-darwin.tar.gz"
-      sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+      sha256 "087db92ae3b7cc5c3b139ad0a1a79a53c8f8bf1102ea3f8418075b1a2bd1436e"
     end
   end
 

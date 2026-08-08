@@ -209,6 +209,19 @@ last_verified = "2026-07"
 kind = "all"
 
 [[rule]]
+id = "zed-npm-system-cache"
+category = "app-caches"
+label = "Zed system-node npm cache"
+platform = ["macos"]
+paths = ["~/Library/Application Support/Zed/node/cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
 id = "simulator-cache"
 category = "app-caches"
 label = "Simulator cache"

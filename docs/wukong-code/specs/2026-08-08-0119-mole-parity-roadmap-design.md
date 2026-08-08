@@ -1,3 +1,5 @@
+> **后续进度**：以 [`2026-08-08-1646-mole-parity-roadmap-design.md`](2026-08-08-1646-mole-parity-roadmap-design.md) 为准（含 1.41.0 Batch 6 收口）。本文件保留 1.40.0 合入后快照。
+
 # Mole 对齐路线图（近满配 backlog · CLI）
 
 - 日期：2026-08-08（修订：同日 W2c Batch 6+ Chrome DevTools MCP Cache / 1.40.0 合入后更新状态）

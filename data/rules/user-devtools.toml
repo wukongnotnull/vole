@@ -1222,11 +1222,57 @@ last_verified = "2026-08"
 kind = "all"
 
 [[rule]]
+id = "antigravity-browser-siblings"
+category = "user-devtools"
+label = "Antigravity browser profile sibling caches"
+platform = ["macos"]
+paths = [
+  "~/.gemini/antigravity-browser-profile/Default/Code Cache/*",
+  "~/.gemini/antigravity-browser-profile/Default/GPUCache/*",
+  "~/.gemini/antigravity-browser-profile/Default/DawnGraphiteCache/*",
+  "~/.gemini/antigravity-browser-profile/Default/DawnWebGPUCache/*",
+  "~/.gemini/antigravity-browser-profile/GraphiteDawnCache/*",
+  "~/.gemini/antigravity-browser-profile/component_crx_cache/*",
+  "~/.gemini/antigravity-browser-profile/extensions_crx_cache/*",
+  "~/.gemini/antigravity-browser-profile/Default/Service Worker/CacheStorage/*",
+]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
 id = "chrome-devtools-mcp-cache"
 category = "user-devtools"
 label = "Chrome DevTools MCP browser cache"
 platform = ["macos"]
 paths = ["~/.cache/chrome-devtools-mcp/chrome-profile/Default/Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
+id = "chrome-devtools-mcp-siblings"
+category = "user-devtools"
+label = "Chrome DevTools MCP profile sibling caches"
+platform = ["macos"]
+paths = [
+  "~/.cache/chrome-devtools-mcp/chrome-profile/Default/Code Cache/*",
+  "~/.cache/chrome-devtools-mcp/chrome-profile/Default/GPUCache/*",
+  "~/.cache/chrome-devtools-mcp/chrome-profile/Default/DawnGraphiteCache/*",
+  "~/.cache/chrome-devtools-mcp/chrome-profile/Default/DawnWebGPUCache/*",
+  "~/.cache/chrome-devtools-mcp/chrome-profile/Default/DawnCache/*",
+  "~/.cache/chrome-devtools-mcp/chrome-profile/Default/GrShaderCache/*",
+  "~/.cache/chrome-devtools-mcp/chrome-profile/GraphiteDawnCache/*",
+  "~/.cache/chrome-devtools-mcp/chrome-profile/component_crx_cache/*",
+  "~/.cache/chrome-devtools-mcp/chrome-profile/extensions_crx_cache/*",
+  "~/.cache/chrome-devtools-mcp/chrome-profile/Default/Service Worker/CacheStorage/*",
+]
 impact = "Application cache/logs; safe to rebuild"
 disabled = false
 last_verified = "2026-08"

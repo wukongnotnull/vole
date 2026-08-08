@@ -41,6 +41,30 @@ fn is_container_cache_or_tmp(path: &str) -> bool {
     path.contains("/Data/Library/Caches/") || path.contains("/Data/tmp/")
 }
 
+/// QQ Music Mac 容器内可再生 AS 缓存（对齐 Mole `iRRCache`/`iLog`/`iCache`/`iTemp`）。
+/// 不含 `iDownloadProxy`（离线下载）。
+fn is_qq_music_mac_as_cache_path(path: &str) -> bool {
+    qq_music_mac_as_leaf_dir(path)
+        .is_some_and(|dir| matches!(dir, "iRRCache" | "iLog" | "iCache" | "iTemp"))
+}
+
+/// 容器 AS 下非上述四目录的路径（如 `iDownloadProxy`）须保护。
+fn is_qq_music_mac_as_non_rebuildable_path(path: &str) -> bool {
+    qq_music_mac_as_leaf_dir(path)
+        .is_some_and(|dir| !matches!(dir, "iRRCache" | "iLog" | "iCache" | "iTemp"))
+}
+
+fn qq_music_mac_as_leaf_dir(path: &str) -> Option<&str> {
+    const MARKER: &str =
+        "/Library/Containers/com.tencent.QQMusicMac/Data/Library/Application Support/QQMusicMac/";
+    let rest = path.split(MARKER).nth(1)?;
+    let (dir, leaf) = rest.split_once('/')?;
+    if leaf.is_empty() || dir.is_empty() {
+        return None;
+    }
+    Some(dir)
+}
+
 /// Group Containers 下可再生 Logs 路径（1.9.0 Cleanup 形状豁免）。
 /// 仅相对容器根的 `Logs/<leaf>` 或 `Library/Logs/<leaf>`。
 fn is_group_container_logs_path(path: &str) -> bool {
@@ -67,6 +91,10 @@ fn is_group_container_logs_path(path: &str) -> bool {
 /// 路径保护。`Cleanup` 对齐现网；`Uninstall` 对齐 mole `MOLE_UNINSTALL_MODE=1`
 ///（不因 data-protected 拦截；仍拦 system-critical / EDR / 关键路径）。
 pub fn should_protect_path(path: &str, catalog: &ProtectionCatalog, mode: ProtectionMode) -> bool {
+    // QQ Music：容器 AS 仅放行四可再生目录；离线下载等一律保护。
+    if mode == ProtectionMode::Cleanup && is_qq_music_mac_as_non_rebuildable_path(path) {
+        return true;
+    }
     if path.is_empty() {
         return false;
     }
@@ -107,7 +135,10 @@ pub fn should_protect_path(path: &str, catalog: &ProtectionCatalog, mode: Protec
     // 3. Sandbox bundle IDs
     let mut container_cache = false;
     if let Some(bundle_id) = extract_container_bundle_id(path) {
-        if is_container_cache_or_tmp(path) || is_group_container_logs_path(path) {
+        if is_container_cache_or_tmp(path)
+            || is_group_container_logs_path(path)
+            || is_qq_music_mac_as_cache_path(path)
+        {
             container_cache = true;
         } else if mode == ProtectionMode::Cleanup && should_protect_data(&bundle_id, catalog) {
             return true;
@@ -182,6 +213,9 @@ fn is_explicit_clean_cache_path(path: &str) -> bool {
     if is_claude_pending_uploads_path(path) {
         return true;
     }
+    if is_qq_music_mac_as_cache_path(path) {
+        return true;
+    }
     // mole user.sh `_clean_recent_items`: fixed Recent*.sfl(2) + recentitems.plist.
     // Filename is `com.apple.*`, so step-7 bundle guards would otherwise block them.
     if is_explicit_recent_items_path(path) {
@@ -200,6 +234,12 @@ fn is_explicit_clean_cache_path(path: &str) -> bool {
         "/sentry/",
         "/DawnGraphiteCache/",
         "/DawnWebGPUCache/",
+        "/DawnCache/",
+        "/GraphiteDawnCache/",
+        "/GrShaderCache/",
+        "/component_crx_cache/",
+        "/extensions_crx_cache/",
+        "/Service Worker/CacheStorage/",
     ];
     CACHE_SEGMENTS.iter().any(|seg| path.contains(seg))
 }
@@ -575,6 +615,67 @@ mod tests {
         )));
         assert!(!is_claude_pending_uploads_path(&format!(
             "{home}/Library/Application Support/Claude/Local Storage/file"
+        )));
+    }
+
+    #[test]
+    fn batch6_sibling_cache_segments_allowed() {
+        let c = cat();
+        let home = "/Users/t";
+        let ag = format!("{home}/.gemini/antigravity-browser-profile");
+        assert!(!should_protect_path(
+            &format!("{ag}/Default/Code Cache/x"),
+            &c,
+            ProtectionMode::Cleanup
+        ));
+        assert!(!should_protect_path(
+            &format!("{ag}/GraphiteDawnCache/x"),
+            &c,
+            ProtectionMode::Cleanup
+        ));
+        assert!(!should_protect_path(
+            &format!("{ag}/component_crx_cache/x"),
+            &c,
+            ProtectionMode::Cleanup
+        ));
+        assert!(!should_protect_path(
+            &format!("{ag}/Default/Service Worker/CacheStorage/x"),
+            &c,
+            ProtectionMode::Cleanup
+        ));
+        let mcp = format!("{home}/.cache/chrome-devtools-mcp/chrome-profile");
+        assert!(!should_protect_path(
+            &format!("{mcp}/Default/GrShaderCache/x"),
+            &c,
+            ProtectionMode::Cleanup
+        ));
+        assert!(!should_protect_path(
+            &format!("{mcp}/Default/DawnCache/x"),
+            &c,
+            ProtectionMode::Cleanup
+        ));
+    }
+
+    #[test]
+    fn qq_music_mac_as_caches_allowed_but_not_download_proxy() {
+        let c = cat();
+        let home = "/Users/t";
+        let base = format!(
+            "{home}/Library/Containers/com.tencent.QQMusicMac/Data/Library/Application Support/QQMusicMac"
+        );
+        for dir in ["iRRCache", "iLog", "iCache", "iTemp"] {
+            assert!(
+                !should_protect_path(&format!("{base}/{dir}/leaf"), &c, ProtectionMode::Cleanup),
+                "{dir} must be cleanable"
+            );
+        }
+        assert!(should_protect_path(
+            &format!("{base}/iDownloadProxy/song"),
+            &c,
+            ProtectionMode::Cleanup
+        ));
+        assert!(!is_qq_music_mac_as_cache_path(&format!(
+            "{base}/iDownloadProxy/song"
         )));
     }
 

@@ -1,0 +1,14 @@
+{
+  "id": "w2c_chrome_devtools_mcp_siblings_selects_child",
+  "source_bats": "manual",
+  "source_test": "chrome-devtools-mcp-siblings selects GrShaderCache child",
+  "fixture": [
+    {
+      "mkdir": "~/.cache/chrome-devtools-mcp/chrome-profile/Default/GrShaderCache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/.cache/chrome-devtools-mcp/chrome-profile/Default/GrShaderCache/item|Chrome DevTools MCP profile sibling caches"
+  ],
+  "expect_not_selected": []
+}

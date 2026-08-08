@@ -12,6 +12,7 @@ mod plan;
 mod proto_plan;
 mod purge_apply;
 mod purge_plan;
+mod remove;
 mod touchid;
 mod uninstall_apply;
 mod uninstall_plan;
@@ -63,6 +64,10 @@ pub use purge_plan::{
     build_purge_plan, is_project_root_for_hints, is_protected_purge_artifact,
     quick_hint_search_roots, PurgePlanError, PurgePlanOptions, DEFAULT_PURGE_MIN_AGE_DAYS,
     PURGE_TARGETS, QUICK_HINT_EXCLUDED_TARGETS,
+};
+pub use remove::{
+    plan_remove, run_remove, BrewUninstaller, FakeBrewUninstaller, LiveBrewUninstaller,
+    RemoveError, RemoveItem, RemoveItemKind, RemoveOptions, RemoveOutcome, RemovePlan,
 };
 pub use touchid::{
     backup_path, disable_touchid, enable_touchid, is_touchid_configured, pam_install_for_runtime,

@@ -1209,6 +1209,19 @@ last_verified = "2026-07"
 kind = "all"
 
 [[rule]]
+id = "antigravity-browser-cache"
+category = "user-devtools"
+label = "Antigravity browser cache"
+platform = ["macos"]
+paths = ["~/.gemini/antigravity-browser-profile/Default/Cache/*"]
+impact = "Application cache/logs; safe to rebuild"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
 id = "antigravity-cache"
 category = "user-devtools"
 label = "Antigravity cache"

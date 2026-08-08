@@ -1,0 +1,14 @@
+{
+  "id": "w2c_antigravity_browser_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "antigravity-browser-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/.gemini/antigravity-browser-profile/Default/Cache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/.gemini/antigravity-browser-profile/Default/Cache/item|Antigravity browser cache"
+  ],
+  "expect_not_selected": []
+}

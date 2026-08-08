@@ -3,6 +3,7 @@
 mod actions;
 mod delete_paths;
 mod login_items_audit;
+mod spotlight_index;
 mod spotlight_orphan_rules;
 
 pub use actions::{
@@ -22,6 +23,7 @@ pub use login_items_audit::{
     plan_login_items_audit, FakeLoginItemsAuditDeps, LiveLoginItemsAuditDeps, LoginItemSnapshot,
     LoginItemsAuditDeps, LoginItemsAuditError,
 };
+pub use spotlight_index::plan_spotlight_index_optimize;
 pub use spotlight_orphan_rules::{
     plan_spotlight_orphan_rules_cleanup, FakeSpotlightOrphanDeps, LiveSpotlightOrphanDeps,
     SpotlightOrphanDeps, SpotlightOrphanError,

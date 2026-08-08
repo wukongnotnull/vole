@@ -12,9 +12,9 @@ use crate::optimize::{
     plan_dock_refresh, plan_launch_services_rebuild, plan_legacy_overrides_audit,
     plan_login_items_audit, plan_memory_pressure_relief, plan_network_optimization,
     plan_network_stack_optimize, plan_notification_cleanup, plan_periodic_maintenance,
-    plan_prevent_network_dsstore, plan_quarantine_cleanup, plan_spotlight_orphan_rules_cleanup,
-    plan_sqlite_vacuum, plan_system_maintenance, LiveLoginItemsAuditDeps, LiveSpotlightOrphanDeps,
-    OptimizeCandidate, OptimizeTaskKind,
+    plan_prevent_network_dsstore, plan_quarantine_cleanup, plan_spotlight_index_optimize,
+    plan_spotlight_orphan_rules_cleanup, plan_sqlite_vacuum, plan_system_maintenance,
+    LiveLoginItemsAuditDeps, LiveSpotlightOrphanDeps, OptimizeCandidate, OptimizeTaskKind,
 };
 use crate::protection::{AppProtection, ProtectionCatalog};
 use crate::safety::capture_plan_entry_identity;
@@ -127,6 +127,9 @@ pub fn build_optimize_plan(
             opts.home,
             &LiveSpotlightOrphanDeps,
         ));
+    }
+    if allow("spotlight_index_optimize") {
+        candidates.push(plan_spotlight_index_optimize(opts.home));
     }
 
     let mut entries = Vec::new();

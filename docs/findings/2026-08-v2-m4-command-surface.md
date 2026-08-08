@@ -1,7 +1,7 @@
 # M4：§3.1 命令面对照核定
 
 **日期**：2026-08-08  
-**状态**：骨架（Task 1）；核定列在 Task 8/10 填完  
+**状态**：已核定（M4 Task 8/10）  
 **Mole 钉版**：`third_party/mole-1.48.1`  
 **规格**：[`2026-08-08-2030-v2-cli-complete-design.md`](../wukong-code/specs/2026-08-08-2030-v2-cli-complete-design.md) §3.1  
 **计划**：[`2026-08-08-2051-v2-m4-cli-complete-spike.md`](../wukong-code/plans/2026-08-08-2051-v2-m4-cli-complete-spike.md)
@@ -10,31 +10,31 @@
 
 | Mole 命令 | Mole 实现 | Vole 1.46.0 | 规格处置 | M4 核定 |
 |---|---|---|---|---|
-| `clean` | `bin/clean.sh` | ✅ `Clean` | 已达 | 待填 |
-| `uninstall` | `bin/uninstall.sh` | ✅ `Uninstall` | 已达 | 待填 |
-| `optimize` / `optimise` | `bin/optimize.sh` | ✅ 无 `optimise` 别名 | 补别名 §3.3 | 待填 |
-| `analyze` / `analyse` | `bin/analyze.sh` | ✅ 无 `analyse` 别名 | 补别名 §3.3 | 待填 |
-| `status` | `bin/status.sh` | ✅ | 已达 | 待填 |
-| `history` | early dispatch → `bin/history.sh` | ✅ | 已达 | 待填 |
-| `completion` | `bin/completion.sh` | ⚠️ 仅 `completions` | 补别名 §3.3 | 待填 |
-| `help` / `--help` / `-h` | `show_help` | ✅ clap | 已达 | 待填 |
-| `version` / `--version` / `-V` | `show_version` | ✅ clap | 已达 | 待填 |
-| 裸调用 → 菜单 | `check_for_updates` 后菜单 | ✅ 菜单；**无**联网检查 | 已达；故意不跟进 §6.5 | 待填 |
-| `purge` | `bin/purge.sh` + `lib/clean/project.sh` | ❌ | **M5** | 待填 |
-| `installer` | `bin/installer.sh` | ❌ | **M7** | 待填 |
-| `touchid` | `bin/touchid.sh` | ❌ | **M8** | 待填 |
-| `update` | `lib/manage/update.sh`（sourced） | ❌ | **M9** 自更新 | 待填 |
-| `remove` | `lib/manage/remove.sh`（sourced） | ❌ | **M10** 自卸载 | 待填 |
+| `clean` | `bin/clean.sh` | ✅ `Clean` | 已达 | **已达** |
+| `uninstall` | `bin/uninstall.sh` | ✅ `Uninstall` | 已达 | **已达** |
+| `optimize` / `optimise` | `bin/optimize.sh` | ✅ 无 `optimise` | 补别名 §3.3 | **缺口→建议 M5**（别名） |
+| `analyze` / `analyse` | `bin/analyze.sh` | ✅ 无 `analyse` | 补别名 §3.3 | **缺口→建议 M5**（别名） |
+| `status` | `bin/status.sh` | ✅ | 已达 | **已达** |
+| `history` | early → `bin/history.sh` | ✅ | 已达 | **已达** |
+| `completion` | `bin/completion.sh` | ⚠️ 仅 `completions` | 补别名 §3.3 | **缺口→建议 M5**（别名） |
+| `help` / `--help` / `-h` | `show_help` | ✅ clap | 已达 | **已达** |
+| `version` / `--version` / `-V` | `show_version` | ✅ clap | 已达 | **已达** |
+| 裸调用 → 菜单 | `check_for_updates` 后菜单 | ✅ 菜单；无联网检查 | 已达；不跟进 §6.5 | **已达（故意差异）** |
+| `purge` | `bin/purge.sh` + `project.sh` | ❌ | **M5** | **缺口→M5** |
+| `installer` | `bin/installer.sh` | ❌ | **M7** | **缺口→M7** |
+| `touchid` | `bin/touchid.sh` | ❌ | **M8** | **缺口→M8** |
+| `update` | `lib/manage/update.sh` | ❌ | **M9** | **缺口→M9** |
+| `remove` | `lib/manage/remove.sh` | ❌ | **M10** | **缺口→M10** |
 
 ## 豁免（不计入「⊇」顶层判据）
 
 | 项 | 说明 | M4 核定 |
 |---|---|---|
-| `hints` | Mole：`lib/clean/hints.sh`，由 `clean.sh` source；**无** `mo hints`。Vole 按 **M6** 做 clean 内只读提示；**禁止**顶层 `vole hints` | 待填 |
-| `whitelist` | Mole：optimize/clean 内交互 `manage_whitelist`；Vole 已有 `clean --whitelist*`。能力已有、形态不同，可接受差异 | 待填 |
+| `hints` | Mole 无 `mo hints`；`clean` 内只读模块；Vole **M6**；禁止顶层 `vole hints` | **豁免成立**；M6 交付模块 |
+| `whitelist` | Mole 交互 manage；Vole 已有 `clean --whitelist*` | **豁免成立**（可接受形态差异） |
 
-## Mole 路由抽取（Task 1）
+## Mole 路由抽取
 
-来自 `third_party/mole-1.48.1/mole` `main()` case + `mole_dispatch_history_early`：
+来自 `third_party/mole-1.48.1/mole`：
 
-`optimize|optimise`, `clean`, `uninstall`, `analyze|analyse`, `status`, `purge`, `installer`, `touchid`, `completion`, `update`, `remove`, `help|--help|-h`, `version|--version|-V`, `history`（early）, `""` → `check_for_updates` + 交互菜单。
+`optimize|optimise`, `clean`, `uninstall`, `analyze|analyse`, `status`, `purge`, `installer`, `touchid`, `completion`, `update`, `remove`, `help|--help|-h`, `version|--version|-V`, `history`（early）, `""` → `check_for_updates` + 菜单。

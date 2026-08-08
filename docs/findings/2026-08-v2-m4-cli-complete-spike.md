@@ -137,7 +137,21 @@
 
 ## 4. 别名与裸调用
 
-（Task 8 填写）
+### 4.1 别名缺口（§3.3）
+
+| Mole | Vole 1.46.0（`crates/vole-cli/src/main.rs`） | 处置 |
+|---|---|---|
+| `completion` | 仅 `Completions`（`completions`） | 补 `completion` visible_alias；保留 `completions` 主名 |
+| `optimise` | 仅 `Optimize` | 补英式别名 |
+| `analyse` | 仅 `Analyze` | 补英式别名 |
+
+建议随 **M5** 同 PR 交付，使 `2.0.0` 即具备完整命令名兼容（规格 §3.3）。纳入 `--help` 与 shell 补全。
+
+### 4.2 裸调用不联网（§6.5）
+
+- Mole：`""` → `check_for_updates` 再 `interactive_main_menu`
+- Vole：`Command::None` → `interactive::run()`；菜单仅 spawn 本地子命令（status/clean/uninstall/optimize/history）；**无** GitHub/brew 版本探测
+- **核定：** 故意差异，已达；收口闸门须静态断言 `interactive.rs` 无更新探测联网调用
 
 ## 5. 主路径 vs 长尾总表
 

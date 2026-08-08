@@ -33,6 +33,11 @@ impl LoginItemDeps for LiveLoginItemDeps {
         if clean.is_empty() {
             return Ok(());
         }
+        if !is_safe_login_item_display_name(clean) {
+            return Err(LoginItemError::Failed(
+                "login item display name contains unsafe AppleScript metacharacters".into(),
+            ));
+        }
         let escaped = escape_applescript_string(clean);
         let script = format!(
             r#"tell application "System Events"
@@ -123,9 +128,23 @@ fn from_hex(b: u8) -> Option<u8> {
     }
 }
 
-pub fn encode_login_item_name_rule_id(display_name: &str) -> String {
+/// 拒绝会破坏 AppleScript 字面量结构的显示名（`&`、换行等）。
+pub fn is_safe_login_item_display_name(s: &str) -> bool {
+    !s.is_empty()
+        && !s
+            .chars()
+            .any(|c| matches!(c, '&' | '\n' | '\r' | '\0') || c.is_control())
+}
+
+pub fn encode_login_item_name_rule_id(display_name: &str) -> Option<String> {
     let clean = display_name.strip_suffix(".app").unwrap_or(display_name);
-    format!("{LOGIN_ITEM_NAME_PREFIX}{}", percent_encode_token(clean))
+    if !is_safe_login_item_display_name(clean) {
+        return None;
+    }
+    Some(format!(
+        "{LOGIN_ITEM_NAME_PREFIX}{}",
+        percent_encode_token(clean)
+    ))
 }
 
 pub fn parse_login_item_name_rule_id(rule_id: &str) -> Option<String> {
@@ -184,8 +203,9 @@ pub fn discover_login_item_helper_bundle_ids(app_path: &Path) -> Vec<(PathBuf, S
     out
 }
 
-fn escape_applescript_string(s: &str) -> String {
-    s.replace('\\', "\\\\").replace('"', "\\\"")
+/// AppleScript 字符串字面量：双引号通过加倍嵌入（`"` → `""`），不是 shell `\"`。
+pub fn escape_applescript_string(s: &str) -> String {
+    s.replace('"', "\"\"")
 }
 
 fn map_osascript_error(err: String) -> LoginItemError {
@@ -270,13 +290,26 @@ mod tests {
 
     #[test]
     fn name_rule_id_roundtrip_with_spaces() {
-        let id = encode_login_item_name_rule_id("Foo Bar");
+        let id = encode_login_item_name_rule_id("Foo Bar").unwrap();
         assert!(id.starts_with("uninstall:login-item:name:"));
         assert_eq!(
             parse_login_item_name_rule_id(&id).as_deref(),
             Some("Foo Bar")
         );
         assert!(!id.contains(' '));
+    }
+
+    #[test]
+    fn encode_rejects_applescript_metacharacters() {
+        assert!(encode_login_item_name_rule_id("Foo&do shell script \"id\"").is_none());
+        assert!(encode_login_item_name_rule_id("Foo\nBar").is_none());
+        assert!(!is_safe_login_item_display_name("a&b"));
+    }
+
+    #[test]
+    fn applescript_escape_doubles_quotes() {
+        assert_eq!(escape_applescript_string(r#"Foo"Bar"#), r#"Foo""Bar"#);
+        assert_eq!(escape_applescript_string("plain"), "plain");
     }
 
     #[test]

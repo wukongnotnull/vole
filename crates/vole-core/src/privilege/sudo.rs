@@ -41,6 +41,10 @@ impl PrivilegeBackend for NoPrivilege {
     fn run_periodic_maintenance(&self) -> Result<(), PrivilegeError> {
         Err(PrivilegeError::Unavailable)
     }
+
+    fn rebuild_spotlight_index(&self) -> Result<(), PrivilegeError> {
+        Err(PrivilegeError::Unavailable)
+    }
 }
 
 /// 生产：非交互 `sudo -n`。
@@ -221,6 +225,23 @@ impl PrivilegeBackend for SudoNoninteractive {
             )))
         }
     }
+
+    fn rebuild_spotlight_index(&self) -> Result<(), PrivilegeError> {
+        if test_no_auth() {
+            return Err(PrivilegeError::Unavailable);
+        }
+        let status = Command::new("sudo")
+            .args(["-n", "mdutil", "-E", "/"])
+            .status()
+            .map_err(|e| PrivilegeError::CommandFailed(e.to_string()))?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err(PrivilegeError::CommandFailed(format!(
+                "mdutil -E exit {status}"
+            )))
+        }
+    }
 }
 
 /// 测试用：记录 remove 调用，不执行真 sudo。
@@ -235,6 +256,7 @@ pub struct RecordingPrivilege {
     pub network_stack_calls: Mutex<u32>,
     pub reset_permissions_calls: Mutex<u32>,
     pub periodic_calls: Mutex<u32>,
+    pub spotlight_rebuild_calls: Mutex<u32>,
 }
 
 impl RecordingPrivilege {
@@ -250,6 +272,7 @@ impl RecordingPrivilege {
             network_stack_calls: Mutex::new(0),
             reset_permissions_calls: Mutex::new(0),
             periodic_calls: Mutex::new(0),
+            spotlight_rebuild_calls: Mutex::new(0),
         }
     }
 
@@ -265,6 +288,7 @@ impl RecordingPrivilege {
             network_stack_calls: Mutex::new(0),
             reset_permissions_calls: Mutex::new(0),
             periodic_calls: Mutex::new(0),
+            spotlight_rebuild_calls: Mutex::new(0),
         }
     }
 }
@@ -344,6 +368,14 @@ impl PrivilegeBackend for RecordingPrivilege {
             return Err(PrivilegeError::Unavailable);
         }
         *self.periodic_calls.lock().unwrap() += 1;
+        Ok(())
+    }
+
+    fn rebuild_spotlight_index(&self) -> Result<(), PrivilegeError> {
+        if !*self.probe.lock().unwrap() {
+            return Err(PrivilegeError::Unavailable);
+        }
+        *self.spotlight_rebuild_calls.lock().unwrap() += 1;
         Ok(())
     }
 }

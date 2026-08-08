@@ -113,7 +113,7 @@ const CATALOG: &[OptimizeTask] = &[
         kind: OptimizeTaskKind::Action,
         title: "Spotlight Optimization",
         description: "Rebuild index if search is slow (smart detection)",
-        in_m3: false,
+        in_m3: true,
     },
     OptimizeTask {
         id: "spotlight_orphan_rules_cleanup",
@@ -256,10 +256,10 @@ mod tests {
         assert!(main.contains(&"periodic_maintenance"));
         assert!(main.contains(&"login_items_audit"));
         assert!(main.contains(&"spotlight_orphan_rules_cleanup"));
-        assert!(!main.contains(&"spotlight_index_optimize"));
+        assert!(main.contains(&"spotlight_index_optimize"));
         assert!(!main.contains(&"disk_verify"));
         assert!(!main.contains(&"shared_file_list_repair"));
-        assert_eq!(main.len(), 20);
+        assert_eq!(main.len(), 21);
     }
 
     #[test]

@@ -556,6 +556,7 @@ pub fn apply_optimize_action(
         "periodic_maintenance" => apply_periodic_maintenance(privilege),
         "login_items_audit" => apply_login_items_audit(path),
         "spotlight_orphan_rules_cleanup" => apply_spotlight_orphan_rules_cleanup(),
+        "spotlight_index_optimize" => apply_spotlight_index_optimize(privilege),
         _ => Err(OptimizeActionError::Failed),
     }
 }
@@ -580,6 +581,20 @@ fn apply_spotlight_orphan_rules_cleanup() -> Result<(), OptimizeActionError> {
         Err(SpotlightOrphanError::TestMode) => Err(OptimizeActionError::Skipped),
         Err(SpotlightOrphanError::Unavailable) => Err(OptimizeActionError::Failed),
     }
+}
+
+fn apply_spotlight_index_optimize(
+    privilege: Option<&dyn crate::privilege::PrivilegeBackend>,
+) -> Result<(), OptimizeActionError> {
+    use super::spotlight_index::spotlight_index_needs_rebuild;
+
+    if !spotlight_index_needs_rebuild() {
+        return Ok(());
+    }
+    let Some(backend) = privilege else {
+        return Err(OptimizeActionError::NeedsPrivilege);
+    };
+    map_privilege_result(backend.rebuild_spotlight_index())
 }
 
 fn apply_memory_pressure_relief(
@@ -1132,5 +1147,54 @@ mod tests {
             .unwrap_err();
         assert_eq!(err, OptimizeActionError::Skipped);
         std::env::remove_var("VOLE_TEST_NO_AUTH");
+    }
+
+    #[test]
+    fn apply_spotlight_index_noop_when_fast() {
+        let _guard = super::super::spotlight_index::test_env_lock();
+        std::env::set_var("VOLE_TEST_SPOTLIGHT_STATUS", "enabled");
+        std::env::set_var("VOLE_TEST_AC_POWER", "1");
+        std::env::set_var("VOLE_TEST_SPOTLIGHT_SLOW", "0");
+        let path = Path::new("/tmp/.vole-optimize-action/spotlight_index_optimize");
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        apply_optimize_action("spotlight_index_optimize", path, Some(&backend), &mut false)
+            .unwrap();
+        assert_eq!(*backend.spotlight_rebuild_calls.lock().unwrap(), 0);
+        std::env::remove_var("VOLE_TEST_SPOTLIGHT_STATUS");
+        std::env::remove_var("VOLE_TEST_AC_POWER");
+        std::env::remove_var("VOLE_TEST_SPOTLIGHT_SLOW");
+    }
+
+    #[test]
+    fn apply_spotlight_index_rebuilds_when_slow() {
+        let _guard = super::super::spotlight_index::test_env_lock();
+        std::env::set_var("VOLE_TEST_SPOTLIGHT_STATUS", "enabled");
+        std::env::set_var("VOLE_TEST_AC_POWER", "1");
+        std::env::set_var("VOLE_TEST_SPOTLIGHT_SLOW", "1");
+        let path = Path::new("/tmp/.vole-optimize-action/spotlight_index_optimize");
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        apply_optimize_action("spotlight_index_optimize", path, Some(&backend), &mut false)
+            .unwrap();
+        assert_eq!(*backend.spotlight_rebuild_calls.lock().unwrap(), 1);
+        std::env::remove_var("VOLE_TEST_SPOTLIGHT_STATUS");
+        std::env::remove_var("VOLE_TEST_AC_POWER");
+        std::env::remove_var("VOLE_TEST_SPOTLIGHT_SLOW");
+    }
+
+    #[test]
+    fn apply_spotlight_index_needs_privilege_when_denied() {
+        let _guard = super::super::spotlight_index::test_env_lock();
+        std::env::set_var("VOLE_TEST_SPOTLIGHT_STATUS", "enabled");
+        std::env::set_var("VOLE_TEST_AC_POWER", "1");
+        std::env::set_var("VOLE_TEST_SPOTLIGHT_SLOW", "1");
+        let path = Path::new("/tmp/.vole-optimize-action/spotlight_index_optimize");
+        let backend = crate::privilege::RecordingPrivilege::denying();
+        let err =
+            apply_optimize_action("spotlight_index_optimize", path, Some(&backend), &mut false)
+                .unwrap_err();
+        assert_eq!(err, OptimizeActionError::NeedsPrivilege);
+        std::env::remove_var("VOLE_TEST_SPOTLIGHT_STATUS");
+        std::env::remove_var("VOLE_TEST_AC_POWER");
+        std::env::remove_var("VOLE_TEST_SPOTLIGHT_SLOW");
     }
 }

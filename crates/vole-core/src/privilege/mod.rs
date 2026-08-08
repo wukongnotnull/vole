@@ -144,6 +144,8 @@ pub trait PrivilegeBackend: Send + Sync {
     fn reset_user_permissions(&self, uid: u32) -> Result<(), PrivilegeError>;
     /// `sudo -n periodic daily weekly monthly`。
     fn run_periodic_maintenance(&self) -> Result<(), PrivilegeError>;
+    /// `sudo -n mdutil -E /`（重建 Spotlight 索引）。
+    fn rebuild_spotlight_index(&self) -> Result<(), PrivilegeError>;
 }
 
 const LIVE_PREFIXES: &[&str] = &[

@@ -7,6 +7,10 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use crate::brew_cask::{
     detect_cask_name, encode_brew_cask_rule_id, BrewDeps, LiveBrewDeps, ZapMode,
 };
+use crate::login_items::{
+    discover_login_item_helper_bundle_ids, encode_login_helper_rule_id,
+    encode_login_item_name_rule_id, login_name_collides,
+};
 use crate::protection::{
     find_app_leftovers, find_bundle_siblings, official_uninstaller_vendor, read_bundle_id,
     read_display_name, should_protect_from_uninstall, AppIdentity, AppProtection,
@@ -86,6 +90,7 @@ pub fn build_uninstall_plan_with_brew(
     let mut skipped_filter = 0u64;
     let mut sibling_notes = 0u64;
     let mut brew_cask = 0u64;
+    let mut login_items = 0u64;
 
     let uninstall_protect = UninstallPathProtection::new(protection);
     let search_roots = opts.applications_dirs.to_vec();
@@ -130,6 +135,33 @@ pub fn build_uninstall_plan_with_brew(
             sibling_notes += 1;
         }
 
+        let sibling_names = sibling_display_names(&siblings);
+        let name_collides = login_name_collides(&app.display_name, &sibling_names);
+
+        // Login Item / helper 侧车先于本体，便于 apply 在删包前执行（且 PathVanished 仍可动作）。
+        if !name_collides {
+            let rule = encode_login_item_name_rule_id(&app.display_name);
+            let label = format!("Login Item: {}", app.display_name);
+            if let Some(entry) =
+                try_plan_entry_sized(&app.app_path, &label, &rule, &uninstall_protect, 0)
+            {
+                entries.push(entry);
+                login_items += 1;
+            }
+        }
+        if !siblings.has_siblings() {
+            for (_helper_path, helper_id) in discover_login_item_helper_bundle_ids(&app.app_path) {
+                let rule = encode_login_helper_rule_id(&helper_id);
+                let label = format!("LoginItems helper: {helper_id}");
+                if let Some(entry) =
+                    try_plan_entry_sized(&app.app_path, &label, &rule, &uninstall_protect, 0)
+                {
+                    entries.push(entry);
+                    login_items += 1;
+                }
+            }
+        }
+
         let leftovers = find_app_leftovers(&app, opts.home, &siblings);
         let (rule_app, label) = if let Some(token) = detect_cask_name(brew, &app.app_path) {
             brew_cask += 1;
@@ -161,8 +193,8 @@ pub fn build_uninstall_plan_with_brew(
     }
 
     let coverage_note = Some(format!(
-        "vole uninstall: skipped protected={skipped_protected}, official_uninstaller={skipped_official}, filter_miss={skipped_filter}, sibling_leftovers_suppressed={sibling_notes}, brew_cask={brew_cask}. \
-Long-tail not covered (use Mole): login items, system LaunchDaemons, /Library sudo paths."
+        "vole uninstall: skipped protected={skipped_protected}, official_uninstaller={skipped_official}, filter_miss={skipped_filter}, sibling_leftovers_suppressed={sibling_notes}, brew_cask={brew_cask}, login_items={login_items}. \
+Long-tail not covered (use Mole): system LaunchDaemons, /Library sudo paths."
     ));
 
     Ok(ProtoPlan {
@@ -184,10 +216,20 @@ fn try_plan_entry(
     rule_id: &str,
     protection: &UninstallPathProtection<'_>,
 ) -> Option<ProtoPlanEntry> {
+    let size = path_size(path);
+    try_plan_entry_sized(path, label, rule_id, protection, size)
+}
+
+fn try_plan_entry_sized(
+    path: &Path,
+    label: &str,
+    rule_id: &str,
+    protection: &UninstallPathProtection<'_>,
+    size: u64,
+) -> Option<ProtoPlanEntry> {
     let path_str = path.display().to_string();
     validate_path_for_deletion(&path_str, protection).ok()?;
     let identity = capture_plan_entry_identity(path).ok()?;
-    let size = path_size(path);
     Some(ProtoPlanEntry {
         id: format!("{rule_id}:{}", path.display()),
         path: path.to_path_buf(),
@@ -199,6 +241,22 @@ fn try_plan_entry(
         ino: identity.ino,
         mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
     })
+}
+
+fn sibling_display_names(siblings: &crate::protection::SiblingPresence) -> Vec<String> {
+    siblings
+        .other_app_paths
+        .iter()
+        .map(|p| {
+            read_display_name(p).unwrap_or_else(|| {
+                p.file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("")
+                    .to_string()
+            })
+        })
+        .filter(|s| !s.is_empty())
+        .collect()
 }
 
 fn path_size(path: &Path) -> u64 {
@@ -315,7 +373,7 @@ mod tests {
         let entry = plan
             .entries
             .iter()
-            .find(|e| e.path.ends_with("Foo.app"))
+            .find(|e| e.path.ends_with("Foo.app") && e.rule_id.starts_with("uninstall:brew-cask:"))
             .expect("foo app");
         assert_eq!(entry.rule_id, "uninstall:brew-cask:zap:foo");
         assert!(entry.label.contains("[Brew:foo]"));
@@ -346,7 +404,7 @@ mod tests {
         let entry = plan
             .entries
             .iter()
-            .find(|e| e.path.ends_with("Foo.app"))
+            .find(|e| e.path.ends_with("Foo.app") && e.rule_id.starts_with("uninstall:brew-cask:"))
             .expect("foo");
         assert_eq!(entry.rule_id, "uninstall:brew-cask:nozap:foo");
     }
@@ -369,7 +427,94 @@ mod tests {
         let plan = build_uninstall_plan(&catalog, &protection, &opts).unwrap();
         let note = plan.coverage_note.unwrap();
         assert!(!note.to_ascii_lowercase().contains("brew cask zap"));
-        assert!(note.contains("login items"));
+        assert!(!note.to_ascii_lowercase().contains("login items"));
+        assert!(note.contains("LaunchDaemons") || note.contains("/Library"));
+        assert!(note.contains("login_items="));
+    }
+
+    #[test]
+    fn plan_emits_login_item_and_helper_sidecar() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path();
+        let apps = home.join("Applications");
+        fs::create_dir_all(&apps).unwrap();
+        let foo = apps.join("Foo.app");
+        write_app(&foo, "com.example.foo", "Foo");
+        write_helper(
+            &foo.join("Contents/Library/LoginItems/Helper.app"),
+            "com.example.foo.helper",
+        );
+
+        let catalog = ProtectionCatalog::embedded();
+        let protection = AppProtection::new();
+        let opts = UninstallPlanOptions {
+            applications_dirs: std::slice::from_ref(&apps),
+            home,
+            target_bundle_or_name: None,
+            ttl_secs: 900,
+        };
+        let plan = build_uninstall_plan(&catalog, &protection, &opts).unwrap();
+        assert!(plan
+            .entries
+            .iter()
+            .any(|e| e.rule_id.starts_with("uninstall:login-item:name:")));
+        assert!(plan
+            .entries
+            .iter()
+            .any(|e| { e.rule_id == "uninstall:login-helper:com.example.foo.helper" }));
+    }
+
+    #[test]
+    fn plan_skips_helper_when_sibling() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path();
+        let apps = home.join("Applications");
+        fs::create_dir_all(&apps).unwrap();
+        let foo = apps.join("Foo.app");
+        write_app(&foo, "com.example.foo", "Foo");
+        write_helper(
+            &foo.join("Contents/Library/LoginItems/Helper.app"),
+            "com.example.foo.helper",
+        );
+        write_app(&apps.join("Foo Copy.app"), "com.example.foo", "Foo Copy");
+
+        let catalog = ProtectionCatalog::embedded();
+        let protection = AppProtection::new();
+        let opts = UninstallPlanOptions {
+            applications_dirs: std::slice::from_ref(&apps),
+            home,
+            target_bundle_or_name: None,
+            ttl_secs: 900,
+        };
+        let plan = build_uninstall_plan(&catalog, &protection, &opts).unwrap();
+        assert!(!plan
+            .entries
+            .iter()
+            .any(|e| e.rule_id.starts_with("uninstall:login-helper:")));
+    }
+
+    #[test]
+    fn plan_skips_login_name_when_display_collides() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path();
+        let apps = home.join("Applications");
+        fs::create_dir_all(&apps).unwrap();
+        write_app(&apps.join("Foo.app"), "com.example.foo", "Foo");
+        write_app(&apps.join("Foo Alternate.app"), "com.example.foo", "Foo");
+
+        let catalog = ProtectionCatalog::embedded();
+        let protection = AppProtection::new();
+        let opts = UninstallPlanOptions {
+            applications_dirs: std::slice::from_ref(&apps),
+            home,
+            target_bundle_or_name: None,
+            ttl_secs: 900,
+        };
+        let plan = build_uninstall_plan(&catalog, &protection, &opts).unwrap();
+        assert!(!plan
+            .entries
+            .iter()
+            .any(|e| e.rule_id.starts_with("uninstall:login-item:name:")));
     }
 
     fn write_app(app: &Path, bundle_id: &str, name: &str) {
@@ -384,5 +529,9 @@ mod tests {
 </dict></plist>"#
         );
         fs::write(contents.join("Info.plist"), plist).unwrap();
+    }
+
+    fn write_helper(app: &Path, bundle_id: &str) {
+        write_app(app, bundle_id, "Helper");
     }
 }

@@ -16,6 +16,7 @@ pub mod groupcaches;
 pub mod handoff;
 pub mod history;
 pub mod localsnapshots;
+pub mod login_items;
 pub mod mutex;
 pub mod oplog;
 pub mod ops;

@@ -3,6 +3,7 @@
 mod apply_plan;
 mod clean_hints;
 mod coverage;
+mod install_origin;
 mod installer_apply;
 mod installer_plan;
 mod optimize_apply;
@@ -14,6 +15,7 @@ mod purge_plan;
 mod touchid;
 mod uninstall_apply;
 mod uninstall_plan;
+mod update;
 
 use crate::vole_proto::StreamEvent;
 use crossbeam_channel::Sender;
@@ -38,6 +40,7 @@ pub use coverage::{
     HANDOFF_PASTEBOARD_WARN, MOLE_INVENTORY_TOTAL, ORPHAN_LIBRARY_WARN, SYSTEM_SERVICES_WARN,
     TIME_MACHINE_BUSY_WARN,
 };
+pub use install_origin::{default_config_dir, detect_install_layout, InstallLayout, InstallOrigin};
 pub use installer_apply::{
     apply_installer_plan, apply_installer_proto_plan, InstallerApplyContext, InstallerApplyError,
     InstallerApplyOptions,
@@ -74,6 +77,10 @@ pub use uninstall_apply::{
 pub use uninstall_plan::{
     build_uninstall_plan, build_uninstall_plan_with_brew, default_applications_dirs,
     scan_applications, UninstallPlanOptions,
+};
+pub use update::{
+    run_update, verify_sha256, CurlUpdateTransport, ExecVersionProbe, FakeUpdateTransport,
+    UpdateError, UpdateOptions, UpdateOutcome, UpdateTransport, VersionProbe,
 };
 
 #[derive(Debug, Error)]

@@ -12,6 +12,7 @@ mod terminal;
 mod touchid;
 mod tui;
 mod uninstall;
+mod update;
 
 use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
@@ -237,6 +238,24 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    /// 自更新（检测 → 下载 → 校验 → 安装；对齐 mole update）。
+    Update {
+        /// 强制重装；Homebrew 安装时同时解除「优先 brew」拦截。
+        #[arg(long, short = 'f')]
+        force: bool,
+        /// 安装最新 nightly（main）；Homebrew 安装拒绝。
+        #[arg(long)]
+        nightly: bool,
+        /// 只检查是否有更新，不下载不安装。
+        #[arg(long)]
+        check: bool,
+        /// 非交互确认（含 Homebrew 自更新确认）。
+        #[arg(long, short = 'y')]
+        yes: bool,
+        /// 输出 JSON。
+        #[arg(long)]
+        json: bool,
+    },
     /// 生成 shell 补全脚本（stdout）。
     #[command(visible_alias = "completion")]
     Completions {
@@ -399,6 +418,22 @@ fn main() {
                 action,
                 dry_run: dry_run || plan,
                 plan,
+                json,
+            });
+            std::process::exit(code);
+        }
+        Some(Command::Update {
+            force,
+            nightly,
+            check,
+            yes,
+            json,
+        }) => {
+            let code = update::run_update_cli(update::UpdateCliOptions {
+                force,
+                nightly,
+                check,
+                yes,
                 json,
             });
             std::process::exit(code);

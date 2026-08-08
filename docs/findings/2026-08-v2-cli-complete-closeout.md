@@ -39,6 +39,12 @@ CI：`.github/workflows/ci.yml` 步骤 `Command surface (v2 CLI ⊇ Mole routes)
 - [x] 包线 `2.x`，首发 `2.0.0`，收口时最新为 `2.5.0`
 - [x] 桌面 / SMAppService / Mole 广谱边缘：**非本续篇主路径**，诚实记录为余项
 
+## 发版运营（与「CLI 做全」收口分离）
+
+本 findings 宣告的是 **命令面 / 包版本线收口**，**不是** GitHub Release 资产齐全。
+
+截至 2026-08-09 核验：`v2.5.0` tag / Release / tarball+`SHA256SUMS` / Formula 真实 sha **均未齐**；详见 [`../releases/v2.5.0.md`](../releases/v2.5.0.md)「发版运营状态」。对外装包通道在打 tag 并跑通 `Release` workflow 之前，仍以已发布的 `v1.28.0`（或 `brew install --HEAD`）为准。
+
 ## 结论
 
-产品 v2 续篇「CLI 做全」可宣告完成。后续缺陷走 PATCH；新能力另开 design，不占用本收口。
+产品 v2 续篇「CLI 做全」可宣告完成。**GitHub 预编译发版运营另计**（见上节）。后续缺陷走 PATCH；新能力另开 design，不占用本收口。

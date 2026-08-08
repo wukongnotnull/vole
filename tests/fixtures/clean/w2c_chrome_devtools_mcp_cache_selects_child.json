@@ -1,0 +1,14 @@
+{
+  "id": "w2c_chrome_devtools_mcp_cache_selects_child",
+  "source_bats": "manual",
+  "source_test": "chrome-devtools-mcp-cache selects glob child",
+  "fixture": [
+    {
+      "mkdir": "~/.cache/chrome-devtools-mcp/chrome-profile/Default/Cache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/.cache/chrome-devtools-mcp/chrome-profile/Default/Cache/item|Chrome DevTools MCP browser cache"
+  ],
+  "expect_not_selected": []
+}

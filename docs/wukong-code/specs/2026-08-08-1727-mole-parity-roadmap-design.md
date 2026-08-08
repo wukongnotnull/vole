@@ -2,13 +2,13 @@
 
 - 日期：2026-08-08 17:27（**本文件为当前权威**）
 - 状态：已批准（盘点文档）；**本文件不开实现**，不 bump 包版本
-- 快照：`main` @ **1.45.0**（近满配收口 1.41.0 / PR #91；G1–G4 optimize 长尾 1.42.0–1.45.0 / PR #92 #93 #95 #97）；Mole 钉版 `third_party/mole-1.48.1`
+- 快照：`main` @ **1.46.0**（近满配收口 1.41.0 / PR #91；G1–G5 optimize 1.42.0–1.46.0 / PR #92 #93 #95 #97 + G5）；Mole 钉版 `third_party/mole-1.48.1`
 - 依据：`scripts/inventory-mole-rules.py`；[`coverage_note`](../../../crates/vole-core/src/ops/coverage.rs)；[`optimize/catalog.rs`](../../../crates/vole-core/src/optimize/catalog.rs)；[`2026-08-08-0025-mole-system-sh-backlog-design.md`](2026-08-08-0025-mole-system-sh-backlog-design.md)；[`2026-07-30-1900-v2-product-goals-design.md`](2026-07-30-1900-v2-product-goals-design.md)；M1/M2 findings；[`2026-08-08-1646-mole-parity-roadmap-design.md`](2026-08-08-1646-mole-parity-roadmap-design.md)（近满配收口快照）
 - 范围：相对 Mole 家庭桶的 **clean / uninstall / optimize / CLI 子命令 / 桌面** 全量差距盘点、优先级与先后顺序；**不含**具体实现 plan
 
 ## 1. 结论
 
-相对 Mole 1.48.1，近满配必做（W0→W2c）已全部完成（`main` / **1.41.0**）。闸控轨 G1–G4（`login_items_audit` / `spotlight_orphan_rules_cleanup` / `spotlight_index_optimize` / `shared_file_list_repair`）已于 **1.42.0–1.45.0** / PR #92 #93 #95 #97 落地。启用清理规则 **540**；Mole `safe_clean` inventory **507/513** 匹配（余 6 条为动态 custom 假阴性，见 §3.1）。**默认下一项实现：无**（仅剩 `disk_verify` 默认永不升必做 + 桌面 D1）。本文件本身不触发实现 PR。
+相对 Mole 1.48.1，近满配必做（W0→W2c）已全部完成（`main` / **1.41.0**）。闸控轨 G1–G5（含推翻默认的 `disk_verify`）已于 **1.42.0–1.46.0** 落地。启用清理规则 **540**；Mole `safe_clean` inventory **507/513** 匹配（余 6 条为动态 custom 假阴性，见 §3.1）。**默认下一项实现：无**（仅剩桌面 D1）。本文件本身不触发实现 PR。
 
 ### 1.1 已对齐（相对 Mole 家庭桶）
 
@@ -61,7 +61,7 @@
 - Login Items（osascript + LoginItems helper `launchctl bootout`）
 - 系统 LaunchDaemons / `/Library` sudo 残留（`PrivilegeBackend` + `sudo -n`）
 
-**optimize（已启用 `in_m3`，22 项）**
+**optimize（已启用 `in_m3`，23 项）**
 
 - `system_maintenance`（DNS / Spotlight 检查）
 - `network_optimization`（DNS / mDNSResponder）
@@ -76,6 +76,7 @@
 - `spotlight_orphan_rules_cleanup`（**1.43.0** / PR #93）
 - `spotlight_index_optimize`（**1.44.0** / PR #95）
 - `shared_file_list_repair`（**1.45.0** / PR #97）
+- `disk_verify`（须 `VOLE_ENABLE_DISK_VERIFY=1`；**1.46.0** / G5 推翻默认）
 
 **提权 / 交互（CLI）**
 
@@ -94,7 +95,7 @@
 - ~~`optimize` · `spotlight_orphan_rules_cleanup`~~ → **已落地 1.43.0** / PR #93
 - ~~`optimize` · `spotlight_index_optimize`~~ → **已落地 1.44.0** / PR #95
 - ~~`optimize` · `shared_file_list_repair`~~ → **已落地 1.45.0** / PR #97
-- `optimize` · `disk_verify`（默认永不升必做；主路径现 **22** / 长尾仅此项）
+- ~~`optimize` · `disk_verify`~~ → **已落地 1.46.0**（推翻默认；仍须 `VOLE_ENABLE_DISK_VERIFY=1`；主路径 **23**）
 - clean · `user.sh` 广域扫描 / 盲扩 bash custom 循环（继续用 Mole；非路径级缺漏）
 - uninstall · 广谱边缘卸载场景（非主路径）
 
@@ -182,7 +183,7 @@ flowchart LR
 
 ### 3.3 optimize（唯一「可选实现」长尾）
 
-Catalog **23** 项；`in_m3: true` **22**；`in_m3: false` 仅剩 **1**（`disk_verify`）。P1–P4 已于 **1.42.0–1.45.0** / PR #92 #93 #95 #97 进入主路径。
+Catalog **23** 项；`in_m3: true` **23**；`in_m3: false` **0**。P1–P5 已于 **1.42.0–1.46.0** 进入主路径（P5 经推翻默认）。
 
 | 优先级（若未来另开代际 / 显式批准） | task_id | 风险 | 建议 |
 |---|---|---|---|
@@ -190,9 +191,9 @@ Catalog **23** 项；`in_m3: true` **22**；`in_m3: false` 仅剩 **1**（`disk_
 | P2 | `spotlight_orphan_rules_cleanup` | 易误伤 Spotlight 规则 | **已落地 1.43.0** / PR #93 |
 | P3 | `spotlight_index_optimize` | 常需 `sudo mdutil -E`；索引重建副作用大 | **已落地 1.44.0** / PR #95 |
 | P4 | `shared_file_list_repair` | 共享列表 DB；高复杂 | **已落地 1.45.0** / PR #97 |
-| P5（最低） | `disk_verify` | 可能长时间卡住系统；Mole 亦偏诊断 | **默认永不升必做** |
+| P5（最低） | `disk_verify` | 可能长时间卡住系统；Mole 亦偏诊断 | **已落地 1.46.0**（推翻默认；须 `VOLE_ENABLE_DISK_VERIFY=1`） |
 
-**默认策略：仅 `disk_verify` 保持 coverage，不进入当前代际必做队列**（P5 仍默认拒绝升必做）。
+**默认策略（历史）：** P5 曾默认拒绝升必做；推翻后仍以 opt-in 限制真扫盘。
 
 ### 3.4 CLI 子命令对照
 
@@ -225,7 +226,7 @@ Catalog **23** 项；`in_m3: true` **22**；`in_m3: false` 仅剩 **1**（`disk_
 
 1. **无默认实现项。** 不因「对齐 Mole」自动开 optimize 后置或新子命令。
 2. 缺陷修复、文档、fixture、conformance、安全加固优先于任何可选长尾。
-3. 若用户**显式**要求某可选项：单独 design → plan → 单 PR；优先顺序遵循 §3.3 表（P1→P5），且 **P5 `disk_verify` 默认拒绝升必做**。
+3. 若用户**显式**要求某可选项：单独 design → plan → 单 PR。optimize P1–P5 均已落地；余量为 clean/uninstall 广谱边缘与桌面 D1。
 
 ### 4.2 若另开「产品下一代际」（须重新批准，本文件不授权实施）
 
@@ -259,9 +260,9 @@ Catalog **23** 项；`in_m3: true` **22**；`in_m3: false` 仅剩 **1**（`disk_
 - [x] 相对 Mole 1.48.1 覆盖 clean / uninstall / optimize / CLI / 桌面
 - [x] 已完成波次与 main/1.41.0 一致
 - [x] inventory 6 条「未移植」解释为假阴性 / 动态 custom
-- [x] optimize 后置写明可选优先级；P1 已落地（1.42.0），余 4 项默认不实现
+- [x] optimize 后置写明可选优先级；P1–P5 均已落地（1.42.0–1.46.0；P5 推翻默认）
 - [x] 永不做 / 延后写死；默认下一项 = 无
 - [x] 声明本文件不触发实现、不 bump 版本
 - [x] 任务用语统一为「实现项 / 下一项」，无含糊隐喻缩写
 
-下一步：**无默认实现项。** 近满配 CLI 对齐关闭；可选长尾与 W3 仅记档，开做须另开 design 并显式批准。
+下一步：**无默认实现项。** optimize 长尾已空；桌面 D1 与 W3 禁区仅记档，开做须另开 design 并显式批准。

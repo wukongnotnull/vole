@@ -141,7 +141,7 @@ const CATALOG: &[OptimizeTask] = &[
         kind: OptimizeTaskKind::Action,
         title: "Disk Health",
         description: "Verify filesystem integrity",
-        in_m3: false,
+        in_m3: true,
     },
     OptimizeTask {
         id: "login_items_audit",
@@ -258,8 +258,8 @@ mod tests {
         assert!(main.contains(&"spotlight_orphan_rules_cleanup"));
         assert!(main.contains(&"spotlight_index_optimize"));
         assert!(main.contains(&"shared_file_list_repair"));
-        assert!(!main.contains(&"disk_verify"));
-        assert_eq!(main.len(), 22);
+        assert!(main.contains(&"disk_verify"));
+        assert_eq!(main.len(), 23);
     }
 
     #[test]

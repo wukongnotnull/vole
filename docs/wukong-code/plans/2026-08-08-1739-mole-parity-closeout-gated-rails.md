@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use wukong-code:executing-plans（本仓默认 inline）或 wukong-code:subagent-driven-development。Steps 用 checkbox（`- [ ]`）跟踪。
 >
-> **默认只执行 Task 1–3（收口核对）。** Task G1–G4 / D1 **禁止**开跑，除非人类在本会话明确写出「批准执行轨 GX」（或 D1）。Task G5 / N1 **永不**变成功能实现；仅允许核对式维护。
+> **默认只执行 Task 1–3（收口核对）。** Task G1–G5 / D1 **禁止**开跑，除非人类在本会话明确写出「批准执行轨 GX」（或「推翻默认并批准执行轨 G5」/ D1）。N1 **永不**变成功能实现；仅允许核对式维护。G1–G5 已全部合入。
 
 **Goal:** 把 [`2026-08-08-1727-mole-parity-roadmap-design.md`](../specs/2026-08-08-1727-mole-parity-roadmap-design.md) 落成可执行计划：完成近满配收口核对与文档门禁；将未对齐项按优先级写成闸控任务轨（显式批准前零实现）。
 
@@ -14,10 +14,10 @@
 
 - 规格权威：[`docs/wukong-code/specs/2026-08-08-1727-mole-parity-roadmap-design.md`](../specs/2026-08-08-1727-mole-parity-roadmap-design.md)
 - Mole 钉版：`third_party/mole-1.48.1`
-- 快照版本：**1.45.0**（G2–G4 已合入；G1=1.42.0 / #92；收口轨核对时为 1.41.0）
-- **默认下一项实现：无**（规格 §1 / §4.1；G2–G4 已完成；仅 G5 `disk_verify` 默认永不升必做；D1 可用通道代码已合入 vole-macos [#3](https://github.com/wukongnotnull/vole-macos/pull/3) / 本仓 [#100](https://github.com/wukongnotnull/vole/pull/100)，待真机 uid==0 验收后改 coverage）
+- 快照版本：**1.46.0**（G5 `disk_verify` 推翻默认合入；G2–G4=1.43.0–1.45.0；G1=1.42.0 / #92；收口轨核对时为 1.41.0）
+- **默认下一项实现：无**（规格 §1 / §4.1；G1–G5 已完成；D1 可用通道代码已合入 vole-macos [#3](https://github.com/wukongnotnull/vole-macos/pull/3) / 本仓 [#100](https://github.com/wukongnotnull/vole/pull/100)，待真机 uid==0 验收后改 coverage）
 - 闸控轨开跑前：该轨必须已有（或本会话当场完成）**专用 design**，再按单轨单 PR
-- `disk_verify`：**默认拒绝升必做**（规格 §3.3 P5）
+- `disk_verify`：曾默认拒绝升必做（规格 §3.3 P5）；**已推翻并落地 1.46.0**（仍须 `VOLE_ENABLE_DISK_VERIFY=1`）
 - 本代际禁止实现：`purge` / `installer` / `touchid` / `hints` / Mole 式 `update`；禁止 `clean --apply` 删本地快照；禁止删 `/Library/Updates`、`/macOS Install Data`
 - 合入 PR 用 **merge commit**（非 squash）
 - 任务用语：实现项 / 下一项（不用隐喻缩写）
@@ -29,7 +29,7 @@
 | `scripts/inventory-mole-rules.py` | Mole `safe_clean` vs `data/rules` 核对 |
 | `data/rules/*.toml` | 启用规则计数（期望 540） |
 | `crates/vole-core/src/ops/coverage.rs` | coverage 诚实面；「仍未移植」仅桌面特权助手 |
-| `crates/vole-core/src/optimize/catalog.rs` | 23 task；22 `in_m3: true`；1 长尾 `false`（仅 `disk_verify`） |
+| `crates/vole-core/src/optimize/catalog.rs` | 23 task；23 `in_m3: true`（optimize 长尾已空） |
 | `crates/vole-core/src/optimize/tasks/actions.rs` | 闸控轨启用后的 plan/apply handler |
 | `crates/vole-core/src/ops/optimize_plan.rs` / `optimize_apply.rs` | 闸控轨接线 |
 | `docs/findings/2026-08-mole-parity-closeout.md` | 收口 findings |
@@ -387,29 +387,19 @@ EOF
 
 ---
 
-### Task G5: `disk_verify`（P5 · 默认拒绝升必做）
+### Task G5: `disk_verify`（P5 · 推翻默认已执行）
 
-> **状态（2026-08-08）：「保持 false」核对已完成**（findings / main `in_m3: false`）。实现轨仍默认永久 SKIP，无推翻批准。
+> **状态：已完成 · 1.46.0**。专用 design：[`2026-08-08-1923-optimize-disk-verify-design.md`](../specs/2026-08-08-1923-optimize-disk-verify-design.md)。主路径 **23**；须 `VOLE_ENABLE_DISK_VERIFY=1`；禁 repair；超时 fail-closed。
 
-**Gate:** **默认永久 SKIP。** 仅当人类写出「推翻默认并批准执行轨 G5」才可进入实现；否则本 Task 只做「保持 false」核对。
+**Gate:** 已收到「推翻默认并批准执行轨 G5」。
 
 **Files:**
-- Read: `crates/vole-core/src/optimize/catalog.rs`
+- Modify: `catalog.rs` / `disk_verify.rs` / `actions.rs` / `optimize_plan.rs`
 - Mole: `opt_disk_verify`（`tasks.sh` 约 1189 行）
 
-- [x] **Step 1: 确认仍为长尾**（2026-08-08 · findings；main 复核 `in_m3: false`）
-
-```bash
-rg -n 'id: "disk_verify"' -A5 crates/vole-core/src/optimize/catalog.rs
-```
-
-Expected: `in_m3: false`
-
-- [x] **Step 2: 无推翻批准 → 结束**（2026-08-08）
-
-输出：`KEEP disk_verify out of main path (spec P5)`。**禁止**翻转 `in_m3`。
-
-- [ ] **Step 3: （仅推翻默认后）** 先写 design，再按 G1 同构 TDD；commit message 须含风险说明。
+- [x] **Step 1: 确认曾为长尾**（2026-08-08 · findings；推翻前 `in_m3: false`）
+- [x] **Step 2: 推翻批准已收到**（本会话）
+- [x] **Step 3: 专用 design + TDD + 发版** — design 含风险（可能卡住 / 默认曾拒绝 / 超时取消 fail-closed / Mole 对齐）；`disk_verify.in_m3 = true`；**1.46.0**
 
 ---
 
@@ -480,9 +470,13 @@ Task 1 → Task 2 → Task 3 → Task G5 Step1–2（保持 false）→ Task N1
 STOP
 ```
 
+<<<<<<< HEAD
 > **进度（2026-08-08）：** 上列默认顺序已全部完成（findings + `9a780f0`）。闸控轨：**G1–G4 已完成**（1.42.0–1.45.0 / PR #92 #93 #95 #97）；**G5** 保持 `disk_verify` false；**D1 可用通道代码已合入** vole-macos [#3](https://github.com/wukongnotnull/vole-macos/pull/3) / 本仓 [#100](https://github.com/wukongnotnull/vole/pull/100)（待真机 uid==0；coverage 仍保留「仍未移植」）。
+=======
+> **进度（2026-08-08）：** 上列默认顺序已全部完成（findings + `9a780f0`）。闸控轨：**G1–G5 已完成**（1.42.0–1.46.0 / PR #92 #93 #95 #97 + G5）；**D1 部分完成**（vole-macos Helper 骨架；coverage 仍保留「仍未移植」）。
+>>>>>>> 95036d2 (feat(optimize): enable disk_verify on main path (G5))
 
-之后仅在显式批准后：`D1`（分仓）或推翻默认的 `G5`。  
+之后仅在显式批准后：`D1`（分仓）。  
 **永不**默认进入：`purge` / `installer` / `touchid` / `hints` / `update` 实现任务（本计划不下发此类 Task）。
 
 ## Spec coverage

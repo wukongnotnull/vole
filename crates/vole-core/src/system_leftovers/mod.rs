@@ -157,13 +157,12 @@ fn scan_launchd(root: &Path, identity: &AppIdentity, hits: &mut Vec<SystemLeftov
             }
 
             let mut matched = false;
-            if is_reverse_dns_bundle_id(&identity.bundle_id) {
-                if name == format!("{}.plist", identity.bundle_id)
+            if is_reverse_dns_bundle_id(&identity.bundle_id)
+                && (name == format!("{}.plist", identity.bundle_id)
                     || (name.starts_with(&format!("{}.", identity.bundle_id))
-                        && name.ends_with(".plist"))
-                {
-                    matched = true;
-                }
+                        && name.ends_with(".plist")))
+            {
+                matched = true;
             }
             let display = identity.display_name.trim();
             if !matched

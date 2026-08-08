@@ -3,12 +3,12 @@
 mod apply_plan;
 mod clean_hints;
 mod coverage;
+mod installer_apply;
+mod installer_plan;
 mod optimize_apply;
 mod optimize_plan;
 mod plan;
 mod proto_plan;
-mod installer_apply;
-mod installer_plan;
 mod purge_apply;
 mod purge_plan;
 mod uninstall_apply;
@@ -37,13 +37,6 @@ pub use coverage::{
     HANDOFF_PASTEBOARD_WARN, MOLE_INVENTORY_TOTAL, ORPHAN_LIBRARY_WARN, SYSTEM_SERVICES_WARN,
     TIME_MACHINE_BUSY_WARN,
 };
-pub use optimize_apply::{
-    apply_optimize_plan, apply_optimize_proto_plan, OptimizeApplyContext, OptimizeApplyError,
-    OptimizeApplyOptions,
-};
-pub use optimize_plan::{build_optimize_plan, OptimizePlanError, OptimizePlanOptions};
-pub use plan::{Plan, PlanBuilder, PlanEntry, PlanNotice, DEFAULT_PLAN_TTL};
-pub use proto_plan::{plan_to_proto, ProtoPlanError};
 pub use installer_apply::{
     apply_installer_plan, apply_installer_proto_plan, InstallerApplyContext, InstallerApplyError,
     InstallerApplyOptions,
@@ -52,6 +45,13 @@ pub use installer_plan::{
     build_installer_plan, resolve_default_scan_roots, InstallerPlanError, InstallerPlanOptions,
     DEFAULT_INSTALLER_SCAN_MAX_DEPTH,
 };
+pub use optimize_apply::{
+    apply_optimize_plan, apply_optimize_proto_plan, OptimizeApplyContext, OptimizeApplyError,
+    OptimizeApplyOptions,
+};
+pub use optimize_plan::{build_optimize_plan, OptimizePlanError, OptimizePlanOptions};
+pub use plan::{Plan, PlanBuilder, PlanEntry, PlanNotice, DEFAULT_PLAN_TTL};
+pub use proto_plan::{plan_to_proto, ProtoPlanError};
 pub use purge_apply::{
     apply_purge_plan, apply_purge_proto_plan, PurgeApplyContext, PurgeApplyError, PurgeApplyOptions,
 };

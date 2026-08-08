@@ -195,20 +195,12 @@ fn zip_line_looks_like_installer(line: &str) -> bool {
 }
 
 fn zip_list_entries(path: &Path) -> Result<String, ()> {
-    if let Ok(out) = Command::new("zipinfo")
-        .args(["-1"])
-        .arg(path)
-        .output()
-    {
+    if let Ok(out) = Command::new("zipinfo").args(["-1"]).arg(path).output() {
         if out.status.success() {
             return Ok(String::from_utf8_lossy(&out.stdout).into_owned());
         }
     }
-    if let Ok(out) = Command::new("unzip")
-        .args(["-Z", "-1"])
-        .arg(path)
-        .output()
-    {
+    if let Ok(out) = Command::new("unzip").args(["-Z", "-1"]).arg(path).output() {
         if out.status.success() {
             return Ok(String::from_utf8_lossy(&out.stdout).into_owned());
         }
@@ -223,11 +215,12 @@ fn display_name(path: &Path) -> String {
         .unwrap_or("installer")
         .to_string();
     // Homebrew cache: strip leading sha256--
-    if name.len() > 66 && name.as_bytes().get(64) == Some(&b'-') && name.as_bytes().get(65) == Some(&b'-')
+    if name.len() > 66
+        && name.as_bytes().get(64) == Some(&b'-')
+        && name.as_bytes().get(65) == Some(&b'-')
+        && name[..64].chars().all(|c| c.is_ascii_hexdigit())
     {
-        if name[..64].chars().all(|c| c.is_ascii_hexdigit()) {
-            return name[66..].to_string();
-        }
+        return name[66..].to_string();
     }
     name
 }
@@ -284,7 +277,10 @@ mod tests {
         assert_eq!(paths.len(), 2, "entries={:?}", plan.entries);
         assert!(paths.iter().any(|p| p.ends_with("App.dmg")));
         assert!(paths.iter().any(|p| p.ends_with("Setup.pkg")));
-        assert!(plan.entries.iter().all(|e| e.rule_id.starts_with("installer:")));
+        assert!(plan
+            .entries
+            .iter()
+            .all(|e| e.rule_id.starts_with("installer:")));
     }
 
     #[test]
@@ -318,7 +314,9 @@ mod tests {
 
     #[test]
     fn zip_line_matcher_accepts_app_bundle() {
-        assert!(zip_line_looks_like_installer("Payload/Foo.app/Contents/Info.plist"));
+        assert!(zip_line_looks_like_installer(
+            "Payload/Foo.app/Contents/Info.plist"
+        ));
         assert!(zip_line_looks_like_installer("Foo.app"));
         assert!(zip_line_looks_like_installer("pkg/Bar.pkg"));
         assert!(!zip_line_looks_like_installer("readme.txt"));

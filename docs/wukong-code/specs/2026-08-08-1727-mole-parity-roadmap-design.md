@@ -2,13 +2,13 @@
 
 - 日期：2026-08-08 17:27（**本文件为当前权威**）
 - 状态：已批准（盘点文档）；**本文件不开实现**，不 bump 包版本
-- 快照：`main` @ **1.42.0**（近满配收口 1.41.0 / PR #91；G1 `login_items_audit` 1.42.0 / PR #92）；Mole 钉版 `third_party/mole-1.48.1`
+- 快照：`main` @ **1.45.0**（近满配收口 1.41.0 / PR #91；G1–G4 optimize 长尾 1.42.0–1.45.0 / PR #92 #93 #95 #97）；Mole 钉版 `third_party/mole-1.48.1`
 - 依据：`scripts/inventory-mole-rules.py`；[`coverage_note`](../../../crates/vole-core/src/ops/coverage.rs)；[`optimize/catalog.rs`](../../../crates/vole-core/src/optimize/catalog.rs)；[`2026-08-08-0025-mole-system-sh-backlog-design.md`](2026-08-08-0025-mole-system-sh-backlog-design.md)；[`2026-07-30-1900-v2-product-goals-design.md`](2026-07-30-1900-v2-product-goals-design.md)；M1/M2 findings；[`2026-08-08-1646-mole-parity-roadmap-design.md`](2026-08-08-1646-mole-parity-roadmap-design.md)（近满配收口快照）
 - 范围：相对 Mole 家庭桶的 **clean / uninstall / optimize / CLI 子命令 / 桌面** 全量差距盘点、优先级与先后顺序；**不含**具体实现 plan
 
 ## 1. 结论
 
-相对 Mole 1.48.1，近满配必做（W0→W2c）已全部完成（`main` / **1.41.0**）。闸控轨 G1 `login_items_audit` 已于 **1.42.0** / PR #92 落地。启用清理规则 **540**；Mole `safe_clean` inventory **507/513** 匹配（余 6 条为动态 custom 假阴性，见 §3.1）。**默认下一项实现：无。** 本文件本身不触发实现 PR。
+相对 Mole 1.48.1，近满配必做（W0→W2c）已全部完成（`main` / **1.41.0**）。闸控轨 G1–G4（`login_items_audit` / `spotlight_orphan_rules_cleanup` / `spotlight_index_optimize` / `shared_file_list_repair`）已于 **1.42.0–1.45.0** / PR #92 #93 #95 #97 落地。启用清理规则 **540**；Mole `safe_clean` inventory **507/513** 匹配（余 6 条为动态 custom 假阴性，见 §3.1）。**默认下一项实现：无**（仅剩 `disk_verify` 默认永不升必做 + 桌面 D1）。本文件本身不触发实现 PR。
 
 ### 1.1 已对齐（相对 Mole 家庭桶）
 
@@ -61,7 +61,7 @@
 - Login Items（osascript + LoginItems helper `launchctl bootout`）
 - 系统 LaunchDaemons / `/Library` sudo 残留（`PrivilegeBackend` + `sudo -n`）
 
-**optimize（已启用 `in_m3`，19 项）**
+**optimize（已启用 `in_m3`，22 项）**
 
 - `system_maintenance`（DNS / Spotlight 检查）
 - `network_optimization`（DNS / mDNSResponder）
@@ -73,6 +73,9 @@
 - `quarantine_cleanup` / `launch_agents_cleanup`
 - `notification_cleanup` / `coreduet_cleanup`
 - `login_items_audit`（只读审计损坏登录项；**1.42.0** / PR #92）
+- `spotlight_orphan_rules_cleanup`（**1.43.0** / PR #93）
+- `spotlight_index_optimize`（**1.44.0** / PR #95）
+- `shared_file_list_repair`（**1.45.0** / PR #97）
 
 **提权 / 交互（CLI）**
 
@@ -87,11 +90,11 @@
 
 **A. 可选长尾（已注册进 coverage，默认不实现）**
 
-- ~~`optimize` · `login_items_audit`~~ → **已落地 1.42.0** / PR #92（`in_m3: true`；主路径 19）
-- `optimize` · `spotlight_orphan_rules_cleanup`
-- `optimize` · `spotlight_index_optimize`
-- `optimize` · `shared_file_list_repair`
-- `optimize` · `disk_verify`（默认永不升必做）
+- ~~`optimize` · `login_items_audit`~~ → **已落地 1.42.0** / PR #92
+- ~~`optimize` · `spotlight_orphan_rules_cleanup`~~ → **已落地 1.43.0** / PR #93
+- ~~`optimize` · `spotlight_index_optimize`~~ → **已落地 1.44.0** / PR #95
+- ~~`optimize` · `shared_file_list_repair`~~ → **已落地 1.45.0** / PR #97
+- `optimize` · `disk_verify`（默认永不升必做；主路径现 **22** / 长尾仅此项）
 - clean · `user.sh` 广域扫描 / 盲扩 bash custom 循环（继续用 Mole；非路径级缺漏）
 - uninstall · 广谱边缘卸载场景（非主路径）
 
@@ -179,17 +182,17 @@ flowchart LR
 
 ### 3.3 optimize（唯一「可选实现」长尾）
 
-Catalog **23** 项；`in_m3: true` **19**；`in_m3: false` 仅剩 **4**（均已注册，plan 侧进 coverage，不执行）。P1 `login_items_audit` 已于 **1.42.0** / PR #92 进入主路径。
+Catalog **23** 项；`in_m3: true` **22**；`in_m3: false` 仅剩 **1**（`disk_verify`）。P1–P4 已于 **1.42.0–1.45.0** / PR #92 #93 #95 #97 进入主路径。
 
 | 优先级（若未来另开代际 / 显式批准） | task_id | 风险 | 建议 |
 |---|---|---|---|
 | P1（相对最可控） | `login_items_audit` | AppleScript；与 uninstall login items 有重叠面 | **已落地 1.42.0** / PR #92 |
-| P2 | `spotlight_orphan_rules_cleanup` | 易误伤 Spotlight 规则 | 可选 |
-| P3 | `spotlight_index_optimize` | 常需 `sudo mdutil -E`；索引重建副作用大 | 可选；偏危险 |
-| P4 | `shared_file_list_repair` | 共享列表 DB；高复杂 | 可选；宜长期 coverage |
+| P2 | `spotlight_orphan_rules_cleanup` | 易误伤 Spotlight 规则 | **已落地 1.43.0** / PR #93 |
+| P3 | `spotlight_index_optimize` | 常需 `sudo mdutil -E`；索引重建副作用大 | **已落地 1.44.0** / PR #95 |
+| P4 | `shared_file_list_repair` | 共享列表 DB；高复杂 | **已落地 1.45.0** / PR #97 |
 | P5（最低） | `disk_verify` | 可能长时间卡住系统；Mole 亦偏诊断 | **默认永不升必做** |
 
-**默认策略：余下 4 项保持 coverage，不进入当前代际必做队列**（P5 仍默认拒绝升必做）。
+**默认策略：仅 `disk_verify` 保持 coverage，不进入当前代际必做队列**（P5 仍默认拒绝升必做）。
 
 ### 3.4 CLI 子命令对照
 

@@ -25,6 +25,10 @@ impl PrivilegeBackend for NoPrivilege {
     fn flush_dns_cache(&self) -> Result<(), PrivilegeError> {
         Err(PrivilegeError::Unavailable)
     }
+
+    fn purge_inactive_memory(&self) -> Result<(), PrivilegeError> {
+        Err(PrivilegeError::Unavailable)
+    }
 }
 
 /// 生产：非交互 `sudo -n`。
@@ -122,6 +126,21 @@ impl PrivilegeBackend for SudoNoninteractive {
             )))
         }
     }
+
+    fn purge_inactive_memory(&self) -> Result<(), PrivilegeError> {
+        if test_no_auth() {
+            return Err(PrivilegeError::Unavailable);
+        }
+        let status = Command::new("sudo")
+            .args(["-n", "purge"])
+            .status()
+            .map_err(|e| PrivilegeError::CommandFailed(e.to_string()))?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err(PrivilegeError::CommandFailed(format!("purge exit {status}")))
+        }
+    }
 }
 
 /// 测试用：记录 remove 调用，不执行真 sudo。
@@ -132,6 +151,7 @@ pub struct RecordingPrivilege {
     pub removed: Mutex<Vec<PathBuf>>,
     pub unloaded: Mutex<Vec<PathBuf>>,
     pub flush_dns_calls: Mutex<u32>,
+    pub purge_memory_calls: Mutex<u32>,
 }
 
 impl RecordingPrivilege {
@@ -143,6 +163,7 @@ impl RecordingPrivilege {
             removed: Mutex::new(Vec::new()),
             unloaded: Mutex::new(Vec::new()),
             flush_dns_calls: Mutex::new(0),
+            purge_memory_calls: Mutex::new(0),
         }
     }
 
@@ -154,6 +175,7 @@ impl RecordingPrivilege {
             removed: Mutex::new(Vec::new()),
             unloaded: Mutex::new(Vec::new()),
             flush_dns_calls: Mutex::new(0),
+            purge_memory_calls: Mutex::new(0),
         }
     }
 }
@@ -201,6 +223,14 @@ impl PrivilegeBackend for RecordingPrivilege {
             return Err(PrivilegeError::Unavailable);
         }
         *self.flush_dns_calls.lock().unwrap() += 1;
+        Ok(())
+    }
+
+    fn purge_inactive_memory(&self) -> Result<(), PrivilegeError> {
+        if !*self.probe.lock().unwrap() {
+            return Err(PrivilegeError::Unavailable);
+        }
+        *self.purge_memory_calls.lock().unwrap() += 1;
         Ok(())
     }
 }

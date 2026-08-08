@@ -101,7 +101,22 @@
 
 ### 3.5 `update`（→ M9）
 
-（Task 6 填写）
+**Mole：** `lib/manage/update.sh` 被 `mole` **source**（非 exec），供菜单与 banner 同进程调用。  
+**CLI：** `mole update [--force|-f] [--nightly]` → `update_mole`。  
+**裸调用：** `""` 分支先 `check_for_updates`（写 cache / banner），再菜单——**Vole 故意不跟进**（规格 §6.5）。  
+**对照 bats：** `tests/update.bats`；安装校验精神见 Mole AGENTS / `install.sh`（checksum/attestation fail-closed）。
+
+| 面 | Mole 事实 |
+|---|---|
+| 检测 | GitHub latest + Homebrew outdated/info；nightly 比 commit |
+| 安装形态 | `is_homebrew_install` / `is_homebrew_mole_path` vs 手动前缀（`resolve_mole_source_path` / `MOLE_ENTRY_SCRIPT`） |
+| brew 路径 | 走 `update_via_homebrew`；nightly 对 brew 拒绝 |
+| 成功判据 | 安装后二进制版本（非安装器 stdout） |
+| 自愈 | `_update_self_heal_reinstall`（破损本地引导）；不得变成「校验失败仍继续」后门 |
+
+**主路径：** 显式 `vole update` 自更新通道（非仅 brew 包装）；`--force` / `--nightly`（名称以 M9 design 为准）；brew 默认提示 `brew upgrade`，自更新须显式确认或 `--force`。  
+**故意差异：** 裸调用**不联网**。  
+**硬约束：** 校验失败 fail-closed；禁止静默降级未校验源码安装；发版资产（签名/公证）须能支撑通道。
 
 ### 3.6 `remove`（→ M10）
 

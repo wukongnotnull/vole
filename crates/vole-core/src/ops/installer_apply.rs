@@ -1,4 +1,4 @@
-//! `purge` apply：TTL + TOCTOU + Cleanup 保护 + `mole_delete_verified`。
+//! `installer` apply：TTL + TOCTOU + Cleanup 保护 + `mole_delete_verified`。
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -19,22 +19,22 @@ use crate::vole_proto::{
 };
 
 #[derive(Debug, Error, PartialEq, Eq)]
-pub enum PurgeApplyError {
-    #[error("plan expired; rescan with `vole purge --plan`")]
+pub enum InstallerApplyError {
+    #[error("plan expired; rescan with `vole installer --plan`")]
     Expired,
     #[error("unsupported plan schema version {got} (expected {expected})")]
     UnsupportedSchema { expected: u32, got: u32 },
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct PurgeApplyOptions {
+pub struct InstallerApplyOptions {
     pub permanent: bool,
 }
 
-pub struct PurgeApplyContext<'a> {
+pub struct InstallerApplyContext<'a> {
     pub protection: &'a AppProtection,
     pub whitelist_patterns: &'a [String],
-    pub options: PurgeApplyOptions,
+    pub options: InstallerApplyOptions,
     pub trash: &'a dyn Trash,
     pub deletion_log: &'a DeletionLogger,
     pub oplog: &'a mut OperationLogger,
@@ -42,16 +42,16 @@ pub struct PurgeApplyContext<'a> {
     pub now: SystemTime,
 }
 
-pub fn apply_purge_plan(
+pub fn apply_installer_plan(
     plan: &ProtoPlan,
     protection: &AppProtection,
-    options: PurgeApplyOptions,
+    options: InstallerApplyOptions,
     on_event: Option<&dyn Fn(StreamEvent)>,
-) -> Result<Report, PurgeApplyError> {
+) -> Result<Report, InstallerApplyError> {
     let deletion_log = DeletionLogger::from_env();
-    let mut oplog = OperationLogger::new("purge");
+    let mut oplog = OperationLogger::new("installer");
     let _ = oplog.session_start();
-    let mut ctx = PurgeApplyContext {
+    let mut ctx = InstallerApplyContext {
         protection,
         whitelist_patterns: &[],
         options,
@@ -61,7 +61,7 @@ pub fn apply_purge_plan(
         on_event,
         now: SystemTime::now(),
     };
-    let report = apply_purge_proto_plan(plan, &mut ctx)?;
+    let report = apply_installer_proto_plan(plan, &mut ctx)?;
     let _ = oplog.session_end(
         report.succeeded,
         report.trashed_bytes / 1024 + report.deleted_bytes / 1024,
@@ -69,18 +69,18 @@ pub fn apply_purge_plan(
     Ok(report)
 }
 
-pub fn apply_purge_proto_plan(
+pub fn apply_installer_proto_plan(
     plan: &ProtoPlan,
-    ctx: &mut PurgeApplyContext<'_>,
-) -> Result<Report, PurgeApplyError> {
+    ctx: &mut InstallerApplyContext<'_>,
+) -> Result<Report, InstallerApplyError> {
     if plan.schema_version != SCHEMA_VERSION {
-        return Err(PurgeApplyError::UnsupportedSchema {
+        return Err(InstallerApplyError::UnsupportedSchema {
             expected: SCHEMA_VERSION,
             got: plan.schema_version,
         });
     }
     if plan_is_expired(plan, ctx.now) {
-        return Err(PurgeApplyError::Expired);
+        return Err(InstallerApplyError::Expired);
     }
 
     let delete_mode = if ctx.options.permanent {
@@ -120,7 +120,7 @@ pub fn apply_purge_proto_plan(
             continue;
         }
 
-        if !entry.rule_id.starts_with("purge:") {
+        if !entry.rule_id.starts_with("installer:") {
             skipped += 1;
             skip_tracker.record(SkipReason::Whitelisted, &entry.rule_id);
             continue;
@@ -263,14 +263,13 @@ impl SkipTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ops::purge_plan::{build_purge_plan, PurgePlanOptions};
+    use crate::ops::installer_plan::{build_installer_plan, InstallerPlanOptions};
     use crate::protection::AppProtection;
     use std::fs;
-    use std::fs::FileTimes;
     use std::path::PathBuf;
 
     #[test]
-    fn rejects_non_purge_rule_ids() {
+    fn rejects_non_installer_rule_ids() {
         let plan = ProtoPlan {
             schema_version: SCHEMA_VERSION,
             created_at: SystemTime::now(),
@@ -280,7 +279,7 @@ mod tests {
                 path: PathBuf::from("/tmp"),
                 label: "x".into(),
                 size: 0,
-                rule_id: "uninstall:com.example".into(),
+                rule_id: "purge:node_modules".into(),
                 skip_reason: None,
                 dev: 0,
                 ino: 0,
@@ -289,10 +288,10 @@ mod tests {
             coverage_note: None,
         };
         let protection = AppProtection::new();
-        let report = apply_purge_plan(
+        let report = apply_installer_plan(
             &plan,
             &protection,
-            PurgeApplyOptions { permanent: false },
+            InstallerApplyOptions { permanent: false },
             None,
         )
         .unwrap();
@@ -301,54 +300,46 @@ mod tests {
     }
 
     #[test]
-    fn apply_trashes_planned_node_modules() {
+    fn apply_trashes_planned_dmg() {
         let _guard = crate::test_env::lock();
         let dir = tempfile::tempdir().unwrap();
         let home = dir.path();
-        let project = home.join("Code/app");
-        fs::create_dir_all(&project).unwrap();
-        fs::write(project.join("package.json"), b"{}").unwrap();
-        let nm = project.join("node_modules");
-        fs::create_dir_all(nm.join("pkg")).unwrap();
-        fs::write(nm.join("pkg/i.js"), b"1").unwrap();
-        let old = SystemTime::now() - Duration::from_secs(14 * 86_400);
-        fs::File::open(&nm)
-            .unwrap()
-            .set_times(FileTimes::new().set_modified(old))
-            .unwrap();
+        let downloads = home.join("Downloads");
+        fs::create_dir_all(&downloads).unwrap();
+        let dmg = downloads.join("App.dmg");
+        fs::write(&dmg, b"installer-bytes").unwrap();
 
         let trash_dir = dir.path().join("trash");
         fs::create_dir_all(&trash_dir).unwrap();
         std::env::set_var("MOLE_TEST_TRASH_DIR", &trash_dir);
 
         let protection = AppProtection::new();
-        let roots = [home.join("Code")];
-        let plan = build_purge_plan(
+        let roots = [downloads.clone()];
+        let plan = build_installer_plan(
             &protection,
-            &PurgePlanOptions {
+            &InstallerPlanOptions {
                 home,
                 ttl_secs: 900,
-                search_roots: Some(&roots),
-                include_empty: false,
-                min_age_days: 7,
+                scan_roots: Some(&roots),
+                max_depth: 2,
                 now: SystemTime::now(),
             },
         )
         .unwrap();
         assert!(
             !plan.entries.is_empty(),
-            "expected purge candidates, got none"
+            "expected installer candidates, got none"
         );
 
-        let report = apply_purge_plan(
+        let report = apply_installer_plan(
             &plan,
             &protection,
-            PurgeApplyOptions { permanent: false },
+            InstallerApplyOptions { permanent: false },
             None,
         )
         .unwrap();
         assert!(report.succeeded >= 1, "report={report:?}");
-        assert!(!nm.exists(), "node_modules should be trashed");
+        assert!(!dmg.exists(), "dmg should be trashed");
 
         std::env::remove_var("MOLE_TEST_TRASH_DIR");
     }

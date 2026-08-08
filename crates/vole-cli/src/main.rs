@@ -3,6 +3,7 @@
 
 mod clean;
 mod history_cmd;
+mod installer;
 mod interactive;
 mod optimize;
 mod purge;
@@ -197,6 +198,30 @@ enum Command {
         #[arg(long = "include-empty")]
         include_empty: bool,
     },
+    /// 查找并清理安装包（plan → apply；对齐 mole installer）。
+    Installer {
+        /// 只产出候选集，不改动任何文件（默认）。
+        #[arg(long, conflicts_with = "apply")]
+        plan: bool,
+        /// 同 `--plan`。
+        #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
+        dry_run: bool,
+        /// 执行 plan 文件中的条目。
+        #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
+        apply: Option<PathBuf>,
+        /// 永久删除而非移入废纸篓（仅与 `--apply` 联用）。
+        #[arg(long, requires = "apply")]
+        permanent: bool,
+        /// 输出 JSON。
+        #[arg(long)]
+        json: bool,
+        /// NDJSON 事件流。
+        #[arg(long = "json-stream")]
+        json_stream: bool,
+        /// 将 plan JSON 写入文件。
+        #[arg(long, conflicts_with = "apply")]
+        plan_out: Option<PathBuf>,
+    },
     /// 生成 shell 补全脚本（stdout）。
     #[command(visible_alias = "completion")]
     Completions {
@@ -328,6 +353,24 @@ fn main() {
                 apply_plan: apply,
                 permanent,
                 include_empty,
+            });
+            std::process::exit(code);
+        }
+        Some(Command::Installer {
+            plan: _,
+            dry_run: _,
+            apply,
+            permanent,
+            json,
+            json_stream,
+            plan_out,
+        }) => {
+            let code = installer::run_installer(installer::InstallerOptions {
+                json,
+                json_stream,
+                plan_out,
+                apply_plan: apply,
+                permanent,
             });
             std::process::exit(code);
         }

@@ -67,6 +67,10 @@ pub fn try_lock_purge() -> Result<ConfigLock, MutexError> {
     try_lock_config("purge")
 }
 
+pub fn try_lock_installer() -> Result<ConfigLock, MutexError> {
+    try_lock_config("installer")
+}
+
 pub fn try_lock_config(name: &str) -> Result<ConfigLock, MutexError> {
     let path = cache_dir().join(format!("{}.lock", name));
     let file = try_lock_path(&path)?;

@@ -441,7 +441,12 @@ pub fn needs_disk_permissions_repair(home: &Path) -> bool {
         };
         if p.exists() {
             let probe = p.join(".vole-perm-probe");
-            match fs::OpenOptions::new().create(true).write(true).open(&probe) {
+            match fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(&probe)
+            {
                 Ok(_) => {
                     let _ = fs::remove_file(&probe);
                 }

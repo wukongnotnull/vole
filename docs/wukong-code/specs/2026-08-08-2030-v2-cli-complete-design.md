@@ -1,8 +1,8 @@
 # Vole 产品 v2 · CLI 做全（续篇）
 
 - 日期：2026-08-08 20:30
-- 状态：已批准（本会话锁定；本文件为产品 v2 续篇权威）
-- 快照：`main` @ **1.46.0**（近满配 + optimize 闸控 G1–G5）；Mole 钉版 `third_party/mole-1.48.1`
+- 状态：已批准；**收口已完成**（M4–M10 + §3.2 CI 闸门；包线 **`2.5.0`**；findings [`../../findings/2026-08-v2-cli-complete-closeout.md`](../../findings/2026-08-v2-cli-complete-closeout.md)）
+- 快照：收口时 `main` @ **2.5.0**（M10 `remove`）；Mole 钉版 `third_party/mole-1.48.1`（设计时基线曾为 1.46.0）
 - 依据：本会话 brainstorming；[`2026-07-30-1900-v2-product-goals-design.md`](2026-07-30-1900-v2-product-goals-design.md)（v2 前半：uninstall / optimize，**已完成**）；[`2026-08-08-1727-mole-parity-roadmap-design.md`](2026-08-08-1727-mole-parity-roadmap-design.md) §1.2 B / §4.2（禁令由本文件推翻）；[`2026-07-30-semver-policy-design.md`](2026-07-30-semver-policy-design.md)
 - 范围：产品 v2 后半——把 CLI 能力做全；**不含**具体实现 plan（各命令另开 design → plan → 单 PR）
 
@@ -143,9 +143,9 @@ Mole 用户的既有脚本必须能直接改名调用：
 | **M8** | `touchid` | **`2.3.0`** |
 | **M9** | 自更新 `update` | **`2.4.0`** |
 | **M10** | 自卸载 `remove` | **`2.5.0`** |
-| **收口** | §3.2 命令面核对闸门 + findings + README「产品 v2 CLI 全家桶」 | 当时最新 `2.x` |
+| **收口** | §3.2 命令面核对闸门 + findings + README「产品 v2 CLI 全家桶」 | **`2.5.0`**（已完成；无新 CLI 未再 bump） |
 
-顺序：M4 → M5 / **2.0.0** → M6 → M7 → M8 → M9 → M10 → 收口。  
+顺序：M4 → M5 / **2.0.0** → M6 → M7 → M8 → M9 → M10 → 收口（**已全部完成**）。  
 
 PATCH 用于缺陷修复，不占用上表里程碑号。
 
@@ -201,5 +201,9 @@ PATCH 用于缺陷修复，不占用上表里程碑号。
 2. ~~`writing-plans` 写 **M4 spike**~~ → [`../plans/2026-08-08-2051-v2-m4-cli-complete-spike.md`](../plans/2026-08-08-2051-v2-m4-cli-complete-spike.md)；findings [`../../findings/2026-08-v2-m4-cli-complete-spike.md`](../../findings/2026-08-v2-m4-cli-complete-spike.md)  
 3. ~~**M5 `purge` → `2.0.0`**~~（含 §3.3 别名；PR #104）  
 4. ~~**M6 `hints` → `2.1.0`**~~ → design [`2026-08-08-2143-v2-m6-clean-hints-design.md`](2026-08-08-2143-v2-m6-clean-hints-design.md)；plan [`../plans/2026-08-08-2144-v2-m6-clean-hints.md`](../plans/2026-08-08-2144-v2-m6-clean-hints.md)  
-5. 下一项：**M7 `installer`** → 专用 design → plan → 实现 → **`2.2.0`**  
-6. 各后续命令落地前仍须**专用 design**（尤其 `update` 校验与 brew 共存、`remove` 删除范围）
+5. ~~**M7 `installer` → `2.2.0`**~~  
+6. ~~**M8 `touchid` → `2.3.0`**~~  
+7. ~~**M9 `update` → `2.4.0`**~~  
+8. ~~**M10 `remove` → `2.5.0`**~~（PR #110）  
+9. ~~**收口**~~：§3.2 CI `--enforce` + README「产品 v2 CLI 全家桶」+ findings [`../../findings/2026-08-v2-cli-complete-closeout.md`](../../findings/2026-08-v2-cli-complete-closeout.md)；计划 [`../plans/2026-08-08-2354-v2-cli-complete-closeout.md`](../plans/2026-08-08-2354-v2-cli-complete-closeout.md)  
+10. 续篇主路径已关闭；缺陷 PATCH / 新能力另开 design；桌面与 Mole 广谱边缘不阻塞本宣告

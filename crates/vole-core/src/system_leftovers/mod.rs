@@ -49,20 +49,36 @@ pub struct SystemLeftoverHit {
     pub label: String,
 }
 
-pub fn encode_system_leftover_rule_id(kind: SystemLeftoverKind, path: &Path) -> String {
+pub fn encode_system_leftover_rule_id(
+    kind: SystemLeftoverKind,
+    bundle_id: &str,
+    path: &Path,
+) -> String {
     let token = percent_encode_token(&path.to_string_lossy());
-    format!("{SYSTEM_LEFTOVER_PREFIX}{}:{token}", kind.as_str())
+    format!(
+        "{SYSTEM_LEFTOVER_PREFIX}{}:{}:{token}",
+        kind.as_str(),
+        percent_encode_token(bundle_id)
+    )
 }
 
-pub fn parse_system_leftover_rule_id(rule_id: &str) -> Option<(SystemLeftoverKind, PathBuf)> {
+/// `(kind, bundle_id, path)`
+pub fn parse_system_leftover_rule_id(
+    rule_id: &str,
+) -> Option<(SystemLeftoverKind, String, PathBuf)> {
     let rest = rule_id.strip_prefix(SYSTEM_LEFTOVER_PREFIX)?;
-    let (kind_s, token) = rest.split_once(':')?;
+    let (kind_s, rest) = rest.split_once(':')?;
+    let (bundle_tok, path_tok) = rest.split_once(':')?;
     let kind = SystemLeftoverKind::parse(kind_s)?;
-    let path = percent_decode_token(token)?;
-    if path.is_empty() {
+    let bundle_id = percent_decode_token(bundle_tok)?;
+    let path = percent_decode_token(path_tok)?;
+    if bundle_id.is_empty() || path.is_empty() {
         return None;
     }
-    Some((kind, PathBuf::from(path)))
+    if !is_reverse_dns_bundle_id(&bundle_id) {
+        return None;
+    }
+    Some((kind, bundle_id, PathBuf::from(path)))
 }
 
 /// Mole `mole_name_starts_with_bundle_id_boundary`：basename 等于 id 或以 `id.` 开头。
@@ -283,10 +299,11 @@ mod tests {
     #[test]
     fn rule_id_roundtrip_encodes_path() {
         let p = PathBuf::from("/Library/LaunchDaemons/com.example.plist");
-        let id = encode_system_leftover_rule_id(SystemLeftoverKind::Launchd, &p);
+        let id = encode_system_leftover_rule_id(SystemLeftoverKind::Launchd, "com.example.app", &p);
         assert!(id.starts_with("uninstall:system-leftover:launchd:"));
-        let (k, out) = parse_system_leftover_rule_id(&id).unwrap();
+        let (k, bundle, out) = parse_system_leftover_rule_id(&id).unwrap();
         assert_eq!(k, SystemLeftoverKind::Launchd);
+        assert_eq!(bundle, "com.example.app");
         assert_eq!(out, p);
     }
 

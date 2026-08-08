@@ -194,7 +194,7 @@ pub fn build_uninstall_plan_with_brew(
         }
 
         for hit in find_system_leftovers(&app, &siblings) {
-            let rule = encode_system_leftover_rule_id(hit.kind, &hit.path);
+            let rule = encode_system_leftover_rule_id(hit.kind, &app.bundle_id, &hit.path);
             let label = format!("System leftover: {}", hit.label);
             if let Some(entry) = try_plan_entry(&hit.path, &label, &rule, &uninstall_protect) {
                 entries.push(entry);

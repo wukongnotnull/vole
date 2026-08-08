@@ -293,7 +293,8 @@ pub fn apply_uninstall_proto_plan(
         if entry.rule_id.starts_with(SYSTEM_LEFTOVER_PREFIX) {
             let fallback = NoPrivilege;
             let backend = ctx.privilege.unwrap_or(&fallback);
-            let Some((kind, decoded)) = parse_system_leftover_rule_id(&entry.rule_id) else {
+            let Some((kind, bundle_id, decoded)) = parse_system_leftover_rule_id(&entry.rule_id)
+            else {
                 skipped += 1;
                 skip_tracker.record(SkipReason::Whitelisted, &entry.rule_id);
                 continue;
@@ -307,6 +308,18 @@ pub fn apply_uninstall_proto_plan(
                     });
                 }
                 skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            // plan/apply 窗口内可能新增 sibling：再检并 fail-closed 跳过。
+            if system_leftover_sibling_blocks(&bundle_id) {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::Whitelisted,
+                    });
+                }
+                skip_tracker.record(SkipReason::Whitelisted, &entry.rule_id);
                 continue;
             }
             if !path_allowed_for_privilege(&entry.path) {
@@ -562,6 +575,18 @@ fn login_helper_blocked(app_path: &Path) -> bool {
         return false;
     }
     sibling_presence_for_app(app_path).has_siblings()
+}
+
+fn system_leftover_sibling_blocks(bundle_id: &str) -> bool {
+    let home = std::env::var_os("VOLE_TEST_HOME")
+        .or_else(|| std::env::var_os("HOME"))
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("/"));
+    let roots = crate::ops::uninstall_plan::default_applications_dirs(&home);
+    // except 用占位路径：返回所有同 bundle 安装；≥2 即共享残留不可删。
+    let phantom = PathBuf::from("/__vole_no_such_app__.app");
+    let sib = find_bundle_siblings(bundle_id, &phantom, &roots);
+    sib.other_app_paths.len() >= 2
 }
 
 #[derive(Default)]
@@ -1239,6 +1264,7 @@ mod tests {
         let identity = capture_plan_entry_identity(&plist).unwrap();
         let rule = crate::system_leftovers::encode_system_leftover_rule_id(
             crate::system_leftovers::SystemLeftoverKind::Launchd,
+            "com.example.sys",
             &plist,
         );
         let entry = ProtoPlanEntry {
@@ -1299,6 +1325,7 @@ mod tests {
         let identity = capture_plan_entry_identity(&plist).unwrap();
         let rule = crate::system_leftovers::encode_system_leftover_rule_id(
             crate::system_leftovers::SystemLeftoverKind::Launchd,
+            "com.example.sys",
             &plist,
         );
         let entry = ProtoPlanEntry {
@@ -1344,5 +1371,85 @@ mod tests {
         assert!(report.skipped >= 1);
         assert!(fake.removed.lock().unwrap().is_empty());
         std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+    }
+
+    #[test]
+    fn apply_system_leftover_skips_when_sibling_appears() {
+        let _guard = crate::test_env::lock();
+        let root = scratch("sys-leftover-sib");
+        let home = root.join("home");
+        let apps = home.join("Applications");
+        fs::create_dir_all(&apps).unwrap();
+        // two copies same bundle
+        for name in ["Foo.app", "Foo Copy.app"] {
+            let app = apps.join(name);
+            fs::create_dir_all(app.join("Contents")).unwrap();
+            let info = app.join("Contents/Info.plist");
+            let body = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>com.example.sib</string>
+<key>CFBundleName</key><string>Foo</string>
+</dict></plist>"#;
+            fs::write(&info, body).unwrap();
+        }
+        let lib = root.join("Library");
+        fs::create_dir_all(lib.join("LaunchDaemons")).unwrap();
+        let plist = lib.join("LaunchDaemons/com.example.sib.plist");
+        fs::write(&plist, b"{}").unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+        std::env::set_var("VOLE_TEST_HOME", &home);
+        std::env::set_var("HOME", &home);
+
+        let identity = capture_plan_entry_identity(&plist).unwrap();
+        let rule = crate::system_leftovers::encode_system_leftover_rule_id(
+            crate::system_leftovers::SystemLeftoverKind::Launchd,
+            "com.example.sib",
+            &plist,
+        );
+        let entry = ProtoPlanEntry {
+            id: "sys3".into(),
+            path: plist.clone(),
+            label: "System leftover".into(),
+            size: 2,
+            rule_id: rule,
+            skip_reason: None,
+            dev: identity.dev,
+            ino: identity.ino,
+            mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+        };
+        let plan = ProtoPlan {
+            schema_version: SCHEMA_VERSION,
+            created_at: SystemTime::now(),
+            ttl_secs: 900,
+            entries: vec![entry],
+            coverage_note: None,
+        };
+        let fake = crate::privilege::RecordingPrivilege::allowing();
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("uninstall");
+        let trash = MacTrash;
+        let mut ctx = UninstallApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: UninstallApplyOptions { permanent: true },
+            trash: &trash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            brew: None,
+            login_items: None,
+            privilege: Some(&fake),
+            privilege_acquire_attempted: false,
+        };
+        let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert!(fake.removed.lock().unwrap().is_empty());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+        std::env::remove_var("VOLE_TEST_HOME");
+        // leave HOME as was — restore to original via remove and rely on lock
+        std::env::remove_var("HOME");
     }
 }

@@ -11,7 +11,7 @@
 在既有 `vole uninstall` plan→apply 上交付 **系统 LaunchDaemons / `/Library` sudo 残留卸载主路径**：
 
 1. **plan**：对通过保护筛选且 **无 sibling** 的 app，扫描 Mole 对齐的系统残留主路径，产出侧车条目  
-   `rule_id = uninstall:system-leftover:{kind}:{token}`（path 为绝对系统路径）
+   `rule_id = uninstall:system-leftover:{kind}:{bundle_id}:{token}`（path 为绝对系统路径）
 2. **apply**：复用现有 **`PrivilegeBackend`**（`SudoNoninteractive` / Fake）：TTY 下可至多一次 `acquire_interactive`（`sudo -v`），再 `sudo -n`；LaunchAgent/Daemon plist 先 `launchctl_unload`，再 `remove_permanent`；无凭证 → **`NeedsPrivilege` + 响亮 skip**，不阻塞同 plan 其余条目
 3. **保护层不绕过**：仍走 Uninstall 保护 / TOCTOU / whitelist / `path_allowed_for_privilege`；**禁止**第二套特权实现
 4. **sibling**：有存活同 bundle sibling → **整刀系统残留不进 plan**（对齐用户域 leftovers / Mole 共享残留守卫）
@@ -83,8 +83,8 @@ Frameworks、Internet Plug-Ins、Input Methods、Audio Plug-Ins、QuickLook、Pr
 
 1. 既有 siblings / brew / login / 用户域 leftovers 不变  
 2. `find_system_leftovers(identity, siblings)` → hits  
-3. 每条：`rule_id = uninstall:system-leftover:{kind}:{token}`  
-   - `kind` ∈ `launchd` \| `pht` \| `library` \| `receipt`  
+3. 每条：`rule_id = uninstall:system-leftover:{kind}:{bundle_id}:{token}`  
+   - `bundle_id` = reverse-DNS；`kind` ∈ `launchd` \| `pht` \| `library` \| `receipt`  
    - `token` = 绝对 path 的 URL-safe 百分号编码（与 login-item name token 同形，保证单行可解析）  
    - `path` = 绝对系统路径；`size` = 尽力 `du` 或 0  
 4. 保护命中的路径 **不进 plan**（`should_protect_from_uninstall` / path protection）  

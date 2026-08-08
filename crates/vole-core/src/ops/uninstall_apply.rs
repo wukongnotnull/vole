@@ -1,7 +1,9 @@
 //! `uninstall` apply：TTL + TOCTOU + Uninstall 模式保护 + `mole_delete_verified`。
 //! brew-cask 条目走 `BrewDeps::uninstall_cask`，失败仅在 cask 已卸载时回退 delete。
 //! login-item / login-helper 侧车走 `LoginItemDeps`（不 mole_delete）。
+//! system-leftover 侧车走既有 `PrivilegeBackend`（sudo -n + TTY sudo -v）。
 
+use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -20,12 +22,18 @@ use crate::login_items::{
     parse_login_item_name_rule_id, LiveLoginItemDeps, LoginItemDeps, LoginItemError,
 };
 use crate::oplog::OperationLogger;
+use crate::privilege::{
+    path_allowed_for_privilege, NoPrivilege, PrivilegeBackend, PrivilegeError, SudoNoninteractive,
+};
 use crate::protection::{
     find_bundle_siblings, read_bundle_id, read_display_name, AppProtection, SiblingPresence,
     UninstallPathProtection,
 };
 use crate::safety::{
     verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity, ValidationError,
+};
+use crate::system_leftovers::{
+    parse_system_leftover_rule_id, SystemLeftoverKind, SYSTEM_LEFTOVER_PREFIX,
 };
 use crate::vole_proto::{
     Plan as ProtoPlan, PlanEntry as ProtoPlanEntry, Report, SkipReason, SkipSummary, StreamEvent,
@@ -58,6 +66,10 @@ pub struct UninstallApplyContext<'a> {
     pub brew: Option<&'a dyn BrewDeps>,
     /// 注入 login items；None 则用 LiveLoginItemDeps。
     pub login_items: Option<&'a dyn LoginItemDeps>,
+    /// 注入特权；None 则用 SudoNoninteractive（仅 system-leftover 会碰）。
+    pub privilege: Option<&'a dyn PrivilegeBackend>,
+    /// TTY `sudo -v` 本会话是否已尝试（至多一次）。
+    pub privilege_acquire_attempted: bool,
 }
 
 pub fn apply_uninstall_plan(
@@ -71,6 +83,7 @@ pub fn apply_uninstall_plan(
     let _ = oplog.session_start();
     let live = LiveBrewDeps;
     let live_login = LiveLoginItemDeps;
+    let sudo = SudoNoninteractive;
     let mut ctx = UninstallApplyContext {
         protection,
         whitelist_patterns: &[],
@@ -82,6 +95,8 @@ pub fn apply_uninstall_plan(
         now: SystemTime::now(),
         brew: Some(&live),
         login_items: Some(&live_login),
+        privilege: Some(&sudo),
+        privilege_acquire_attempted: false,
     };
     let report = apply_uninstall_proto_plan(plan, &mut ctx)?;
     let _ = oplog.session_end(
@@ -89,6 +104,24 @@ pub fn apply_uninstall_plan(
         report.trashed_bytes / 1024 + report.deleted_bytes / 1024,
     );
     Ok(report)
+}
+
+
+fn ensure_privilege_ready(
+    ctx: &mut UninstallApplyContext<'_>,
+    backend: &dyn PrivilegeBackend,
+) -> bool {
+    if backend.probe_noninteractive() {
+        return true;
+    }
+    if ctx.privilege_acquire_attempted {
+        return false;
+    }
+    ctx.privilege_acquire_attempted = true;
+    if io::stdin().is_terminal() {
+        let _ = writeln!(io::stderr(), "正在请求管理员权限以清理系统路径…");
+    }
+    backend.acquire_interactive() && backend.probe_noninteractive()
 }
 
 pub fn apply_uninstall_proto_plan(
@@ -245,6 +278,85 @@ pub fn apply_uninstall_proto_plan(
                     skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
                 }
                 Err(LoginItemError::Failed(_)) => {
+                    skipped += 1;
+                    if let Some(event) = &ctx.on_event {
+                        event(StreamEvent::Skipped {
+                            rule_id: entry.rule_id.clone(),
+                            reason: SkipReason::PathVanished,
+                        });
+                    }
+                    skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                }
+            }
+            continue;
+        }
+
+        if entry.rule_id.starts_with(SYSTEM_LEFTOVER_PREFIX) {
+            let fallback = NoPrivilege;
+            let backend = ctx.privilege.unwrap_or(&fallback);
+            let Some((kind, decoded)) = parse_system_leftover_rule_id(&entry.rule_id) else {
+                skipped += 1;
+                skip_tracker.record(SkipReason::Whitelisted, &entry.rule_id);
+                continue;
+            };
+            if decoded != entry.path {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            if !path_allowed_for_privilege(&entry.path) {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::Whitelisted,
+                    });
+                }
+                skip_tracker.record(SkipReason::Whitelisted, &entry.rule_id);
+                continue;
+            }
+            if !ensure_privilege_ready(ctx, backend) {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::NeedsPrivilege,
+                    });
+                }
+                skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+                let _ = writeln!(
+                    io::stderr(),
+                    "注意：系统残留条目需要非交互 sudo（可先执行 sudo -v）后重试。"
+                );
+                continue;
+            }
+            if matches!(kind, SystemLeftoverKind::Launchd)
+                && entry.path.extension().and_then(|e| e.to_str()) == Some("plist")
+            {
+                let _ = backend.launchctl_unload(&entry.path);
+            }
+            match backend.remove_permanent(&entry.path) {
+                Ok(()) => {
+                    succeeded += 1;
+                    deleted_bytes = deleted_bytes.saturating_add(entry.size);
+                }
+                Err(PrivilegeError::Unavailable) => {
+                    skipped += 1;
+                    if let Some(event) = &ctx.on_event {
+                        event(StreamEvent::Skipped {
+                            rule_id: entry.rule_id.clone(),
+                            reason: SkipReason::NeedsPrivilege,
+                        });
+                    }
+                    skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
+                }
+                Err(PrivilegeError::Refused) | Err(PrivilegeError::CommandFailed(_)) => {
                     skipped += 1;
                     if let Some(event) = &ctx.on_event {
                         event(StreamEvent::Skipped {
@@ -595,6 +707,8 @@ mod tests {
             now: SystemTime::now(),
             brew: None,
             login_items: None,
+            privilege: None,
+            privilege_acquire_attempted: false,
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 1);
@@ -658,6 +772,8 @@ mod tests {
             now: SystemTime::now(),
             brew: Some(&brew),
             login_items: None,
+            privilege: None,
+            privilege_acquire_attempted: false,
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 1);
@@ -715,6 +831,8 @@ mod tests {
             now: SystemTime::now(),
             brew: Some(&brew),
             login_items: None,
+            privilege: None,
+            privilege_acquire_attempted: false,
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 0);
@@ -769,6 +887,8 @@ mod tests {
             now: SystemTime::now(),
             brew: Some(&brew),
             login_items: None,
+            privilege: None,
+            privilege_acquire_attempted: false,
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 1);
@@ -825,6 +945,8 @@ mod tests {
             now: SystemTime::now(),
             brew: Some(&brew),
             login_items: None,
+            privilege: None,
+            privilege_acquire_attempted: false,
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 0);
@@ -886,6 +1008,8 @@ mod tests {
             now: SystemTime::now(),
             brew: None,
             login_items: Some(&fake),
+            privilege: None,
+            privilege_acquire_attempted: false,
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 1);
@@ -945,6 +1069,8 @@ mod tests {
             now: SystemTime::now(),
             brew: None,
             login_items: Some(&fake),
+            privilege: None,
+            privilege_acquire_attempted: false,
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 1);
@@ -1020,6 +1146,8 @@ mod tests {
             now: SystemTime::now(),
             brew: None,
             login_items: Some(&fake),
+            privilege: None,
+            privilege_acquire_attempted: false,
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 1);
@@ -1089,6 +1217,8 @@ mod tests {
             now: SystemTime::now(),
             brew: None,
             login_items: Some(&fake),
+            privilege: None,
+            privilege_acquire_attempted: false,
         };
         let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
         assert_eq!(report.succeeded, 0);
@@ -1096,4 +1226,125 @@ mod tests {
         assert!(fake.booted_helpers.lock().unwrap().is_empty());
         fs::remove_dir_all(&root).ok();
     }
+
+    #[test]
+    fn apply_system_leftover_unload_and_remove() {
+        let _guard = crate::test_env::lock();
+        let root = scratch("sys-leftover-ok");
+        let lib = root.join("Library");
+        fs::create_dir_all(lib.join("LaunchDaemons")).unwrap();
+        let plist = lib.join("LaunchDaemons/com.example.sys.plist");
+        fs::write(&plist, b"{}").unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let identity = capture_plan_entry_identity(&plist).unwrap();
+        let rule = crate::system_leftovers::encode_system_leftover_rule_id(
+            crate::system_leftovers::SystemLeftoverKind::Launchd,
+            &plist,
+        );
+        let entry = ProtoPlanEntry {
+            id: "sys1".into(),
+            path: plist.clone(),
+            label: "System leftover: com.example.sys.plist".into(),
+            size: 2,
+            rule_id: rule,
+            skip_reason: None,
+            dev: identity.dev,
+            ino: identity.ino,
+            mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+        };
+        let plan = ProtoPlan {
+            schema_version: SCHEMA_VERSION,
+            created_at: SystemTime::now(),
+            ttl_secs: 900,
+            entries: vec![entry],
+            coverage_note: None,
+        };
+
+        let fake = crate::privilege::RecordingPrivilege::allowing();
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("uninstall");
+        let trash = MacTrash;
+        let mut ctx = UninstallApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: UninstallApplyOptions { permanent: true },
+            trash: &trash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            brew: None,
+            login_items: None,
+            privilege: Some(&fake),
+            privilege_acquire_attempted: false,
+        };
+        let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 1);
+        assert_eq!(fake.unloaded.lock().unwrap().len(), 1);
+        assert_eq!(fake.removed.lock().unwrap().len(), 1);
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+    }
+
+    #[test]
+    fn apply_system_leftover_needs_privilege_when_denied() {
+        let _guard = crate::test_env::lock();
+        let root = scratch("sys-leftover-deny");
+        let lib = root.join("Library");
+        fs::create_dir_all(lib.join("LaunchDaemons")).unwrap();
+        let plist = lib.join("LaunchDaemons/com.example.deny.plist");
+        fs::write(&plist, b"{}").unwrap();
+        std::env::set_var("VOLE_TEST_SYSTEM_LIBRARY", &lib);
+
+        let identity = capture_plan_entry_identity(&plist).unwrap();
+        let rule = crate::system_leftovers::encode_system_leftover_rule_id(
+            crate::system_leftovers::SystemLeftoverKind::Launchd,
+            &plist,
+        );
+        let entry = ProtoPlanEntry {
+            id: "sys2".into(),
+            path: plist.clone(),
+            label: "System leftover".into(),
+            size: 2,
+            rule_id: rule,
+            skip_reason: None,
+            dev: identity.dev,
+            ino: identity.ino,
+            mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+        };
+        let plan = ProtoPlan {
+            schema_version: SCHEMA_VERSION,
+            created_at: SystemTime::now(),
+            ttl_secs: 900,
+            entries: vec![entry],
+            coverage_note: None,
+        };
+
+        let fake = crate::privilege::RecordingPrivilege::denying();
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("uninstall");
+        let trash = MacTrash;
+        let mut ctx = UninstallApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: UninstallApplyOptions { permanent: true },
+            trash: &trash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            brew: None,
+            login_items: None,
+            privilege: Some(&fake),
+            privilege_acquire_attempted: false,
+        };
+        let report = apply_uninstall_proto_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert!(report.skipped >= 1);
+        assert!(fake.removed.lock().unwrap().is_empty());
+        std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
+    }
+
 }

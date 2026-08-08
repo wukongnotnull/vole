@@ -199,5 +199,6 @@ PATCH 用于缺陷修复，不占用上表里程碑号。
 
 1. ~~人类审阅本规格~~（已批准）  
 2. ~~`writing-plans` 写 **M4 spike**~~ → [`../plans/2026-08-08-2051-v2-m4-cli-complete-spike.md`](../plans/2026-08-08-2051-v2-m4-cli-complete-spike.md)；findings [`../../findings/2026-08-v2-m4-cli-complete-spike.md`](../../findings/2026-08-v2-m4-cli-complete-spike.md)  
-3. 下一项：**M5 `purge` 专用 design → plan → 实现 → `2.0.0`**（建议同 PR 补 §3.3 别名）  
-4. 各后续命令落地前仍须**专用 design**（尤其 `update` 校验与 brew 共存、`remove` 删除范围）
+3. ~~**M5 `purge` → `2.0.0`**~~（含 §3.3 别名；PR #104）  
+4. **进行中：M6 `hints`** → 专用 design [`2026-08-08-2143-v2-m6-clean-hints-design.md`](2026-08-08-2143-v2-m6-clean-hints-design.md) → plan → 实现 → **`2.1.0`**  
+5. 各后续命令落地前仍须**专用 design**（尤其 `update` 校验与 brew 共存、`remove` 删除范围）

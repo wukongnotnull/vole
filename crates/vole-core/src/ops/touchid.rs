@@ -392,14 +392,14 @@ fn insert_tid_after_comments(content: &str) -> String {
 
 fn remove_tid_from_file(path: &Path, installer: &dyn PamInstall) -> Result<(), TouchIdError> {
     let body = fs::read_to_string(path)?;
-    let filtered: String = body
-        .lines()
-        .filter(|l| !l.contains("pam_tid.so"))
-        .fold(String::new(), |mut acc, l| {
-            acc.push_str(l);
-            acc.push('\n');
-            acc
-        });
+    let filtered: String =
+        body.lines()
+            .filter(|l| !l.contains("pam_tid.so"))
+            .fold(String::new(), |mut acc, l| {
+                acc.push_str(l);
+                acc.push('\n');
+                acc
+            });
     install_string(path, &filtered, installer)
 }
 
@@ -408,10 +408,7 @@ fn install_string(dst: &Path, body: &str, installer: &dyn PamInstall) -> Result<
         .parent()
         .map(Path::to_path_buf)
         .unwrap_or_else(|| PathBuf::from("."));
-    let tmp = parent.join(format!(
-        ".vole-touchid-{}.tmp",
-        std::process::id()
-    ));
+    let tmp = parent.join(format!(".vole-touchid-{}.tmp", std::process::id()));
     {
         let mut f = fs::File::create(&tmp)?;
         f.write_all(body.as_bytes())?;
@@ -612,10 +609,7 @@ mod tests {
         let dst = dir.path().join("dst");
         fs::write(&src, "x").unwrap();
         let err = LivePamInstall.install_file(&src, &dst).unwrap_err();
-        assert!(
-            err.to_string().contains("VOLE_TEST_NO_AUTH"),
-            "err={err}"
-        );
+        assert!(err.to_string().contains("VOLE_TEST_NO_AUTH"), "err={err}");
         assert!(!dst.exists());
         match prev {
             Some(v) => std::env::set_var("VOLE_TEST_NO_AUTH", v),

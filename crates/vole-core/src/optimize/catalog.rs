@@ -92,7 +92,7 @@ const CATALOG: &[OptimizeTask] = &[
         kind: OptimizeTaskKind::Action,
         title: "Memory Optimization",
         description: "Release inactive memory to improve system responsiveness",
-        in_m3: false,
+        in_m3: true,
     },
     OptimizeTask {
         id: "network_stack_optimize",
@@ -250,9 +250,10 @@ mod tests {
         assert!(main.contains(&"saved_state_cleanup"));
         assert!(main.contains(&"system_maintenance"));
         assert!(main.contains(&"network_optimization"));
-        assert!(!main.contains(&"memory_pressure_relief"));
+        assert!(main.contains(&"memory_pressure_relief"));
+        assert!(!main.contains(&"network_stack_optimize"));
         assert!(!main.contains(&"spotlight_index_optimize"));
-        assert_eq!(main.len(), 14);
+        assert_eq!(main.len(), 15);
     }
 
     #[test]

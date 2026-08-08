@@ -120,7 +120,20 @@
 
 ### 3.6 `remove`（→ M10）
 
-（Task 7 填写）
+**Mole：** `lib/manage/remove.sh` `remove_mole`（sourced）。  
+**CLI：** `mole remove [--dry-run|-n]`。
+
+| 安装形态 | 探测要点 |
+|---|---|
+| Homebrew | `brew_mole_formula_installed` / `is_homebrew_install` → 提示/执行 `brew uninstall` |
+| 手动前缀 | `command -v mole` + `/usr/local` `$HOME/.local` `/opt/local`；排除 Cellar symlink |
+| Alias / 残留 | `mo` 同路径集合；非 Cellar 的 alias 文件 |
+
+另清理自身 config/cache/logs（范围须在 M10 design 逐项写死）。`--dry-run` 只打印 Would remove。
+
+**主路径：** `vole remove --dry-run` 预览；仅删本工具安装产物与自身配置；brew 提示 `brew uninstall`；删除走路径校验漏斗。  
+**长尾 / 禁区：** 用户数据、oplog/审计（除非显式要求）、其它 brew 包。  
+**耦合：** 与 M9 共享安装来源判定 API；规格允许合并为单里程碑。
 
 ## 4. 别名与裸调用
 

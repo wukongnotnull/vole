@@ -3,8 +3,8 @@
 use std::path::{Path, PathBuf};
 
 use crate::delete::{safe_remove, FsRemover, SafeRemoveOptions};
-use crate::ops::install_origin::{detect_install_layout, InstallOrigin};
 use crate::oplog::OperationLogger;
+use crate::ops::install_origin::{detect_install_layout, InstallOrigin};
 use crate::safety::NoPathProtection;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -481,7 +481,11 @@ mod tests {
         let exe = local_bin.join("vole");
         fs::write(&exe, b"x").unwrap();
         fs::create_dir_all(home.join(".config/vole")).unwrap();
-        fs::write(home.join(".config/vole/install_channel"), b"CHANNEL=stable\n").unwrap();
+        fs::write(
+            home.join(".config/vole/install_channel"),
+            b"CHANNEL=stable\n",
+        )
+        .unwrap();
         let opts = RemoveOptions {
             dry_run: false,
             yes: true,

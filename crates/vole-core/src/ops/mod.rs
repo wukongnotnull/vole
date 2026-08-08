@@ -65,7 +65,10 @@ pub use purge_plan::{
     quick_hint_search_roots, PurgePlanError, PurgePlanOptions, DEFAULT_PURGE_MIN_AGE_DAYS,
     PURGE_TARGETS, QUICK_HINT_EXCLUDED_TARGETS,
 };
-pub use remove::{plan_remove, RemoveItem, RemoveItemKind, RemoveOptions, RemovePlan};
+pub use remove::{
+    plan_remove, run_remove, BrewUninstaller, FakeBrewUninstaller, LiveBrewUninstaller,
+    RemoveError, RemoveItem, RemoveItemKind, RemoveOptions, RemoveOutcome, RemovePlan,
+};
 pub use touchid::{
     backup_path, disable_touchid, enable_touchid, is_touchid_configured, pam_install_for_runtime,
     pam_paths_injected, plan_touchid, resolve_touchid_paths, touchid_auth_blocked, FakePamInstall,

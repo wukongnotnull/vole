@@ -3,6 +3,7 @@
 mod actions;
 mod delete_paths;
 mod login_items_audit;
+mod spotlight_orphan_rules;
 
 pub use actions::{
     apply_optimize_action, has_active_vpn, is_memory_pressure_high, needs_disk_permissions_repair,
@@ -20,4 +21,8 @@ pub use delete_paths::{
 pub use login_items_audit::{
     plan_login_items_audit, FakeLoginItemsAuditDeps, LiveLoginItemsAuditDeps, LoginItemSnapshot,
     LoginItemsAuditDeps, LoginItemsAuditError,
+};
+pub use spotlight_orphan_rules::{
+    plan_spotlight_orphan_rules_cleanup, FakeSpotlightOrphanDeps, LiveSpotlightOrphanDeps,
+    SpotlightOrphanDeps, SpotlightOrphanError,
 };

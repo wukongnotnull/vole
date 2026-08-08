@@ -555,6 +555,7 @@ pub fn apply_optimize_action(
         "disk_permissions_repair" => apply_disk_permissions_repair(path, privilege),
         "periodic_maintenance" => apply_periodic_maintenance(privilege),
         "login_items_audit" => apply_login_items_audit(path),
+        "spotlight_orphan_rules_cleanup" => apply_spotlight_orphan_rules_cleanup(),
         _ => Err(OptimizeActionError::Failed),
     }
 }
@@ -567,6 +568,18 @@ fn apply_login_items_audit(path: &Path) -> Result<(), OptimizeActionError> {
     }
     // Report-only acknowledge; never delete login items / never touch osascript/sudo.
     Ok(())
+}
+
+fn apply_spotlight_orphan_rules_cleanup() -> Result<(), OptimizeActionError> {
+    use super::spotlight_orphan_rules::{
+        run_spotlight_orphan_rules_cleanup, LiveSpotlightOrphanDeps, SpotlightOrphanError,
+    };
+
+    match run_spotlight_orphan_rules_cleanup(&LiveSpotlightOrphanDeps) {
+        Ok(()) => Ok(()),
+        Err(SpotlightOrphanError::TestMode) => Err(OptimizeActionError::Skipped),
+        Err(SpotlightOrphanError::Unavailable) => Err(OptimizeActionError::Failed),
+    }
 }
 
 fn apply_memory_pressure_relief(
@@ -1109,5 +1122,15 @@ mod tests {
         let path = Path::new("/tmp/.vole-optimize-action/login_items_audit");
         let err = apply_optimize_action("login_items_audit", path, None, &mut false).unwrap_err();
         assert_eq!(err, OptimizeActionError::NeedsPrivilege);
+    }
+
+    #[test]
+    fn apply_spotlight_orphan_rules_cleanup_test_no_auth_skipped() {
+        std::env::set_var("VOLE_TEST_NO_AUTH", "1");
+        let path = Path::new("/tmp/.vole-optimize-action/spotlight_orphan_rules_cleanup");
+        let err = apply_optimize_action("spotlight_orphan_rules_cleanup", path, None, &mut false)
+            .unwrap_err();
+        assert_eq!(err, OptimizeActionError::Skipped);
+        std::env::remove_var("VOLE_TEST_NO_AUTH");
     }
 }

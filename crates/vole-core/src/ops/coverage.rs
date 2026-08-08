@@ -68,6 +68,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          optimize memory_pressure_relief（高压时 sudo -n purge）、\
          optimize W2b③（network_stack / disk_permissions / periodic + sudo -n）、\
          optimize login_items_audit（只读审计损坏登录项；不删除；禁非特权 sfltool dumpbtm）、\
+         optimize spotlight_orphan_rules_cleanup（仅删确认已卸载 app 的 Spotlight 搜索规则；System/Apple/不确定 keep）、\
          本地快照报告（status/analyze · 仅 list）、\
          Filo production Cache、\
          Zed system-node npm cache、\
@@ -252,6 +253,7 @@ mod tests {
         assert!(note.contains("optimize memory_pressure_relief"));
         assert!(note.contains("optimize W2b③"));
         assert!(note.contains("optimize login_items_audit"));
+        assert!(note.contains("optimize spotlight_orphan_rules_cleanup"));
         assert!(
             !unported.contains("失败中备份") && !unported.contains("Time Machine 失败"),
             "TM failed backups must not remain unported"

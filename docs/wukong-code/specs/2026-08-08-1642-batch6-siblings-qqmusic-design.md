@@ -1,7 +1,7 @@
 # W2c Batch 6 收口：兄弟路径 + QQ Music AS 缓存
 
 - 日期：2026-08-08
-- 状态：已批准（Condensed；用户确认取消「暂停必做」、全部命名项）
+- 状态：已批准并落地（Condensed；用户确认取消「暂停必做」、全部命名项；分支 `feat/clean-batch6-siblings-qqmusic`）
 - 依据：`dev.sh` `clean_antigravity_caches` / `clean_chrome_devtools_mcp_caches`；`app_caches.sh` QQ Music 容器 AS；[`2026-08-08-0119-mole-parity-roadmap-design.md`](2026-08-08-0119-mole-parity-roadmap-design.md)
 - 包版本：**1.41.0**；规则 **537 → 540**
 - 分支：`feat/clean-batch6-siblings-qqmusic`

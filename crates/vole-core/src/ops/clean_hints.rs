@@ -149,14 +149,10 @@ fn probe_project_artifacts(
         return None;
     }
 
-    let max_per_root = ((MAX_PROJECTS + roots.len() - 1) / roots.len()).max(25);
+    let max_per_root = MAX_PROJECTS.div_ceil(roots.len()).max(25);
 
-    let mut count = 0usize;
+    let mut accum = ProjectHintAccum::default();
     let mut truncated = false;
-    let mut estimated_kb = 0u64;
-    let mut estimate_samples = 0usize;
-    let mut estimate_partial = false;
-    let mut examples: Vec<String> = Vec::new();
     let mut scanned_projects = 0usize;
     let mut stop = false;
 
@@ -178,18 +174,7 @@ fn probe_project_artifacts(
                 truncated = true;
                 break;
             }
-            record_targets(
-                root,
-                &targets,
-                &mut count,
-                &mut estimated_kb,
-                &mut estimate_samples,
-                &mut estimate_partial,
-                &mut examples,
-                opts.home,
-                opts.du_timeout,
-                probe,
-            );
+            accum.record(root, &targets, opts.home, opts.du_timeout, probe);
         }
 
         if root_projects >= max_per_root {
@@ -231,18 +216,7 @@ fn probe_project_artifacts(
                 break;
             }
 
-            record_targets(
-                &project_dir,
-                &targets,
-                &mut count,
-                &mut estimated_kb,
-                &mut estimate_samples,
-                &mut estimate_partial,
-                &mut examples,
-                opts.home,
-                opts.du_timeout,
-                probe,
-            );
+            accum.record(&project_dir, &targets, opts.home, opts.du_timeout, probe);
 
             if Instant::now() >= deadline {
                 truncated = true;
@@ -277,18 +251,7 @@ fn probe_project_artifacts(
                 if nested_count > MAX_NESTED_PER_PROJECT {
                     break;
                 }
-                record_targets(
-                    &nested_dir,
-                    &targets,
-                    &mut count,
-                    &mut estimated_kb,
-                    &mut estimate_samples,
-                    &mut estimate_partial,
-                    &mut examples,
-                    opts.home,
-                    opts.du_timeout,
-                    probe,
-                );
+                accum.record(&nested_dir, &targets, opts.home, opts.du_timeout, probe);
             }
             if stop {
                 break;
@@ -299,28 +262,28 @@ fn probe_project_artifacts(
         }
     }
 
-    if count > MAX_MATCH_DISPLAY {
+    if accum.count > MAX_MATCH_DISPLAY {
         truncated = true;
     }
-    if count == 0 {
+    if accum.count == 0 {
         return None;
     }
 
     let count_label = if truncated {
-        format!("{count}+")
+        format!("{}+", accum.count)
     } else {
-        count.to_string()
+        accum.count.to_string()
     };
-    let review = if estimate_samples > 0 && estimated_kb == 0 {
+    let review = if accum.estimate_samples > 0 && accum.estimated_kb == 0 {
         "vole purge --include-empty"
     } else {
         "vole purge"
     };
 
     let mut detail = format!("{count_label} dirs");
-    if estimate_samples > 0 {
-        let human = units::bytes_bin(estimated_kb.saturating_mul(1024));
-        let partial = estimate_partial || truncated || estimate_samples < count;
+    if accum.estimate_samples > 0 {
+        let human = units::bytes_bin(accum.estimated_kb.saturating_mul(1024));
+        let partial = accum.estimate_partial || truncated || accum.estimate_samples < accum.count;
         if partial {
             detail.push_str(&format!(", {human}+"));
         } else {
@@ -335,45 +298,52 @@ fn probe_project_artifacts(
     Some(HintItem {
         kind: HintKind::ProjectArtifacts,
         summary,
-        detail: if examples.is_empty() {
+        detail: if accum.examples.is_empty() {
             None
         } else {
-            Some(examples.join(", "))
+            Some(accum.examples.join(", "))
         },
     })
 }
 
-fn record_targets(
-    parent: &Path,
-    targets: &[&str],
-    count: &mut usize,
-    estimated_kb: &mut u64,
-    estimate_samples: &mut usize,
-    estimate_partial: &mut bool,
-    examples: &mut Vec<String>,
-    home: &Path,
-    du_timeout: Duration,
-    probe: &dyn PathSizeKb,
-) {
-    for target in targets {
-        let candidate = parent.join(target);
-        if !candidate.is_dir() {
-            continue;
-        }
-        *count += 1;
-        if examples.len() < 2 {
-            examples.push(display_under_home(&candidate, home));
-        }
-        if *estimate_samples >= MAX_SIZE_SAMPLES {
-            *estimate_partial = true;
-            continue;
-        }
-        match probe.size_kb(&candidate, du_timeout) {
-            Some(kb) => {
-                *estimated_kb = estimated_kb.saturating_add(kb);
-                *estimate_samples += 1;
+#[derive(Default)]
+struct ProjectHintAccum {
+    count: usize,
+    estimated_kb: u64,
+    estimate_samples: usize,
+    estimate_partial: bool,
+    examples: Vec<String>,
+}
+
+impl ProjectHintAccum {
+    fn record(
+        &mut self,
+        parent: &Path,
+        targets: &[&str],
+        home: &Path,
+        du_timeout: Duration,
+        probe: &dyn PathSizeKb,
+    ) {
+        for target in targets {
+            let candidate = parent.join(target);
+            if !candidate.is_dir() {
+                continue;
             }
-            None => *estimate_partial = true,
+            self.count += 1;
+            if self.examples.len() < 2 {
+                self.examples.push(display_under_home(&candidate, home));
+            }
+            if self.estimate_samples >= MAX_SIZE_SAMPLES {
+                self.estimate_partial = true;
+                continue;
+            }
+            match probe.size_kb(&candidate, du_timeout) {
+                Some(kb) => {
+                    self.estimated_kb = self.estimated_kb.saturating_add(kb);
+                    self.estimate_samples += 1;
+                }
+                None => self.estimate_partial = true,
+            }
         }
     }
 }

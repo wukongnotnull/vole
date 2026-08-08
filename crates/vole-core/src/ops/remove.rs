@@ -2,7 +2,10 @@
 
 use std::path::{Path, PathBuf};
 
+use crate::delete::{safe_remove, FsRemover, SafeRemoveOptions};
 use crate::ops::install_origin::{detect_install_layout, InstallOrigin};
+use crate::oplog::OperationLogger;
+use crate::safety::NoPathProtection;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RemoveItemKind {
@@ -213,6 +216,161 @@ fn paths_equal(a: &Path, b: &Path) -> bool {
     }
 }
 
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub enum RemoveError {
+    #[error("{0}")]
+    Message(String),
+}
+
+#[derive(Debug)]
+pub enum RemoveOutcome {
+    DryRun(RemovePlan),
+    NothingFound,
+    Removed {
+        plan: RemovePlan,
+        errors: Vec<String>,
+    },
+    NeedsConfirmation,
+}
+
+pub trait BrewUninstaller {
+    fn uninstall_vole(&self) -> Result<(), String>;
+}
+
+#[derive(Debug, Default)]
+pub struct FakeBrewUninstaller {
+    pub calls: std::sync::Mutex<u32>,
+    pub fail: bool,
+}
+
+impl BrewUninstaller for FakeBrewUninstaller {
+    fn uninstall_vole(&self) -> Result<(), String> {
+        *self.calls.lock().unwrap() += 1;
+        if self.fail {
+            Err("fake brew failed".into())
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct LiveBrewUninstaller;
+
+impl BrewUninstaller for LiveBrewUninstaller {
+    fn uninstall_vole(&self) -> Result<(), String> {
+        let brew = find_brew_cmd().ok_or_else(|| {
+            "Homebrew command not found. Manual step: brew uninstall vole".to_string()
+        })?;
+        let output = std::process::Command::new(&brew)
+            .args(["uninstall", "vole"])
+            .output()
+            .map_err(|e| format!("failed to run brew: {e}"))?;
+        if output.status.success() {
+            Ok(())
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            Err(format!(
+                "Homebrew uninstallation failed: {stderr}. Manual step: brew uninstall vole"
+            ))
+        }
+    }
+}
+
+fn find_brew_cmd() -> Option<PathBuf> {
+    if let Ok(path) = which_brew_on_path() {
+        return Some(path);
+    }
+    for candidate in ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"] {
+        let p = PathBuf::from(candidate);
+        if p.is_file() {
+            return Some(p);
+        }
+    }
+    None
+}
+
+fn which_brew_on_path() -> Result<PathBuf, ()> {
+    let output = std::process::Command::new("/bin/sh")
+        .args(["-c", "command -v brew"])
+        .output()
+        .map_err(|_| ())?;
+    if !output.status.success() {
+        return Err(());
+    }
+    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if path.is_empty() {
+        Err(())
+    } else {
+        Ok(PathBuf::from(path))
+    }
+}
+
+pub fn run_remove(
+    opts: &RemoveOptions,
+    brew: &dyn BrewUninstaller,
+) -> Result<RemoveOutcome, RemoveError> {
+    let plan = plan_remove(opts);
+    if opts.dry_run {
+        return Ok(RemoveOutcome::DryRun(plan));
+    }
+    if plan.items.is_empty() {
+        return Ok(RemoveOutcome::NothingFound);
+    }
+    if !opts.yes {
+        return Ok(RemoveOutcome::NeedsConfirmation);
+    }
+
+    let mut errors = Vec::new();
+    if plan.homebrew {
+        if let Err(e) = brew.uninstall_vole() {
+            errors.push(e);
+        }
+    }
+
+    let mut logger = OperationLogger::new("remove");
+    let _ = logger.session_start();
+    let protection = NoPathProtection;
+    let remover = FsRemover;
+    let mut removed = 0u64;
+
+    for item in &plan.items {
+        let Some(path) = &item.path else {
+            continue;
+        };
+        if path_forbidden_for_self_remove(path) {
+            errors.push(format!(
+                "refusing to delete Homebrew Cellar path: {}",
+                path.display()
+            ));
+            continue;
+        }
+        let path_str = path.to_string_lossy();
+        match safe_remove(
+            &path_str,
+            &protection,
+            &[],
+            SafeRemoveOptions {
+                silent: false,
+                precomputed_size_kb: None,
+                dry_run: false,
+            },
+            &mut logger,
+            &remover,
+        ) {
+            Ok(()) => removed += 1,
+            Err(e) => errors.push(format!("{}: {e}", path.display())),
+        }
+    }
+
+    let _ = logger.session_end(removed, 0);
+    Ok(RemoveOutcome::Removed { plan, errors })
+}
+
+fn path_forbidden_for_self_remove(path: &Path) -> bool {
+    path_is_cellar_vole(path) || path.to_string_lossy().contains("/Cellar/vole/")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -312,5 +470,76 @@ mod tests {
             .items
             .iter()
             .any(|i| i.kind == RemoveItemKind::Oplog));
+    }
+
+    #[test]
+    fn apply_deletes_manual_via_funnel_not_raw_rm() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path().join("home");
+        let local_bin = home.join(".local/bin");
+        fs::create_dir_all(&local_bin).unwrap();
+        let exe = local_bin.join("vole");
+        fs::write(&exe, b"x").unwrap();
+        fs::create_dir_all(home.join(".config/vole")).unwrap();
+        fs::write(home.join(".config/vole/install_channel"), b"CHANNEL=stable\n").unwrap();
+        let opts = RemoveOptions {
+            dry_run: false,
+            yes: true,
+            purge_oplog: false,
+            binary_path: exe.clone(),
+            home: home.clone(),
+            config_dir: home.join(".config/vole"),
+        };
+        let brew = FakeBrewUninstaller::default();
+        let out = run_remove(&opts, &brew).unwrap();
+        match out {
+            RemoveOutcome::Removed { errors, .. } => assert!(errors.is_empty(), "{errors:?}"),
+            other => panic!("unexpected {other:?}"),
+        }
+        assert!(!exe.exists());
+        assert!(!home.join(".config/vole").exists());
+        assert_eq!(*brew.calls.lock().unwrap(), 0);
+    }
+
+    #[test]
+    fn apply_brew_calls_uninstaller_not_cellar_delete() {
+        let dir = tempfile::tempdir().unwrap();
+        let cellar = dir.path().join("Cellar/vole/2.4.0/bin");
+        fs::create_dir_all(&cellar).unwrap();
+        let real = cellar.join("vole");
+        fs::write(&real, b"x").unwrap();
+        let bin = dir.path().join("bin");
+        fs::create_dir_all(&bin).unwrap();
+        let link = bin.join("vole");
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+        let home = dir.path().join("home");
+        fs::create_dir_all(home.join(".config/vole")).unwrap();
+        let opts = RemoveOptions {
+            dry_run: false,
+            yes: true,
+            purge_oplog: false,
+            binary_path: link,
+            home: home.clone(),
+            config_dir: home.join(".config/vole"),
+        };
+        let brew = FakeBrewUninstaller::default();
+        let out = run_remove(&opts, &brew).unwrap();
+        match out {
+            RemoveOutcome::Removed { .. } => {}
+            other => panic!("unexpected {other:?}"),
+        }
+        assert_eq!(*brew.calls.lock().unwrap(), 1);
+        assert!(real.exists(), "must not hand-tear Cellar");
+        assert!(!home.join(".config/vole").exists());
+    }
+
+    #[test]
+    fn rejects_cellar_path_even_if_forced_into_plan() {
+        let dir = tempfile::tempdir().unwrap();
+        let cellar = dir.path().join("Cellar/vole/2.4.0/bin");
+        fs::create_dir_all(&cellar).unwrap();
+        let real = cellar.join("vole");
+        fs::write(&real, b"x").unwrap();
+        assert!(path_forbidden_for_self_remove(&real));
     }
 }

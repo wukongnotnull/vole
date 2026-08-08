@@ -157,8 +157,7 @@ pub fn apply_uninstall_proto_plan(
 
         if let Err(err) = verify_plan_entry_for_apply(&path, &identity, &mode_protection) {
             let reason = skip_reason_for_apply(&err);
-            let allow_vanished =
-                is_login_action && matches!(reason, SkipReason::PathVanished);
+            let allow_vanished = is_login_action && matches!(reason, SkipReason::PathVanished);
             if !allow_vanished {
                 skipped += 1;
                 if let Some(event) = &ctx.on_event {

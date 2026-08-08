@@ -458,9 +458,10 @@ mod tests {
             .entries
             .iter()
             .any(|e| e.rule_id.starts_with("uninstall:login-item:name:")));
-        assert!(plan.entries.iter().any(|e| {
-            e.rule_id == "uninstall:login-helper:com.example.foo.helper"
-        }));
+        assert!(plan
+            .entries
+            .iter()
+            .any(|e| { e.rule_id == "uninstall:login-helper:com.example.foo.helper" }));
     }
 
     #[test]

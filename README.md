@@ -225,7 +225,7 @@ $ vole completions zsh > ~/.zfunc/_vole
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | **1.33.0**：uninstall brew cask 联动 + Filo production Cache + optimize DNS/mDNS + 本地快照报告 + TM 失败备份 + system.sh 主链；余项：login items / LaunchDaemons / 桌面 Helper | 成熟、功能最全 |
+| 成熟度 | **1.34.0**：uninstall Login Items + brew cask 联动 + Filo production Cache + optimize DNS/mDNS + 本地快照报告 + TM 失败备份 + system.sh 主链；余项：LaunchDaemons/`/Library` sudo / 桌面 Helper | 成熟、功能最全 |
 | 核心命令 | `status` / `analyze` / `clean` / `history` / `uninstall` / `optimize` | 另有 `purge` / `installer` 等 |
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓；orphaned 启发式 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |

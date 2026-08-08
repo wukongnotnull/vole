@@ -203,7 +203,10 @@ fn map_osascript_error(err: String) -> LoginItemError {
     }
 }
 
-fn run_command_timeout(mut cmd: Command, timeout: Duration) -> Result<std::process::Output, String> {
+fn run_command_timeout(
+    mut cmd: Command,
+    timeout: Duration,
+) -> Result<std::process::Output, String> {
     cmd.stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
@@ -269,7 +272,10 @@ mod tests {
     fn name_rule_id_roundtrip_with_spaces() {
         let id = encode_login_item_name_rule_id("Foo Bar");
         assert!(id.starts_with("uninstall:login-item:name:"));
-        assert_eq!(parse_login_item_name_rule_id(&id).as_deref(), Some("Foo Bar"));
+        assert_eq!(
+            parse_login_item_name_rule_id(&id).as_deref(),
+            Some("Foo Bar")
+        );
         assert!(!id.contains(' '));
     }
 

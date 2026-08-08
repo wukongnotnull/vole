@@ -68,6 +68,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          本地快照报告（status/analyze · 仅 list）、\
          Filo production Cache、\
          uninstall Homebrew Cask 联动（`brew uninstall --cask`/`--zap`，sibling→nozap）、\
+         uninstall Login Items（按名 osascript + LoginItems helper `launchctl bootout`，sibling/名冲突守卫）、\
          交互提权（TTY 下至多一次 `sudo -v` 缓存后仍 `sudo -n` 删）、\
          container stubs（CleanMyMac allowlist）、\
          Group Containers logs/caches（含受保护容器 Logs / bundle 命名日志）、\
@@ -217,9 +218,14 @@ mod tests {
         assert!(note.contains("本地快照报告（status/analyze"));
         assert!(note.contains("Filo production Cache"));
         assert!(note.contains("uninstall Homebrew Cask 联动"));
+        assert!(note.contains("uninstall Login Items"));
         assert!(
             !unported.contains("brew cask") && !unported.contains("Homebrew Cask"),
             "uninstall brew cask linkage must not remain unported"
+        );
+        assert!(
+            !unported.to_ascii_lowercase().contains("login item"),
+            "uninstall login items must not remain unported"
         );
         assert!(
             !unported.contains("快照") && !unported.contains("本地快照"),

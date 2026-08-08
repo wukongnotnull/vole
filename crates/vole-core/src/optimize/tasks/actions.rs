@@ -1150,6 +1150,13 @@ mod tests {
     }
 
     #[test]
+    fn apply_login_items_audit_broken_named_like_task_is_noop() {
+        // Must not treat `…/login_items_audit/login_items_audit` as the unavailable sentinel.
+        let path = Path::new("/tmp/.vole-optimize-action/login_items_audit/login_items_audit");
+        apply_optimize_action("login_items_audit", path, None, &mut false).unwrap();
+    }
+
+    #[test]
     fn apply_login_items_audit_unavailable_needs_privilege() {
         let path = Path::new("/tmp/.vole-optimize-action/login_items_audit");
         let err = apply_optimize_action("login_items_audit", path, None, &mut false).unwrap_err();
@@ -1162,6 +1169,16 @@ mod tests {
         let path = Path::new("/tmp/.vole-optimize-action/spotlight_orphan_rules_cleanup");
         let err = apply_optimize_action("spotlight_orphan_rules_cleanup", path, None, &mut false)
             .unwrap_err();
+        assert_eq!(err, OptimizeActionError::Skipped);
+        std::env::remove_var("VOLE_TEST_NO_AUTH");
+    }
+
+    #[test]
+    fn apply_shared_file_list_repair_test_no_auth_skipped() {
+        std::env::set_var("VOLE_TEST_NO_AUTH", "1");
+        let path = Path::new("/tmp/com.apple.sharedfilelist/favorites.sfl2");
+        let err =
+            apply_optimize_action("shared_file_list_repair", path, None, &mut false).unwrap_err();
         assert_eq!(err, OptimizeActionError::Skipped);
         std::env::remove_var("VOLE_TEST_NO_AUTH");
     }

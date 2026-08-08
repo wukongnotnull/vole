@@ -15,7 +15,7 @@
 - 规格权威：[`docs/wukong-code/specs/2026-08-08-1727-mole-parity-roadmap-design.md`](../specs/2026-08-08-1727-mole-parity-roadmap-design.md)
 - Mole 钉版：`third_party/mole-1.48.1`
 - 快照版本：**1.45.0**（G2–G4 已合入；G1=1.42.0 / #92；收口轨核对时为 1.41.0）
-- **默认下一项实现：无**（规格 §1 / §4.1；G2–G4 已完成；仅 G5 `disk_verify` 默认永不升必做；D1 可用通道代码已开 PR，待真机 uid==0 验收后改 coverage）
+- **默认下一项实现：无**（规格 §1 / §4.1；G2–G4 已完成；仅 G5 `disk_verify` 默认永不升必做；D1 可用通道代码已合入 vole-macos [#3](https://github.com/wukongnotnull/vole-macos/pull/3) / 本仓 [#100](https://github.com/wukongnotnull/vole/pull/100)，待真机 uid==0 验收后改 coverage）
 - 闸控轨开跑前：该轨必须已有（或本会话当场完成）**专用 design**，再按单轨单 PR
 - `disk_verify`：**默认拒绝升必做**（规格 §3.3 P5）
 - 本代际禁止实现：`purge` / `installer` / `touchid` / `hints` / Mole 式 `update`；禁止 `clean --apply` 删本地快照；禁止删 `/Library/Updates`、`/macOS Install Data`
@@ -438,7 +438,7 @@ Expected: `in_m3: false`
 - [x] **Step 1: 在 vole-macos 写专用 design 并批准** — `2026-08-08-1822-smappservice-privileged-helper-design.md`
 - [x] **Step 2: 按该 design 另写 `vole-macos` 实施 plan 并执行** — 骨架 [#2](https://github.com/wukongnotnull/vole-macos/pull/2)；可用通道 [#3](https://github.com/wukongnotnull/vole-macos/pull/3)
 - [ ] **Step 3: vole coverage「仍未移植」句在 Helper 可用后删除或改写；发版说明双仓同步** — **阻塞：待真机 ping uid==0 验收**
-- [x] **Step 4: PR（各仓）用 merge commit** — vole-macos 骨架 [#2](https://github.com/wukongnotnull/vole-macos/pull/2)；可用通道 [#3](https://github.com/wukongnotnull/vole-macos/pull/3)；本仓 docs 同步本 PR
+- [x] **Step 4: PR（各仓）用 merge commit** — vole-macos 骨架 [#2](https://github.com/wukongnotnull/vole-macos/pull/2)；可用通道 [#3](https://github.com/wukongnotnull/vole-macos/pull/3)（已合）；本仓 docs [#100](https://github.com/wukongnotnull/vole/pull/100)（已合）
 
 ---
 
@@ -480,7 +480,7 @@ Task 1 → Task 2 → Task 3 → Task G5 Step1–2（保持 false）→ Task N1
 STOP
 ```
 
-> **进度（2026-08-08）：** 上列默认顺序已全部完成（findings + `9a780f0`）。闸控轨：**G1–G4 已完成**（1.42.0–1.45.0 / PR #92 #93 #95 #97）；**G5** 保持 `disk_verify` false；**D1 可用通道代码**见 vole-macos [#3](https://github.com/wukongnotnull/vole-macos/pull/3)（待真机 uid==0；coverage 仍保留「仍未移植」）。
+> **进度（2026-08-08）：** 上列默认顺序已全部完成（findings + `9a780f0`）。闸控轨：**G1–G4 已完成**（1.42.0–1.45.0 / PR #92 #93 #95 #97）；**G5** 保持 `disk_verify` false；**D1 可用通道代码已合入** vole-macos [#3](https://github.com/wukongnotnull/vole-macos/pull/3) / 本仓 [#100](https://github.com/wukongnotnull/vole/pull/100)（待真机 uid==0；coverage 仍保留「仍未移植」）。
 
 之后仅在显式批准后：`D1`（分仓）或推翻默认的 `G5`。  
 **永不**默认进入：`purge` / `installer` / `touchid` / `hints` / `update` 实现任务（本计划不下发此类 Task）。

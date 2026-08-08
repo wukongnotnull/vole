@@ -165,7 +165,10 @@
 
 ## 7. §3.2 闸门草案
 
-（Task 9：checklist + `scripts/check-command-surface.sh`）
+- 清单：[`2026-08-v2-m4-gate-checklist.md`](2026-08-v2-m4-gate-checklist.md)
+- Stub：`scripts/check-command-surface.sh`（默认 report-only；`--enforce` 供收口 CI）
+- M4 实测：report-only exit 0 并报告 `MISSING: optimise|analyse|completion|purge|installer|touchid|update|remove`；`--enforce` 非 0；`interactive.rs` 无更新探测标记 OK
+- 完整强制留给收口里程碑
 
 ## 8. 后续 design 输入清单（M5–M10）
 

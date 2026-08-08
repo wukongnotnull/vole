@@ -14,13 +14,13 @@ pub fn run() -> i32 {
     loop {
         if writeln!(
             stdout,
-            "\nVole\n  1) status (--json snapshot)\n  2) clean --plan\n  3) uninstall --plan\n  4) optimize --plan\n  5) purge --plan\n  6) installer --plan\n  7) touchid status\n  8) update --check\n  9) history\n  10) quit"
+            "\nVole\n  1) status (--json snapshot)\n  2) clean --plan\n  3) uninstall --plan\n  4) optimize --plan\n  5) purge --plan\n  6) installer --plan\n  7) touchid status\n  8) update --check\n  9) remove --dry-run\n  10) history\n  11) quit"
         )
         .is_err()
         {
             return 1;
         }
-        if write!(stdout, "Select [1-10]: ").is_err() || stdout.flush().is_err() {
+        if write!(stdout, "Select [1-11]: ").is_err() || stdout.flush().is_err() {
             return 1;
         }
 
@@ -75,11 +75,16 @@ pub fn run() -> i32 {
                 }
             }
             "9" => {
+                if let Err(msg) = run_child(&["remove", "--dry-run"]) {
+                    let _ = writeln!(stdout, "{msg}");
+                }
+            }
+            "10" => {
                 if let Err(msg) = run_child(&["history"]) {
                     let _ = writeln!(stdout, "{msg}");
                 }
             }
-            "10" | "q" | "quit" | "exit" => return 0,
+            "11" | "q" | "quit" | "exit" => return 0,
             other => {
                 let _ = writeln!(stdout, "Unknown choice: {other}");
             }

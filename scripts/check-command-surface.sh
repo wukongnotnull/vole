@@ -81,7 +81,7 @@ else
 fi
 
 if [[ "$gaps" -gt 0 ]]; then
-  echo "gaps=$gaps (expected during M4–M9; closeout --enforce must be 0)"
+  echo "gaps=$gaps (expected residual aliases/closeout only after M10; closeout --enforce must be 0)"
   if [[ "$REPORT_ONLY" -eq 1 ]]; then
     exit 0
   fi

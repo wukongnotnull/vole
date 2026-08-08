@@ -7,6 +7,7 @@ mod installer;
 mod interactive;
 mod optimize;
 mod purge;
+mod remove;
 mod signals;
 mod terminal;
 mod touchid;
@@ -256,6 +257,21 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    /// 自卸载（删除本工具安装产物与自身配置；对齐 mole remove）。
+    Remove {
+        /// 只预览待删项，不删除。
+        #[arg(long = "dry-run", short = 'n')]
+        dry_run: bool,
+        /// 跳过交互确认。
+        #[arg(long, short = 'y')]
+        yes: bool,
+        /// 输出 JSON。
+        #[arg(long)]
+        json: bool,
+        /// 同时删除 Mole 兼容审计日志（默认保留）。
+        #[arg(long = "purge-oplog")]
+        purge_oplog: bool,
+    },
     /// 生成 shell 补全脚本（stdout）。
     #[command(visible_alias = "completion")]
     Completions {
@@ -435,6 +451,20 @@ fn main() {
                 check,
                 yes,
                 json,
+            });
+            std::process::exit(code);
+        }
+        Some(Command::Remove {
+            dry_run,
+            yes,
+            json,
+            purge_oplog,
+        }) => {
+            let code = remove::run_remove_cli(remove::RemoveCliOptions {
+                dry_run,
+                yes,
+                json,
+                purge_oplog,
             });
             std::process::exit(code);
         }

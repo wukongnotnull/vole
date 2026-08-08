@@ -1,0 +1,14 @@
+{
+  "id": "w2c_antigravity_browser_siblings_selects_child",
+  "source_bats": "manual",
+  "source_test": "antigravity-browser-siblings selects Code Cache child",
+  "fixture": [
+    {
+      "mkdir": "~/.gemini/antigravity-browser-profile/Default/Code Cache/item"
+    }
+  ],
+  "expect_selected": [
+    "~/.gemini/antigravity-browser-profile/Default/Code Cache/item|Antigravity browser profile sibling caches"
+  ],
+  "expect_not_selected": []
+}

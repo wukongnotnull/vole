@@ -1402,6 +1402,24 @@ last_verified = "2026-07"
 kind = "all"
 
 [[rule]]
+id = "qq-music-mac-as-caches"
+category = "app-caches"
+label = "QQ Music Mac streaming and temp caches"
+platform = ["macos"]
+paths = [
+  "~/Library/Containers/com.tencent.QQMusicMac/Data/Library/Application Support/QQMusicMac/iRRCache/*",
+  "~/Library/Containers/com.tencent.QQMusicMac/Data/Library/Application Support/QQMusicMac/iLog/*",
+  "~/Library/Containers/com.tencent.QQMusicMac/Data/Library/Application Support/QQMusicMac/iCache/*",
+  "~/Library/Containers/com.tencent.QQMusicMac/Data/Library/Application Support/QQMusicMac/iTemp/*",
+]
+impact = "Streaming/temp caches; does not touch offline downloads (iDownloadProxy)"
+disabled = false
+last_verified = "2026-08"
+
+[rule.strategy]
+kind = "all"
+
+[[rule]]
 id = "final-cut-pro-cache"
 category = "app-caches"
 label = "Final Cut Pro cache"

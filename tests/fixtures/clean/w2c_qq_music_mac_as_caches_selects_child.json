@@ -1,0 +1,19 @@
+{
+  "id": "w2c_qq_music_mac_as_caches_selects_child",
+  "source_bats": "manual",
+  "source_test": "qq-music-mac-as-caches selects iRRCache child",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Containers/com.tencent.QQMusicMac/Data/Library/Application Support/QQMusicMac/iRRCache/item"
+    },
+    {
+      "mkdir": "~/Library/Containers/com.tencent.QQMusicMac/Data/Library/Application Support/QQMusicMac/iDownloadProxy/song"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Containers/com.tencent.QQMusicMac/Data/Library/Application Support/QQMusicMac/iRRCache/item|QQ Music Mac streaming and temp caches"
+  ],
+  "expect_not_selected": [
+    "~/Library/Containers/com.tencent.QQMusicMac/Data/Library/Application Support/QQMusicMac/iDownloadProxy/song"
+  ]
+}

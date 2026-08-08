@@ -10,10 +10,10 @@ use crate::optimize::{
     discover_saved_state_cleanup, optimize_action_rule_id, optimize_catalog,
     optimize_delete_rule_id, plan_coreduet_cleanup, plan_disk_permissions_repair,
     plan_dock_refresh, plan_launch_services_rebuild, plan_legacy_overrides_audit,
-    plan_memory_pressure_relief, plan_network_optimization, plan_network_stack_optimize,
-    plan_notification_cleanup, plan_periodic_maintenance, plan_prevent_network_dsstore,
-    plan_quarantine_cleanup, plan_sqlite_vacuum, plan_system_maintenance, OptimizeCandidate,
-    OptimizeTaskKind,
+    plan_login_items_audit, plan_memory_pressure_relief, plan_network_optimization,
+    plan_network_stack_optimize, plan_notification_cleanup, plan_periodic_maintenance,
+    plan_prevent_network_dsstore, plan_quarantine_cleanup, plan_sqlite_vacuum,
+    plan_system_maintenance, LiveLoginItemsAuditDeps, OptimizeCandidate, OptimizeTaskKind,
 };
 use crate::protection::{AppProtection, ProtectionCatalog};
 use crate::safety::capture_plan_entry_identity;
@@ -117,6 +117,9 @@ pub fn build_optimize_plan(
     }
     if allow("periodic_maintenance") {
         candidates.push(plan_periodic_maintenance(opts.home));
+    }
+    if allow("login_items_audit") {
+        candidates.extend(plan_login_items_audit(opts.home, &LiveLoginItemsAuditDeps));
     }
 
     let mut entries = Vec::new();
@@ -275,6 +278,7 @@ mod tests {
         assert!(!note.contains("Network Stack Refresh"));
         assert!(!note.contains("Permission Repair"));
         assert!(!note.contains("Periodic Maintenance"));
+        assert!(!note.contains("Login Items"));
         assert!(note.contains("Spotlight") || note.contains("Shared File Lists"));
     }
 }

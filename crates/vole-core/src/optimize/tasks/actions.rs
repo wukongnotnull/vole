@@ -554,8 +554,19 @@ pub fn apply_optimize_action(
         "network_stack_optimize" => apply_network_stack_optimize(privilege),
         "disk_permissions_repair" => apply_disk_permissions_repair(path, privilege),
         "periodic_maintenance" => apply_periodic_maintenance(privilege),
+        "login_items_audit" => apply_login_items_audit(path),
         _ => Err(OptimizeActionError::Failed),
     }
+}
+
+fn apply_login_items_audit(path: &Path) -> Result<(), OptimizeActionError> {
+    use super::login_items_audit::is_unavailable_audit_path;
+
+    if is_unavailable_audit_path(path) {
+        return Err(OptimizeActionError::NeedsPrivilege);
+    }
+    // Report-only acknowledge; never delete login items / never touch osascript/sudo.
+    Ok(())
 }
 
 fn apply_memory_pressure_relief(
@@ -1085,5 +1096,18 @@ mod tests {
         assert!(defaults_is_truthy("1"));
         assert!(defaults_is_truthy("TRUE"));
         assert!(!defaults_is_truthy("0"));
+    }
+
+    #[test]
+    fn apply_login_items_audit_broken_noop() {
+        let path = Path::new("/tmp/.vole-optimize-action/login_items_audit/Missing%20Helper");
+        apply_optimize_action("login_items_audit", path, None, &mut false).unwrap();
+    }
+
+    #[test]
+    fn apply_login_items_audit_unavailable_needs_privilege() {
+        let path = Path::new("/tmp/.vole-optimize-action/login_items_audit");
+        let err = apply_optimize_action("login_items_audit", path, None, &mut false).unwrap_err();
+        assert_eq!(err, OptimizeActionError::NeedsPrivilege);
     }
 }

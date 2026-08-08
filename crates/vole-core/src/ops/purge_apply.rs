@@ -302,6 +302,7 @@ mod tests {
 
     #[test]
     fn apply_trashes_planned_node_modules() {
+        let _guard = crate::test_env::lock();
         let dir = tempfile::tempdir().unwrap();
         let home = dir.path();
         let project = home.join("Code/app");

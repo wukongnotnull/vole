@@ -301,6 +301,7 @@ mod tests {
 
     #[test]
     fn apply_trashes_planned_dmg() {
+        let _guard = crate::test_env::lock();
         let dir = tempfile::tempdir().unwrap();
         let home = dir.path();
         let downloads = home.join("Downloads");

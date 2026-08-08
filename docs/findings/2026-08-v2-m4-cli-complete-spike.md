@@ -1,19 +1,20 @@
 # M4：CLI 做全 · Mole 库存与安全面 Spike
 
 **日期**：2026-08-08  
-**状态**：进行中（骨架）  
+**状态**：完成  
 **Mole 钉版**：`third_party/mole-1.48.1`  
 **规格**：[`2026-08-08-2030-v2-cli-complete-design.md`](../wukong-code/specs/2026-08-08-2030-v2-cli-complete-design.md)  
 **计划**：[`2026-08-08-2051-v2-m4-cli-complete-spike.md`](../wukong-code/plans/2026-08-08-2051-v2-m4-cli-complete-spike.md)  
-**命令面表**：[`2026-08-v2-m4-command-surface.md`](2026-08-v2-m4-command-surface.md)
+**命令面表**：[`2026-08-v2-m4-command-surface.md`](2026-08-v2-m4-command-surface.md)  
+**闸门清单**：[`2026-08-v2-m4-gate-checklist.md`](2026-08-v2-m4-gate-checklist.md)
 
 ## 1. 结论
 
-（Task 10 收口填写）本 spike **docs-only**：核定 Mole 1.48.1 命令面与六命令+hints 主路径/长尾，留下 §3.2 闸门 stub；**不**实现产品行为、**不** bump `2.0.0`。
+M4 **docs-only** 已完成：核定 Mole 1.48.1 命令面（§3.1）、六命令 + `hints` 主路径/长尾与安全面，留下 §3.2 闸门 stub（`scripts/check-command-surface.sh`）。当前包版本仍为 **1.46.0**；产品缺口为 `purge`/`installer`/`touchid`/`update`/`remove` 与三个别名。下一项实现：**M5 `purge` → 2.0.0**（建议同 PR 补别名）。本 spike **未**改产品行为、**未**空 bump MAJOR。
 
 ## 2. §3.1 核定摘要
 
-见 [`2026-08-v2-m4-command-surface.md`](2026-08-v2-m4-command-surface.md)。骨架已含规格全部行；核定列待 Task 8/10。
+见 [`2026-08-v2-m4-command-surface.md`](2026-08-v2-m4-command-surface.md)（已核定）。摘要：已达项含 clean/uninstall/optimize/analyze/status/history/help/version/裸调用菜单；缺口为五命令 + `optimise`/`analyse`/`completion`；豁免 `hints`/`whitelist`；裸调用不联网为故意差异。
 
 ## 3. 分命令库存
 
@@ -155,7 +156,15 @@
 
 ## 5. 主路径 vs 长尾总表
 
-（各命令 Task 填完后汇总）
+| 能力 | 主路径 | 长尾 / 不做 |
+|---|---|---|
+| purge | 发现→targets→年龄/超时→plan/apply→废纸篓→JSON→配置 | TTY 多选；worktree 整树删除；未证明 target 扩张 |
+| hints | clean 内只读探针子集 + 预算降级 | 顶层命令；第二套删除 |
+| installer | 扫描→immutable plan→apply→漏斗 | 冷门扫描根；TTY 分页全量 |
+| touchid | status/enable/disable；sudo_local；可测无真授权 | 真机演示；非 sudo PAM |
+| update | 显式自更新；校验 fail-closed；brew 共存策略 | 裸调用联网检查（禁止） |
+| remove | dry-run；三类安装形态；自身产物/配置 | 用户数据；其它 brew 包 |
+| 别名 | completion/optimise/analyse | — |
 
 ## 6. 安全面与禁区
 
@@ -172,7 +181,14 @@
 
 ## 8. 后续 design 输入清单（M5–M10）
 
-（Task 10 填写完整必答表）
+| 里程碑 | 专用 design 必答 |
+|---|---|
+| **M5 purge** | 1) Mole dry-run/确认 → Vole `--plan`/`--apply` 映射 2) `PURGE_TARGETS` 是否原样钉死 3) 年龄/深度/超时默认值 4) `purge_paths` 配置路径与格式 5) Plan `rule_id` 前缀与 schema 是否零变更 6) 云同步/非交互跳过策略 7) 菜单/补全条目 8) §3.3 别名是否同 PR |
+| **M6 hints** | 1) 挂在 clean 哪一阶段 2) 预算秒数与降级语义 3) 首批探针子集（建议含 project artifact + quick purge） 4) 禁止顶层 `hints` 的测试 5) 与 purge 配置/targets 是否共享只读视图 |
+| **M7 installer** | 1) 首批扫描根 2) immutable delete-plan 字段与校验 3) zip/pkg/dmg 范围 4) incomplete exit 语义 5) JSON/plan_out |
+| **M8 touchid** | 1) PAM 路径注入点（可测） 2) enable/disable 回滚步骤 3) `VOLE_TEST_NO_AUTH` 契约 4) 禁止真授权挂起的回归方式 |
+| **M9 update** | 1) Release 资产与校验（checksum/签名） 2) brew 提示 vs `--force` 3) nightly 是否支持 4) 成功判据=`vole --version` 5) 裸调用不联网回归 6) 与 remove 共享的安装来源 API |
+| **M10 remove** | 1) 删除白名单逐项 2) dry-run 输出契约 3) brew/手动/alias 三类 4) oplog/审计是否保留 5) 是否与 M9 合并里程碑 |
 
 ## 9. 明确未做
 

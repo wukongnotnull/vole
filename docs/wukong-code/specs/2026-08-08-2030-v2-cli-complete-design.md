@@ -136,7 +136,7 @@ Mole 用户的既有脚本必须能直接改名调用：
 
 | 里程碑 | 内容 | 包版本 |
 |---|---|---|
-| **M4** | 六命令（`purge` / `installer` / `touchid` / `update` / `remove` + `hints` 模块）Mole 库存与安全面 spike；划主路径 vs 长尾；核定 §3.1 命令面对照 | docs-only（可仍停在 1.46.x） |
+| **M4** | 六命令（`purge` / `installer` / `touchid` / `update` / `remove` + `hints` 模块）Mole 库存与安全面 spike；划主路径 vs 长尾；核定 §3.1 命令面对照 | docs-only（可仍停在 1.46.x）；计划 [`../plans/2026-08-08-2051-v2-m4-cli-complete-spike.md`](../plans/2026-08-08-2051-v2-m4-cli-complete-spike.md)；findings [`../../findings/2026-08-v2-m4-cli-complete-spike.md`](../../findings/2026-08-v2-m4-cli-complete-spike.md) |
 | **M5** | `purge` + 测试 / 菜单 / 补全 | **`2.0.0`**（升 MAJOR，产品/包对齐） |
 | **M6** | `hints` | **`2.1.0`** |
 | **M7** | `installer` | **`2.2.0`** |
@@ -197,6 +197,7 @@ PATCH 用于缺陷修复，不占用上表里程碑号。
 
 ## 9. 下一步
 
-1. 人类审阅本规格  
-2. 通过后：`writing-plans` 写 **M4 spike** 实施计划（或合并 M4+M5 若 spike 极短）  
-3. 各命令落地前仍须**专用 design**（尤其 `update` 校验与 brew 共存、`remove` 删除范围）
+1. ~~人类审阅本规格~~（已批准）  
+2. ~~`writing-plans` 写 **M4 spike**~~ → [`../plans/2026-08-08-2051-v2-m4-cli-complete-spike.md`](../plans/2026-08-08-2051-v2-m4-cli-complete-spike.md)；findings [`../../findings/2026-08-v2-m4-cli-complete-spike.md`](../../findings/2026-08-v2-m4-cli-complete-spike.md)  
+3. 下一项：**M5 `purge` 专用 design → plan → 实现 → `2.0.0`**（建议同 PR 补 §3.3 别名）  
+4. 各后续命令落地前仍须**专用 design**（尤其 `update` 校验与 brew 共存、`remove` 删除范围）

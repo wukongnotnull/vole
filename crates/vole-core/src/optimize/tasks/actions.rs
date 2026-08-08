@@ -331,15 +331,187 @@ pub fn plan_memory_pressure_relief(home: &Path) -> OptimizeCandidate {
     action_sentinel(home, "memory_pressure_relief", "Memory Optimization")
 }
 
+pub fn plan_network_stack_optimize(home: &Path) -> OptimizeCandidate {
+    action_sentinel(home, "network_stack_optimize", "Network Stack Refresh")
+}
+
+pub fn plan_disk_permissions_repair(home: &Path) -> OptimizeCandidate {
+    action_sentinel(home, "disk_permissions_repair", "Permission Repair")
+}
+
+pub fn plan_periodic_maintenance(home: &Path) -> OptimizeCandidate {
+    action_sentinel(home, "periodic_maintenance", "Periodic Maintenance")
+}
+
+fn env_flag_tri(name: &str) -> Option<bool> {
+    let Ok(v) = std::env::var(name) else {
+        return None;
+    };
+    match v.trim() {
+        "1" | "true" | "TRUE" | "yes" | "YES" => Some(true),
+        "0" | "false" | "FALSE" | "no" | "NO" => Some(false),
+        _ => None,
+    }
+}
+
+/// 对齐 Mole `has_active_vpn_interface`；`VOLE_TEST_VPN_ACTIVE=1|0` 强制。
+pub fn has_active_vpn() -> bool {
+    if let Some(v) = env_flag_tri("VOLE_TEST_VPN_ACTIVE") {
+        return v;
+    }
+    if Command::new("scutil")
+        .args(["--nc", "list"])
+        .output()
+        .ok()
+        .map(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .any(|l| l.contains("* (Connected)"))
+        })
+        .unwrap_or(false)
+    {
+        return true;
+    }
+    let Ok(out) = Command::new("route")
+        .args(["-n", "get", "default"])
+        .output()
+    else {
+        return false;
+    };
+    let text = String::from_utf8_lossy(&out.stdout);
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if let Some(iface) = trimmed.strip_prefix("interface:") {
+            let iface = iface.trim();
+            if iface.starts_with("utun")
+                && iface
+                    .as_bytes()
+                    .get(4..)
+                    .is_some_and(|rest| !rest.is_empty() && rest.iter().all(|b| b.is_ascii_digit()))
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// 默认路由或 DNS 探测失败 → 需要 flush；`VOLE_TEST_NETWORK_STACK_UNHEALTHY=1|0` 强制。
+pub fn network_stack_needs_flush() -> bool {
+    if let Some(v) = env_flag_tri("VOLE_TEST_NETWORK_STACK_UNHEALTHY") {
+        return v;
+    }
+    let route_ok = Command::new("route")
+        .args(["-n", "get", "default"])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+    let dns_ok = Command::new("dscacheutil")
+        .args(["-q", "host", "-a", "name", "example.com"])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+    !(route_ok && dns_ok)
+}
+
+/// 对齐 Mole `needs_permissions_repair`；`VOLE_TEST_DISK_PERMISSIONS_NEED_REPAIR=1|0` 强制。
+pub fn needs_disk_permissions_repair(home: &Path) -> bool {
+    if let Some(v) = env_flag_tri("VOLE_TEST_DISK_PERMISSIONS_NEED_REPAIR") {
+        return v;
+    }
+    if let Ok(out) = Command::new("stat").args(["-f", "%Su"]).arg(home).output() {
+        if out.status.success() {
+            let owner = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            if let Ok(user) = std::env::var("USER") {
+                if !owner.is_empty() && owner != user {
+                    return true;
+                }
+            }
+        }
+    }
+    for rel in ["", "Library", "Library/Preferences"] {
+        let p = if rel.is_empty() {
+            home.to_path_buf()
+        } else {
+            home.join(rel)
+        };
+        if p.exists() {
+            let probe = p.join(".vole-perm-probe");
+            match fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(&probe)
+            {
+                Ok(_) => {
+                    let _ = fs::remove_file(&probe);
+                }
+                Err(_) => return true,
+            }
+        }
+    }
+    false
+}
+
+fn periodic_command_available() -> bool {
+    if let Some(v) = env_flag_tri("VOLE_TEST_PERIODIC_AVAILABLE") {
+        return v;
+    }
+    Command::new("periodic")
+        .arg("-h")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok()
+}
+
+fn periodic_log_path() -> PathBuf {
+    if let Ok(p) = std::env::var("VOLE_TEST_PERIODIC_LOG") {
+        if !p.is_empty() {
+            return PathBuf::from(p);
+        }
+    }
+    PathBuf::from("/var/log/daily.out")
+}
+
+/// `periodic` 可用且 daily 日志缺失或年龄 ≥7 天；`VOLE_TEST_PERIODIC_STALE=1|0` 强制。
+pub fn periodic_needs_run() -> bool {
+    if !periodic_command_available() {
+        return false;
+    }
+    if let Some(v) = env_flag_tri("VOLE_TEST_PERIODIC_STALE") {
+        return v;
+    }
+    let log = periodic_log_path();
+    let Ok(meta) = fs::metadata(&log) else {
+        return true;
+    };
+    let Ok(modified) = meta.modified() else {
+        return true;
+    };
+    let Ok(age) = std::time::SystemTime::now().duration_since(modified) else {
+        return true;
+    };
+    age.as_secs() >= 7 * 86400
+}
+
+/// sentinel `home/.vole-optimize-action/<task>` → `home`
+pub fn optimize_action_home(path: &Path) -> PathBuf {
+    path.parent()
+        .and_then(|p| p.parent())
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| PathBuf::from("/"))
+}
+
 /// 对齐 Mole `is_memory_pressure_high`：`memory_pressure -Q` 含 warning/critical。
 /// `VOLE_TEST_MEMORY_PRESSURE=1|0` 强制高压/低压。
 pub fn is_memory_pressure_high() -> bool {
-    if let Ok(v) = std::env::var("VOLE_TEST_MEMORY_PRESSURE") {
-        match v.trim() {
-            "1" | "true" | "TRUE" | "yes" | "YES" => return true,
-            "0" | "false" | "FALSE" | "no" | "NO" => return false,
-            _ => {}
-        }
+    if let Some(v) = env_flag_tri("VOLE_TEST_MEMORY_PRESSURE") {
+        return v;
     }
     let Ok(out) = Command::new("memory_pressure")
         .arg("-Q")
@@ -379,6 +551,9 @@ pub fn apply_optimize_action(
             apply_dns_optimize(task_id, privilege, dns_flushed)
         }
         "memory_pressure_relief" => apply_memory_pressure_relief(privilege),
+        "network_stack_optimize" => apply_network_stack_optimize(privilege),
+        "disk_permissions_repair" => apply_disk_permissions_repair(path, privilege),
+        "periodic_maintenance" => apply_periodic_maintenance(privilege),
         _ => Err(OptimizeActionError::Failed),
     }
 }
@@ -401,6 +576,71 @@ fn apply_memory_pressure_relief(
         }
         Err(PrivilegeError::CommandFailed(_)) => Err(OptimizeActionError::Failed),
     }
+}
+
+fn map_privilege_result(
+    r: Result<(), crate::privilege::PrivilegeError>,
+) -> Result<(), OptimizeActionError> {
+    use crate::privilege::PrivilegeError;
+    match r {
+        Ok(()) => Ok(()),
+        Err(PrivilegeError::Unavailable) | Err(PrivilegeError::Refused) => {
+            Err(OptimizeActionError::NeedsPrivilege)
+        }
+        Err(PrivilegeError::CommandFailed(_)) => Err(OptimizeActionError::Failed),
+    }
+}
+
+fn apply_network_stack_optimize(
+    privilege: Option<&dyn crate::privilege::PrivilegeBackend>,
+) -> Result<(), OptimizeActionError> {
+    if has_active_vpn() {
+        return Ok(());
+    }
+    if !network_stack_needs_flush() {
+        return Ok(());
+    }
+    let Some(backend) = privilege else {
+        return Err(OptimizeActionError::NeedsPrivilege);
+    };
+    map_privilege_result(backend.flush_network_stack())
+}
+
+fn apply_disk_permissions_repair(
+    path: &Path,
+    privilege: Option<&dyn crate::privilege::PrivilegeBackend>,
+) -> Result<(), OptimizeActionError> {
+    let home = optimize_action_home(path);
+    if !needs_disk_permissions_repair(&home) {
+        return Ok(());
+    }
+    let Some(backend) = privilege else {
+        return Err(OptimizeActionError::NeedsPrivilege);
+    };
+    let uid = Command::new("id")
+        .arg("-u")
+        .output()
+        .ok()
+        .and_then(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .trim()
+                .parse::<u32>()
+                .ok()
+        })
+        .unwrap_or(0);
+    map_privilege_result(backend.reset_user_permissions(uid))
+}
+
+fn apply_periodic_maintenance(
+    privilege: Option<&dyn crate::privilege::PrivilegeBackend>,
+) -> Result<(), OptimizeActionError> {
+    if !periodic_needs_run() {
+        return Ok(());
+    }
+    let Some(backend) = privilege else {
+        return Err(OptimizeActionError::NeedsPrivilege);
+    };
+    map_privilege_result(backend.run_periodic_maintenance())
 }
 
 fn apply_dns_optimize(
@@ -630,6 +870,18 @@ mod tests {
             plan_memory_pressure_relief(home).task_id,
             "memory_pressure_relief"
         );
+        assert_eq!(
+            plan_network_stack_optimize(home).task_id,
+            "network_stack_optimize"
+        );
+        assert_eq!(
+            plan_disk_permissions_repair(home).task_id,
+            "disk_permissions_repair"
+        );
+        assert_eq!(
+            plan_periodic_maintenance(home).task_id,
+            "periodic_maintenance"
+        );
     }
 
     #[test]
@@ -680,6 +932,152 @@ mod tests {
         .unwrap();
         assert_eq!(*backend.purge_memory_calls.lock().unwrap(), 1);
         std::env::remove_var("VOLE_TEST_MEMORY_PRESSURE");
+    }
+
+    #[test]
+    fn apply_network_stack_vpn_skips() {
+        let _guard = crate::test_env::lock();
+        std::env::set_var("VOLE_TEST_VPN_ACTIVE", "1");
+        std::env::set_var("VOLE_TEST_NETWORK_STACK_UNHEALTHY", "1");
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        apply_optimize_action(
+            "network_stack_optimize",
+            Path::new("/tmp/.vole-optimize-action/network_stack_optimize"),
+            Some(&backend),
+            &mut false,
+        )
+        .unwrap();
+        assert_eq!(*backend.network_stack_calls.lock().unwrap(), 0);
+        std::env::remove_var("VOLE_TEST_VPN_ACTIVE");
+        std::env::remove_var("VOLE_TEST_NETWORK_STACK_UNHEALTHY");
+    }
+
+    #[test]
+    fn apply_network_stack_healthy_noop() {
+        let _guard = crate::test_env::lock();
+        std::env::set_var("VOLE_TEST_VPN_ACTIVE", "0");
+        std::env::set_var("VOLE_TEST_NETWORK_STACK_UNHEALTHY", "0");
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        apply_optimize_action(
+            "network_stack_optimize",
+            Path::new("/tmp/.vole-optimize-action/network_stack_optimize"),
+            Some(&backend),
+            &mut false,
+        )
+        .unwrap();
+        assert_eq!(*backend.network_stack_calls.lock().unwrap(), 0);
+        std::env::remove_var("VOLE_TEST_VPN_ACTIVE");
+        std::env::remove_var("VOLE_TEST_NETWORK_STACK_UNHEALTHY");
+    }
+
+    #[test]
+    fn apply_network_stack_needs_privilege_when_unhealthy() {
+        let _guard = crate::test_env::lock();
+        std::env::set_var("VOLE_TEST_VPN_ACTIVE", "0");
+        std::env::set_var("VOLE_TEST_NETWORK_STACK_UNHEALTHY", "1");
+        let err = apply_optimize_action(
+            "network_stack_optimize",
+            Path::new("/tmp/.vole-optimize-action/network_stack_optimize"),
+            Some(&crate::privilege::NoPrivilege),
+            &mut false,
+        )
+        .unwrap_err();
+        assert_eq!(err, OptimizeActionError::NeedsPrivilege);
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        apply_optimize_action(
+            "network_stack_optimize",
+            Path::new("/tmp/.vole-optimize-action/network_stack_optimize"),
+            Some(&backend),
+            &mut false,
+        )
+        .unwrap();
+        assert_eq!(*backend.network_stack_calls.lock().unwrap(), 1);
+        std::env::remove_var("VOLE_TEST_VPN_ACTIVE");
+        std::env::remove_var("VOLE_TEST_NETWORK_STACK_UNHEALTHY");
+    }
+
+    #[test]
+    fn apply_disk_permissions_noop_when_ok() {
+        let _guard = crate::test_env::lock();
+        std::env::set_var("VOLE_TEST_DISK_PERMISSIONS_NEED_REPAIR", "0");
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        apply_optimize_action(
+            "disk_permissions_repair",
+            Path::new("/tmp/.vole-optimize-action/disk_permissions_repair"),
+            Some(&backend),
+            &mut false,
+        )
+        .unwrap();
+        assert_eq!(*backend.reset_permissions_calls.lock().unwrap(), 0);
+        std::env::remove_var("VOLE_TEST_DISK_PERMISSIONS_NEED_REPAIR");
+    }
+
+    #[test]
+    fn apply_disk_permissions_needs_privilege() {
+        let _guard = crate::test_env::lock();
+        std::env::set_var("VOLE_TEST_DISK_PERMISSIONS_NEED_REPAIR", "1");
+        let err = apply_optimize_action(
+            "disk_permissions_repair",
+            Path::new("/tmp/.vole-optimize-action/disk_permissions_repair"),
+            Some(&crate::privilege::NoPrivilege),
+            &mut false,
+        )
+        .unwrap_err();
+        assert_eq!(err, OptimizeActionError::NeedsPrivilege);
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        apply_optimize_action(
+            "disk_permissions_repair",
+            Path::new("/tmp/.vole-optimize-action/disk_permissions_repair"),
+            Some(&backend),
+            &mut false,
+        )
+        .unwrap();
+        assert_eq!(*backend.reset_permissions_calls.lock().unwrap(), 1);
+        std::env::remove_var("VOLE_TEST_DISK_PERMISSIONS_NEED_REPAIR");
+    }
+
+    #[test]
+    fn apply_periodic_noop_when_fresh() {
+        let _guard = crate::test_env::lock();
+        std::env::set_var("VOLE_TEST_PERIODIC_AVAILABLE", "1");
+        std::env::set_var("VOLE_TEST_PERIODIC_STALE", "0");
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        apply_optimize_action(
+            "periodic_maintenance",
+            Path::new("/tmp/.vole-optimize-action/periodic_maintenance"),
+            Some(&backend),
+            &mut false,
+        )
+        .unwrap();
+        assert_eq!(*backend.periodic_calls.lock().unwrap(), 0);
+        std::env::remove_var("VOLE_TEST_PERIODIC_AVAILABLE");
+        std::env::remove_var("VOLE_TEST_PERIODIC_STALE");
+    }
+
+    #[test]
+    fn apply_periodic_needs_privilege_when_stale() {
+        let _guard = crate::test_env::lock();
+        std::env::set_var("VOLE_TEST_PERIODIC_AVAILABLE", "1");
+        std::env::set_var("VOLE_TEST_PERIODIC_STALE", "1");
+        let err = apply_optimize_action(
+            "periodic_maintenance",
+            Path::new("/tmp/.vole-optimize-action/periodic_maintenance"),
+            Some(&crate::privilege::NoPrivilege),
+            &mut false,
+        )
+        .unwrap_err();
+        assert_eq!(err, OptimizeActionError::NeedsPrivilege);
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        apply_optimize_action(
+            "periodic_maintenance",
+            Path::new("/tmp/.vole-optimize-action/periodic_maintenance"),
+            Some(&backend),
+            &mut false,
+        )
+        .unwrap();
+        assert_eq!(*backend.periodic_calls.lock().unwrap(), 1);
+        std::env::remove_var("VOLE_TEST_PERIODIC_AVAILABLE");
+        std::env::remove_var("VOLE_TEST_PERIODIC_STALE");
     }
 
     #[test]

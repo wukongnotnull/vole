@@ -71,10 +71,18 @@ fn ensure_privilege_ready(
     backend.acquire_interactive() && backend.probe_noninteractive()
 }
 
-fn needs_optimize_privilege(task_id: &str) -> bool {
+fn needs_optimize_privilege(task_id: &str, path: &std::path::Path) -> bool {
     match task_id {
         "system_maintenance" | "network_optimization" => true,
         "memory_pressure_relief" => crate::optimize::is_memory_pressure_high(),
+        "network_stack_optimize" => {
+            !crate::optimize::has_active_vpn() && crate::optimize::network_stack_needs_flush()
+        }
+        "disk_permissions_repair" => {
+            let home = crate::optimize::optimize_action_home(path);
+            crate::optimize::needs_disk_permissions_repair(&home)
+        }
+        "periodic_maintenance" => crate::optimize::periodic_needs_run(),
         _ => false,
     }
 }
@@ -209,7 +217,9 @@ pub fn apply_optimize_proto_plan(
             OptimizeTaskKind::Action => {
                 let fallback = NoPrivilege;
                 let backend: &dyn PrivilegeBackend = ctx.privilege.unwrap_or(&fallback);
-                if needs_optimize_privilege(task_id) && !ensure_privilege_ready(ctx, backend) {
+                if needs_optimize_privilege(task_id, &entry.path)
+                    && !ensure_privilege_ready(ctx, backend)
+                {
                     skipped += 1;
                     skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
                     continue;
@@ -544,6 +554,168 @@ mod tests {
         assert_eq!(report.succeeded, 1);
         assert_eq!(*backend.purge_memory_calls.lock().unwrap(), 1);
         std::env::remove_var("VOLE_TEST_MEMORY_PRESSURE");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    fn trio_plan(home: &std::path::Path) -> ProtoPlan {
+        let mk = |id: &str, label: &str| ProtoPlanEntry {
+            id: format!("{id}-0"),
+            path: home.join(format!(".vole-optimize-action/{id}")),
+            label: label.into(),
+            size: 0,
+            rule_id: format!("optimize:action:{id}"),
+            skip_reason: None,
+            dev: 0,
+            ino: 0,
+            mtime: UNIX_EPOCH,
+        };
+        ProtoPlan {
+            schema_version: SCHEMA_VERSION,
+            created_at: SystemTime::now(),
+            ttl_secs: 900,
+            entries: vec![
+                mk("network_stack_optimize", "Network Stack Refresh"),
+                mk("disk_permissions_repair", "Permission Repair"),
+                mk("periodic_maintenance", "Periodic Maintenance"),
+            ],
+            coverage_note: None,
+        }
+    }
+
+    #[test]
+    fn apply_w2b3_trio_gates_noop() {
+        let _guard = test_env::lock();
+        std::env::set_var("VOLE_TEST_VPN_ACTIVE", "0");
+        std::env::set_var("VOLE_TEST_NETWORK_STACK_UNHEALTHY", "0");
+        std::env::set_var("VOLE_TEST_DISK_PERMISSIONS_NEED_REPAIR", "0");
+        std::env::set_var("VOLE_TEST_PERIODIC_AVAILABLE", "1");
+        std::env::set_var("VOLE_TEST_PERIODIC_STALE", "0");
+        let root = scratch("trio-noop");
+        let plan = trio_plan(&root);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("optimize");
+        let trash = MacTrash;
+        let backend = RecordingPrivilege::allowing();
+        let mut ctx = OptimizeApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: OptimizeApplyOptions { permanent: true },
+            trash: &trash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            privilege: Some(&backend),
+            privilege_acquire_attempted: false,
+            dns_flushed: false,
+        };
+        let report = apply_optimize_proto_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 3);
+        assert_eq!(*backend.network_stack_calls.lock().unwrap(), 0);
+        assert_eq!(*backend.reset_permissions_calls.lock().unwrap(), 0);
+        assert_eq!(*backend.periodic_calls.lock().unwrap(), 0);
+        for k in [
+            "VOLE_TEST_VPN_ACTIVE",
+            "VOLE_TEST_NETWORK_STACK_UNHEALTHY",
+            "VOLE_TEST_DISK_PERMISSIONS_NEED_REPAIR",
+            "VOLE_TEST_PERIODIC_AVAILABLE",
+            "VOLE_TEST_PERIODIC_STALE",
+        ] {
+            std::env::remove_var(k);
+        }
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_w2b3_trio_needs_privilege() {
+        let _guard = test_env::lock();
+        std::env::set_var("VOLE_TEST_VPN_ACTIVE", "0");
+        std::env::set_var("VOLE_TEST_NETWORK_STACK_UNHEALTHY", "1");
+        std::env::set_var("VOLE_TEST_DISK_PERMISSIONS_NEED_REPAIR", "1");
+        std::env::set_var("VOLE_TEST_PERIODIC_AVAILABLE", "1");
+        std::env::set_var("VOLE_TEST_PERIODIC_STALE", "1");
+        let root = scratch("trio-deny");
+        let plan = trio_plan(&root);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("optimize");
+        let trash = MacTrash;
+        let backend = NoPrivilege;
+        let mut ctx = OptimizeApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: OptimizeApplyOptions { permanent: true },
+            trash: &trash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            privilege: Some(&backend),
+            privilege_acquire_attempted: false,
+            dns_flushed: false,
+        };
+        let report = apply_optimize_proto_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 3);
+        assert!(report
+            .skipped_by_reason
+            .iter()
+            .any(|s| s.reason == SkipReason::NeedsPrivilege && s.count == 3));
+        for k in [
+            "VOLE_TEST_VPN_ACTIVE",
+            "VOLE_TEST_NETWORK_STACK_UNHEALTHY",
+            "VOLE_TEST_DISK_PERMISSIONS_NEED_REPAIR",
+            "VOLE_TEST_PERIODIC_AVAILABLE",
+            "VOLE_TEST_PERIODIC_STALE",
+        ] {
+            std::env::remove_var(k);
+        }
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_w2b3_trio_with_recording() {
+        let _guard = test_env::lock();
+        std::env::set_var("VOLE_TEST_VPN_ACTIVE", "0");
+        std::env::set_var("VOLE_TEST_NETWORK_STACK_UNHEALTHY", "1");
+        std::env::set_var("VOLE_TEST_DISK_PERMISSIONS_NEED_REPAIR", "1");
+        std::env::set_var("VOLE_TEST_PERIODIC_AVAILABLE", "1");
+        std::env::set_var("VOLE_TEST_PERIODIC_STALE", "1");
+        let root = scratch("trio-ok");
+        let plan = trio_plan(&root);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("optimize");
+        let trash = MacTrash;
+        let backend = RecordingPrivilege::allowing();
+        let mut ctx = OptimizeApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: OptimizeApplyOptions { permanent: true },
+            trash: &trash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            privilege: Some(&backend),
+            privilege_acquire_attempted: false,
+            dns_flushed: false,
+        };
+        let report = apply_optimize_proto_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 3);
+        assert_eq!(*backend.network_stack_calls.lock().unwrap(), 1);
+        assert_eq!(*backend.reset_permissions_calls.lock().unwrap(), 1);
+        assert_eq!(*backend.periodic_calls.lock().unwrap(), 1);
+        for k in [
+            "VOLE_TEST_VPN_ACTIVE",
+            "VOLE_TEST_NETWORK_STACK_UNHEALTHY",
+            "VOLE_TEST_DISK_PERMISSIONS_NEED_REPAIR",
+            "VOLE_TEST_PERIODIC_AVAILABLE",
+            "VOLE_TEST_PERIODIC_STALE",
+        ] {
+            std::env::remove_var(k);
+        }
         fs::remove_dir_all(&root).ok();
     }
 

@@ -29,6 +29,18 @@ impl PrivilegeBackend for NoPrivilege {
     fn purge_inactive_memory(&self) -> Result<(), PrivilegeError> {
         Err(PrivilegeError::Unavailable)
     }
+
+    fn flush_network_stack(&self) -> Result<(), PrivilegeError> {
+        Err(PrivilegeError::Unavailable)
+    }
+
+    fn reset_user_permissions(&self, _uid: u32) -> Result<(), PrivilegeError> {
+        Err(PrivilegeError::Unavailable)
+    }
+
+    fn run_periodic_maintenance(&self) -> Result<(), PrivilegeError> {
+        Err(PrivilegeError::Unavailable)
+    }
 }
 
 /// 生产：非交互 `sudo -n`。
@@ -143,6 +155,72 @@ impl PrivilegeBackend for SudoNoninteractive {
             )))
         }
     }
+
+    fn flush_network_stack(&self) -> Result<(), PrivilegeError> {
+        if test_no_auth() {
+            return Err(PrivilegeError::Unavailable);
+        }
+        let route = Command::new("sudo")
+            .args(["-n", "route", "-n", "flush"])
+            .status()
+            .map_err(|e| PrivilegeError::CommandFailed(e.to_string()))?;
+        if !route.success() {
+            return Err(PrivilegeError::CommandFailed(format!(
+                "route flush exit {route}"
+            )));
+        }
+        let arp = Command::new("sudo")
+            .args(["-n", "arp", "-a", "-d"])
+            .status()
+            .map_err(|e| PrivilegeError::CommandFailed(e.to_string()))?;
+        if arp.success() {
+            Ok(())
+        } else {
+            Err(PrivilegeError::CommandFailed(format!(
+                "arp -a -d exit {arp}"
+            )))
+        }
+    }
+
+    fn reset_user_permissions(&self, uid: u32) -> Result<(), PrivilegeError> {
+        if test_no_auth() {
+            return Err(PrivilegeError::Unavailable);
+        }
+        let status = Command::new("sudo")
+            .args([
+                "-n",
+                "diskutil",
+                "resetUserPermissions",
+                "/",
+                &uid.to_string(),
+            ])
+            .status()
+            .map_err(|e| PrivilegeError::CommandFailed(e.to_string()))?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err(PrivilegeError::CommandFailed(format!(
+                "diskutil resetUserPermissions exit {status}"
+            )))
+        }
+    }
+
+    fn run_periodic_maintenance(&self) -> Result<(), PrivilegeError> {
+        if test_no_auth() {
+            return Err(PrivilegeError::Unavailable);
+        }
+        let status = Command::new("sudo")
+            .args(["-n", "periodic", "daily", "weekly", "monthly"])
+            .status()
+            .map_err(|e| PrivilegeError::CommandFailed(e.to_string()))?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err(PrivilegeError::CommandFailed(format!(
+                "periodic exit {status}"
+            )))
+        }
+    }
 }
 
 /// 测试用：记录 remove 调用，不执行真 sudo。
@@ -154,6 +232,9 @@ pub struct RecordingPrivilege {
     pub unloaded: Mutex<Vec<PathBuf>>,
     pub flush_dns_calls: Mutex<u32>,
     pub purge_memory_calls: Mutex<u32>,
+    pub network_stack_calls: Mutex<u32>,
+    pub reset_permissions_calls: Mutex<u32>,
+    pub periodic_calls: Mutex<u32>,
 }
 
 impl RecordingPrivilege {
@@ -166,6 +247,9 @@ impl RecordingPrivilege {
             unloaded: Mutex::new(Vec::new()),
             flush_dns_calls: Mutex::new(0),
             purge_memory_calls: Mutex::new(0),
+            network_stack_calls: Mutex::new(0),
+            reset_permissions_calls: Mutex::new(0),
+            periodic_calls: Mutex::new(0),
         }
     }
 
@@ -178,6 +262,9 @@ impl RecordingPrivilege {
             unloaded: Mutex::new(Vec::new()),
             flush_dns_calls: Mutex::new(0),
             purge_memory_calls: Mutex::new(0),
+            network_stack_calls: Mutex::new(0),
+            reset_permissions_calls: Mutex::new(0),
+            periodic_calls: Mutex::new(0),
         }
     }
 }
@@ -233,6 +320,30 @@ impl PrivilegeBackend for RecordingPrivilege {
             return Err(PrivilegeError::Unavailable);
         }
         *self.purge_memory_calls.lock().unwrap() += 1;
+        Ok(())
+    }
+
+    fn flush_network_stack(&self) -> Result<(), PrivilegeError> {
+        if !*self.probe.lock().unwrap() {
+            return Err(PrivilegeError::Unavailable);
+        }
+        *self.network_stack_calls.lock().unwrap() += 1;
+        Ok(())
+    }
+
+    fn reset_user_permissions(&self, _uid: u32) -> Result<(), PrivilegeError> {
+        if !*self.probe.lock().unwrap() {
+            return Err(PrivilegeError::Unavailable);
+        }
+        *self.reset_permissions_calls.lock().unwrap() += 1;
+        Ok(())
+    }
+
+    fn run_periodic_maintenance(&self) -> Result<(), PrivilegeError> {
+        if !*self.probe.lock().unwrap() {
+            return Err(PrivilegeError::Unavailable);
+        }
+        *self.periodic_calls.lock().unwrap() += 1;
         Ok(())
     }
 }

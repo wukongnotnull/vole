@@ -8,9 +8,10 @@ use thiserror::Error;
 use crate::optimize::{
     discover_cache_refresh, discover_fix_broken_configs, discover_launch_agents_cleanup,
     discover_saved_state_cleanup, optimize_action_rule_id, optimize_catalog,
-    optimize_delete_rule_id, plan_coreduet_cleanup, plan_dock_refresh,
-    plan_launch_services_rebuild, plan_legacy_overrides_audit, plan_memory_pressure_relief,
-    plan_network_optimization, plan_notification_cleanup, plan_prevent_network_dsstore,
+    optimize_delete_rule_id, plan_coreduet_cleanup, plan_disk_permissions_repair,
+    plan_dock_refresh, plan_launch_services_rebuild, plan_legacy_overrides_audit,
+    plan_memory_pressure_relief, plan_network_optimization, plan_network_stack_optimize,
+    plan_notification_cleanup, plan_periodic_maintenance, plan_prevent_network_dsstore,
     plan_quarantine_cleanup, plan_sqlite_vacuum, plan_system_maintenance, OptimizeCandidate,
     OptimizeTaskKind,
 };
@@ -107,6 +108,15 @@ pub fn build_optimize_plan(
     }
     if allow("memory_pressure_relief") {
         candidates.push(plan_memory_pressure_relief(opts.home));
+    }
+    if allow("network_stack_optimize") {
+        candidates.push(plan_network_stack_optimize(opts.home));
+    }
+    if allow("disk_permissions_repair") {
+        candidates.push(plan_disk_permissions_repair(opts.home));
+    }
+    if allow("periodic_maintenance") {
+        candidates.push(plan_periodic_maintenance(opts.home));
     }
 
     let mut entries = Vec::new();
@@ -246,10 +256,25 @@ mod tests {
             .entries
             .iter()
             .any(|e| e.rule_id == "optimize:action:memory_pressure_relief"));
+        assert!(plan
+            .entries
+            .iter()
+            .any(|e| e.rule_id == "optimize:action:network_stack_optimize"));
+        assert!(plan
+            .entries
+            .iter()
+            .any(|e| e.rule_id == "optimize:action:disk_permissions_repair"));
+        assert!(plan
+            .entries
+            .iter()
+            .any(|e| e.rule_id == "optimize:action:periodic_maintenance"));
         let note = plan.coverage_note.unwrap();
         assert!(!note.contains("DNS & Spotlight Check"));
         assert!(!note.contains("Network Cache Refresh"));
         assert!(!note.contains("Memory Optimization"));
-        assert!(note.contains("Network Stack") || note.contains("Spotlight"));
+        assert!(!note.contains("Network Stack Refresh"));
+        assert!(!note.contains("Permission Repair"));
+        assert!(!note.contains("Periodic Maintenance"));
+        assert!(note.contains("Spotlight") || note.contains("Shared File Lists"));
     }
 }

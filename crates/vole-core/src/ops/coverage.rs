@@ -66,6 +66,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          Time Machine 失败中备份（≥48h inProgress + tmutil delete）、\
          optimize DNS/mDNS（system_maintenance / network_optimization + sudo -n）、\
          optimize memory_pressure_relief（高压时 sudo -n purge）、\
+         optimize W2b③（network_stack / disk_permissions / periodic + sudo -n）、\
          本地快照报告（status/analyze · 仅 list）、\
          Filo production Cache、\
          Zed system-node npm cache、\
@@ -222,6 +223,7 @@ mod tests {
         assert!(note.contains("Time Machine 失败中备份（≥48h"));
         assert!(note.contains("optimize DNS/mDNS"));
         assert!(note.contains("optimize memory_pressure_relief"));
+        assert!(note.contains("optimize W2b③"));
         assert!(
             !unported.contains("失败中备份") && !unported.contains("Time Machine 失败"),
             "TM failed backups must not remain unported"

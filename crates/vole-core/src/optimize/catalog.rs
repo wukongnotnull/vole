@@ -99,14 +99,14 @@ const CATALOG: &[OptimizeTask] = &[
         kind: OptimizeTaskKind::Action,
         title: "Network Stack Refresh",
         description: "Flush routing table and ARP cache to resolve network issues",
-        in_m3: false,
+        in_m3: true,
     },
     OptimizeTask {
         id: "disk_permissions_repair",
         kind: OptimizeTaskKind::Action,
         title: "Permission Repair",
         description: "Fix user directory permission issues",
-        in_m3: false,
+        in_m3: true,
     },
     OptimizeTask {
         id: "spotlight_index_optimize",
@@ -127,7 +127,7 @@ const CATALOG: &[OptimizeTask] = &[
         kind: OptimizeTaskKind::Action,
         title: "Periodic Maintenance",
         description: "Run macOS daily/weekly/monthly maintenance scripts if stale",
-        in_m3: false,
+        in_m3: true,
     },
     OptimizeTask {
         id: "shared_file_list_repair",
@@ -251,9 +251,14 @@ mod tests {
         assert!(main.contains(&"system_maintenance"));
         assert!(main.contains(&"network_optimization"));
         assert!(main.contains(&"memory_pressure_relief"));
-        assert!(!main.contains(&"network_stack_optimize"));
+        assert!(main.contains(&"network_stack_optimize"));
+        assert!(main.contains(&"disk_permissions_repair"));
+        assert!(main.contains(&"periodic_maintenance"));
         assert!(!main.contains(&"spotlight_index_optimize"));
-        assert_eq!(main.len(), 15);
+        assert!(!main.contains(&"disk_verify"));
+        assert!(!main.contains(&"login_items_audit"));
+        assert!(!main.contains(&"shared_file_list_repair"));
+        assert_eq!(main.len(), 18);
     }
 
     #[test]

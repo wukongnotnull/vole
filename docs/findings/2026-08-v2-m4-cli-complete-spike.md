@@ -90,7 +90,14 @@
 
 ### 3.4 `touchid`（→ M8）
 
-（Task 5 填写）
+**Mole 入口：** `bin/touchid.sh`（`mole` `exec`）。  
+**PAM：** 优先 `sudo_local`（`pam_tid.so`）；legacy `/etc/pam.d/sudo` 迁移/清理；行常量 `auth       sufficient     pam_tid.so`。  
+**子命令形态：** `enable` / `disable` / `status`（及菜单）。  
+**Dry-run：** `touchid_dry_run_enabled`；测试护栏对齐 `MOLE_TEST_NO_AUTH` / `MOLE_TEST_MODE`。
+
+**主路径：** 状态查询 + 启用/禁用引导；优先 `sudo_local`；安全回滚路径在 M8 design 写死；`VOLE_TEST_NO_AUTH` 下可测。  
+**长尾：** 真机授权演示、非 sudo PAM 扩展。  
+**硬约束：** 验证路径**禁止**触发真 Touch ID / 交互 sudo 挂起（规格 §6.4）。
 
 ### 3.5 `update`（→ M9）
 

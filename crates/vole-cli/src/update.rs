@@ -1,7 +1,7 @@
 //! `vole update` — 自更新通道。
 
 use std::io::{self, BufRead, IsTerminal, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use vole_core::ops::{
     default_config_dir, run_update, CurlUpdateTransport, ExecVersionProbe, FakeUpdateTransport,
@@ -65,7 +65,7 @@ fn run_update_inner(opts: UpdateCliOptions) -> io::Result<i32> {
     Ok(outcome_exit(&outcome))
 }
 
-fn peek_origin(binary: &PathBuf, config: &PathBuf) -> io::Result<InstallOrigin> {
+fn peek_origin(binary: &Path, config: &Path) -> io::Result<InstallOrigin> {
     Ok(vole_core::ops::detect_install_layout(binary, Some(config)).origin)
 }
 

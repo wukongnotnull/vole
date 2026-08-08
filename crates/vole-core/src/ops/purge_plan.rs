@@ -11,6 +11,9 @@ use crate::protection::AppProtection;
 use crate::safety::{capture_plan_entry_identity, validate_path_for_deletion, PathProtection};
 use crate::vole_proto::{Plan as ProtoPlan, PlanEntry as ProtoPlanEntry, SCHEMA_VERSION};
 
+/// Mole `MOLE_PURGE_QUICK_HINT_EXCLUDED_TARGETS`：quick hint 扫描排除的噪声 basename。
+pub const QUICK_HINT_EXCLUDED_TARGETS: &[&str] = &["bin", "vendor"];
+
 /// Mole `MOLE_PURGE_TARGETS`（钉版 1.48.1）原样钉死。
 pub const PURGE_TARGETS: &[&str] = &[
     "node_modules",
@@ -155,6 +158,46 @@ cloud sync interactive confirm (fail-closed skip uncertain ages)."
                 .into(),
         ),
     })
+}
+
+/// hints / purge 共用：读 `~/.config/vole/purge_paths`，否则默认搜索根（hints 不做 `$HOME/*/` 容器扩扫）。
+pub fn quick_hint_search_roots(home: &Path) -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    let mut seen = BTreeSet::new();
+
+    let config = home.join(".config/vole/purge_paths");
+    if let Ok(text) = fs::read_to_string(&config) {
+        for line in text.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            let p = if line.starts_with('/') {
+                PathBuf::from(line)
+            } else {
+                home.join(line)
+            };
+            if p.is_dir() && seen.insert(p.clone()) {
+                roots.push(p);
+            }
+        }
+        if !roots.is_empty() {
+            return roots;
+        }
+    }
+
+    for rel in DEFAULT_SEARCH_REL {
+        let p = home.join(rel);
+        if p.is_dir() && seen.insert(p.clone()) {
+            roots.push(p);
+        }
+    }
+    roots
+}
+
+/// 目录是否含项目指示文件（hints 浅扫用；对齐 Mole `mole_purge_is_project_root` 子集）。
+pub fn is_project_root_for_hints(dir: &Path) -> bool {
+    PROJECT_INDICATORS.iter().any(|ind| dir.join(ind).exists())
 }
 
 fn resolve_search_roots(home: &Path) -> Vec<PathBuf> {

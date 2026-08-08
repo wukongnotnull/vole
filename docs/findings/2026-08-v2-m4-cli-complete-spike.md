@@ -73,7 +73,20 @@
 
 ### 3.3 `installer`（→ M7）
 
-（Task 4 填写）
+**Mole 入口：** `bin/installer.sh`。  
+**对照 bats：** `installer.bats`、`installer_fd.bats`、`installer_zip.bats`。
+
+| 面 | Mole 事实 |
+|---|---|
+| 扫描根 | Downloads / Desktop / Documents / Public / Library/Downloads / Shared / Homebrew Caches / iCloud Downloads / Mail Downloads / Telegram Desktop 等（`INSTALLER_SCAN_PATHS`） |
+| 深度 | `INSTALLER_SCAN_MAX_DEPTH_DEFAULT=2` |
+| Plan | `build_installer_delete_plan` → 校验 → `execute_installer_delete_plan` |
+| 删除 | `mole_delete`；失败可 `INSTALLER_EXIT_INCOMPLETE=3` |
+| Flag | `--dry-run`/`-n` 等；TTY 分页选择 |
+
+**主路径：** 扫描安装包 → plan → apply；immutable delete-plan 校验精神对齐；删除走安全漏斗；JSON；首批扫描根优先 Downloads/Desktop（+ 明确高价值根）。  
+**长尾：** 全量冷门扫描根、TTY 分页选择器、zip/fd 边缘第二批。  
+**安全面：** plan 不可信则 fail-closed；禁止绕过漏斗；incomplete cleanup 须可观测退出码/报告。
 
 ### 3.4 `touchid`（→ M8）
 

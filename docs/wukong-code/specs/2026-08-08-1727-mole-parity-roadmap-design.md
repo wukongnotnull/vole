@@ -8,7 +8,7 @@
 
 ## 1. 结论
 
-相对 Mole 1.48.1，近满配必做（W0→W2c）已全部完成（`main` / **1.41.0**）。闸控轨 G1–G5（含推翻默认的 `disk_verify`）已于 **1.42.0–1.46.0** 落地。启用清理规则 **540**；Mole `safe_clean` inventory **507/513** 匹配（余 6 条为动态 custom 假阴性，见 §3.1）。**默认下一项实现：无**（仅剩桌面 D1）。本文件本身不触发实现 PR。
+相对 Mole 1.48.1，近满配必做（W0→W2c）已全部完成（`main` / **1.41.0**）。闸控轨 G1–G5（含推翻默认的 `disk_verify`）已于 **1.42.0–1.46.0** 落地；桌面 D1 可用通道真机已验收（2026-08-09）。启用清理规则 **540**；Mole `safe_clean` inventory **507/513** 匹配（余 6 条为动态 custom 假阴性，见 §3.1）。**默认下一项实现：无**。本文件本身不触发实现 PR。
 
 ### 1.1 已对齐（相对 Mole 家庭桶）
 
@@ -111,7 +111,7 @@
 
 **C. 延后（另仓 / 下一代际再议）**
 
-- 桌面 · SMAppService / PrivilegedHelper / 持久特权助手（coverage「仍未移植」）
+- 桌面 · SMAppService / PrivilegedHelper / 持久特权助手（**可用通道已验收**；见 vole-macos；coverage 已改写）
 - uninstall · 与 SMAppService 深度联动的系统级卸载边角
 
 **说明：** inventory 报「未移植」的 6 条动态 custom（`$target` / `$label` 等）**不计入未对齐路径缺口**，见 §3.1。
@@ -218,7 +218,7 @@ Catalog **23** 项；`in_m3: true` **23**；`in_m3: false` **0**。P1–P5 已�
 | 项 | 标签 |
 |---|---|
 | Clean MVP（sidecar plan→勾选→apply） | 另仓已有 MVP |
-| SMAppService / PrivilegedHelper / sudo 助手 | **延后**；coverage 诚实面唯一「仍未移植」 |
+| SMAppService / PrivilegedHelper / sudo 助手 | **可用通道已验收**（vole-macos；coverage 指向另仓） |
 
 ## 4. 优先级与先后顺序
 
@@ -234,7 +234,7 @@ Catalog **23** 项；`in_m3: true` **23**；`in_m3: false` **0**。P1–P5 已�
 
 | 顺序 | 主题 | 依据 |
 |---|---|---|
-| 1 | 桌面特权助手（SMAppService） | coverage 唯一显式未移植；系统路径体验 |
+| 1 | 桌面特权助手（SMAppService） | ~~coverage 唯一显式未移植~~ → 可用通道已验收；余量 Uninstall UI / 公证 |
 | 2 | optimize 后置择优（`login_items_audit` → spotlight orphan → …） | §3.3 |
 | 3 | `purge` / 项目构建物 | 产品 v2 曾明确排除；需新北极星 |
 | 4 | `installer` / `touchid` / `hints` / `update` | 边缘；ROI 低 |

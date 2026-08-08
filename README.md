@@ -193,7 +193,7 @@ $ vole optimize --plan
 $ vole optimize --apply optimize-plan.json
 ```
 
-23 项主路径（含无 sudo 缓存/saved state/坏 prefs/quarantine/sqlite/Dock/LaunchServices/`shared_file_list_repair` 等，以及需 `sudo -n` 的 DNS、`memory_pressure_relief`、`network_stack_optimize`、`disk_permissions_repair`、`periodic_maintenance`、条件性 `spotlight_index_optimize`，只读 `login_items_audit`，`spotlight_orphan_rules_cleanup`，以及须 `VOLE_ENABLE_DISK_VERIFY=1` 的 `disk_verify`）。TTY 下可至多一次 `sudo -v` 缓存凭证。桌面 Helper 仍未移植，会写入 coverage；optimize 长尾已清空。
+23 项主路径（含无 sudo 缓存/saved state/坏 prefs/quarantine/sqlite/Dock/LaunchServices/`shared_file_list_repair` 等，以及需 `sudo -n` 的 DNS、`memory_pressure_relief`、`network_stack_optimize`、`disk_permissions_repair`、`periodic_maintenance`、条件性 `spotlight_index_optimize`，只读 `login_items_audit`，`spotlight_orphan_rules_cleanup`，以及须 `VOLE_ENABLE_DISK_VERIFY=1` 的 `disk_verify`）。TTY 下可至多一次 `sudo -v` 缓存凭证。桌面 SMAppService / 特权助手见兄弟仓 `vole-macos`（真机通道已验收）；optimize 长尾已清空。
 
 ### 磁盘分析
 

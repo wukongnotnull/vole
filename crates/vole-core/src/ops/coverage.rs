@@ -88,7 +88,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          Handoff pasteboard（mtime>60min）、\
          Toolbox keep-N、Codex staging、not_running（精确名 + cmdline）、\
          FCP / 剪映 generated、XCTestDevices 已落地。\
-         仍未移植：桌面 SMAppService / 特权助手。\
+         桌面 SMAppService / 特权助手见 vole-macos（真机通道已验收）。\
          如需完整清理，请继续使用 Mole：https://github.com/tw93/Mole"
     )
 }
@@ -210,25 +210,11 @@ mod tests {
         assert!(note.contains("Claude Desktop workspace VM orphan"));
         assert!(note.contains("system services orphan"));
         assert!(note.contains("可读子集"));
-        assert!(note.contains("仍未移植"));
-        let unported = note.split("仍未移植：").nth(1).expect("unported section");
         assert!(
-            !unported.contains("Claude"),
-            "Claude VM must not remain in the unported list"
+            !note.contains("仍未移植"),
+            "no explicit unported product gaps remain after D1 helper channel"
         );
         assert!(note.contains("Claude pending-uploads"));
-        assert!(
-            !unported.contains("claude pending-uploads"),
-            "claude pending-uploads must not remain unported"
-        );
-        assert!(
-            !unported.contains("pending-uploads"),
-            "pending-uploads must not remain unported"
-        );
-        assert!(
-            !unported.contains("system services orphan"),
-            "system services orphan readable subset must not remain unported"
-        );
         assert!(
             !note.contains("仍未移植：orphaned apps"),
             "must not claim user-domain orphaned is still unported"
@@ -242,15 +228,7 @@ mod tests {
         assert!(note.contains("MemoryLimitViolations"));
         assert!(note.contains("Adobe 系统日志"));
         assert!(note.contains("交互提权（TTY 下至多一次 `sudo -v`"));
-        assert!(
-            !unported.contains("交互提权"),
-            "CLI sudo -v credential cache must not remain unported"
-        );
         assert!(note.contains("Install macOS*.app（≥14 天"));
-        assert!(
-            !unported.contains("Install macOS"),
-            "Install macOS*.app must not remain unported"
-        );
         assert!(note.contains("Time Machine 失败中备份（≥48h"));
         assert!(note.contains("optimize DNS/mDNS"));
         assert!(note.contains("optimize memory_pressure_relief"));
@@ -260,63 +238,27 @@ mod tests {
         assert!(note.contains("optimize spotlight_index_optimize"));
         assert!(note.contains("optimize shared_file_list_repair"));
         assert!(note.contains("optimize disk_verify"));
-        assert!(
-            !unported.contains("失败中备份") && !unported.contains("Time Machine 失败"),
-            "TM failed backups must not remain unported"
-        );
         assert!(note.contains("本地快照报告（status/analyze"));
         assert!(note.contains("Filo production Cache"));
         assert!(note.contains("Zed system-node npm cache"));
         assert!(note.contains("uninstall Homebrew Cask 联动"));
         assert!(note.contains("uninstall Login Items"));
-        assert!(
-            !unported.contains("brew cask") && !unported.contains("Homebrew Cask"),
-            "uninstall brew cask linkage must not remain unported"
-        );
-        assert!(
-            !unported.to_ascii_lowercase().contains("login item"),
-            "uninstall login items must not remain unported"
-        );
         assert!(note.contains("uninstall 系统 LaunchDaemons"));
         assert!(
-            !unported.contains("LaunchDaemons"),
-            "uninstall system LaunchDaemons main path must not remain unported"
+            !note.contains("仍未移植：桌面 SMAppService"),
+            "desktop SMAppService helper channel must not remain listed as unported"
         );
         assert!(
-            !unported.contains("快照") && !unported.contains("本地快照"),
-            "local snapshot reporting must not remain unported"
-        );
-        assert!(
-            unported.contains("SMAppService"),
-            "desktop SMAppService must remain listed as unported"
-        );
-        assert!(
-            !unported.contains("Rosetta"),
-            "Rosetta /Library must not remain unported"
+            note.contains("桌面 SMAppService / 特权助手见 vole-macos"),
+            "coverage should point at vole-macos helper channel after D1 acceptance"
         );
         assert!(note.contains("Rosetta `/Library` update bundle"));
-        assert!(
-            !unported.contains("真 sudo 删除"),
-            "system-services sudo -n apply must not leave '真 sudo 删除' as wholesale unported"
-        );
-        assert!(
-            !unported.contains("Group Containers 泛清理"),
-            "group container caches coverage is shipped"
-        );
         assert!(note.contains("Group Containers logs/caches"));
         assert!(note.contains("含受保护容器 Logs"));
         assert!(note.contains("Handoff pasteboard"));
         assert!(
-            !unported.contains("受保护容器的组容器缓存"),
-            "protected group container caches must not remain unported"
-        );
-        assert!(
             !note.contains("受保护容器与 bundle 命名文件除外"),
             "partial Group Containers caveat must be removed"
-        );
-        assert!(
-            !unported.contains("Containers stubs"),
-            "container stubs allowlist must not remain unported"
         );
         assert!(note.contains("container stubs（CleanMyMac allowlist）"));
     }

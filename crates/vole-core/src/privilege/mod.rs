@@ -138,6 +138,12 @@ pub trait PrivilegeBackend: Send + Sync {
     fn flush_dns_cache(&self) -> Result<(), PrivilegeError>;
     /// `sudo -n purge`（释放 inactive memory pages）。
     fn purge_inactive_memory(&self) -> Result<(), PrivilegeError>;
+    /// `sudo -n route -n flush` + `sudo -n arp -a -d`（两步皆成功）。
+    fn flush_network_stack(&self) -> Result<(), PrivilegeError>;
+    /// `sudo -n diskutil resetUserPermissions / <uid>`。
+    fn reset_user_permissions(&self, uid: u32) -> Result<(), PrivilegeError>;
+    /// `sudo -n periodic daily weekly monthly`。
+    fn run_periodic_maintenance(&self) -> Result<(), PrivilegeError>;
 }
 
 const LIVE_PREFIXES: &[&str] = &[
@@ -1556,6 +1562,57 @@ mod tests {
         let b = RecordingPrivilege::allowing();
         b.purge_inactive_memory().unwrap();
         assert_eq!(*b.purge_memory_calls.lock().unwrap(), 1);
+    }
+
+    #[test]
+    fn recording_network_stack_requires_probe() {
+        let b = RecordingPrivilege::denying();
+        assert!(matches!(
+            b.flush_network_stack(),
+            Err(PrivilegeError::Unavailable)
+        ));
+        assert_eq!(*b.network_stack_calls.lock().unwrap(), 0);
+    }
+
+    #[test]
+    fn recording_network_stack_counts_when_allowing() {
+        let b = RecordingPrivilege::allowing();
+        b.flush_network_stack().unwrap();
+        assert_eq!(*b.network_stack_calls.lock().unwrap(), 1);
+    }
+
+    #[test]
+    fn recording_reset_permissions_requires_probe() {
+        let b = RecordingPrivilege::denying();
+        assert!(matches!(
+            b.reset_user_permissions(501),
+            Err(PrivilegeError::Unavailable)
+        ));
+        assert_eq!(*b.reset_permissions_calls.lock().unwrap(), 0);
+    }
+
+    #[test]
+    fn recording_reset_permissions_counts_when_allowing() {
+        let b = RecordingPrivilege::allowing();
+        b.reset_user_permissions(501).unwrap();
+        assert_eq!(*b.reset_permissions_calls.lock().unwrap(), 1);
+    }
+
+    #[test]
+    fn recording_periodic_requires_probe() {
+        let b = RecordingPrivilege::denying();
+        assert!(matches!(
+            b.run_periodic_maintenance(),
+            Err(PrivilegeError::Unavailable)
+        ));
+        assert_eq!(*b.periodic_calls.lock().unwrap(), 0);
+    }
+
+    #[test]
+    fn recording_periodic_counts_when_allowing() {
+        let b = RecordingPrivilege::allowing();
+        b.run_periodic_maintenance().unwrap();
+        assert_eq!(*b.periodic_calls.lock().unwrap(), 1);
     }
 
     #[test]

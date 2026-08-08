@@ -71,6 +71,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          Filo production Cache、\
          Zed system-node npm cache、\
          Antigravity browser Cache、\
+         Chrome DevTools MCP Cache、\
          uninstall Homebrew Cask 联动（`brew uninstall --cask`/`--zap`，sibling→nozap）、\
          uninstall Login Items（按名 osascript + LoginItems helper `launchctl bootout`，sibling/名冲突守卫）、\
          uninstall 系统 LaunchDaemons/`/Library` sudo 残留主路径（`PrivilegeBackend` unload + permanent）、\
@@ -162,15 +163,22 @@ mod tests {
 
     #[test]
     fn coverage_note_mentions_zed_system_node_npm_cache() {
-        let note = coverage_note(536);
+        let note = coverage_note(537);
         assert!(note.contains("Zed system-node npm cache"));
         assert!(note.contains("已落地"));
     }
 
     #[test]
     fn coverage_note_mentions_antigravity_browser_cache() {
-        let note = coverage_note(536);
+        let note = coverage_note(537);
         assert!(note.contains("Antigravity browser Cache"));
+        assert!(note.contains("已落地"));
+    }
+
+    #[test]
+    fn coverage_note_mentions_chrome_devtools_mcp_cache() {
+        let note = coverage_note(537);
+        assert!(note.contains("Chrome DevTools MCP Cache"));
         assert!(note.contains("已落地"));
     }
 

@@ -186,7 +186,7 @@ $ vole optimize --plan
 $ vole optimize --apply optimize-plan.json
 ```
 
-14 项主路径（含无 sudo 缓存/saved state/坏 prefs/quarantine/sqlite/Dock/LaunchServices 等，以及需 `sudo -n` 的 `system_maintenance` / `network_optimization` DNS 刷新）。TTY 下可至多一次 `sudo -v` 缓存凭证。其余 optimize 长尾与桌面 Helper 会诚实跳过，并写入 plan 的 `coverage_note`。
+18 项主路径（含无 sudo 缓存/saved state/坏 prefs/quarantine/sqlite/Dock/LaunchServices 等，以及需 `sudo -n` 的 DNS、`memory_pressure_relief`、`network_stack_optimize`、`disk_permissions_repair`、`periodic_maintenance`）。TTY 下可至多一次 `sudo -v` 缓存凭证。其余 optimize 长尾（spotlight* / disk_verify / login_items / shared_file_list）与桌面 Helper 会诚实跳过，并写入 plan 的 `coverage_note`。
 
 ### 磁盘分析
 
@@ -225,7 +225,7 @@ $ vole completions zsh > ~/.zfunc/_vole
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | **1.37.0**：Zed system-node npm cache + optimize memory_pressure_relief（高压 sudo -n purge）+ uninstall 系统 LaunchDaemons/`/Library` sudo 主路径 + Login Items + brew cask + Filo + optimize DNS/mDNS + 本地快照报告 + TM 失败备份 + system.sh 主链；余项：Mole 广谱 `/Library` 边缘 / optimize 长尾 / 桌面 Helper | 成熟、功能最全 |
+| 成熟度 | **1.38.0**：optimize W2b③（network/disk/periodic）+ Zed npm cache + memory_pressure_relief + uninstall 系统 LaunchDaemons/`/Library` sudo 主路径 + Login Items + brew cask + Filo + optimize DNS/mDNS + 本地快照报告 + TM 失败备份 + system.sh 主链；余项：Mole 广谱 `/Library` 边缘 / optimize spotlight* 等长尾 / 桌面 Helper | 成熟、功能最全 |
 | 核心命令 | `status` / `analyze` / `clean` / `history` / `uninstall` / `optimize` | 另有 `purge` / `installer` 等 |
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓；orphaned 启发式 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |

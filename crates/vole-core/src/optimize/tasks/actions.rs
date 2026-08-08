@@ -372,7 +372,10 @@ pub fn has_active_vpn() -> bool {
     {
         return true;
     }
-    let Ok(out) = Command::new("route").args(["-n", "get", "default"]).output() else {
+    let Ok(out) = Command::new("route")
+        .args(["-n", "get", "default"])
+        .output()
+    else {
         return false;
     };
     let text = String::from_utf8_lossy(&out.stdout);
@@ -420,11 +423,7 @@ pub fn needs_disk_permissions_repair(home: &Path) -> bool {
     if let Some(v) = env_flag_tri("VOLE_TEST_DISK_PERMISSIONS_NEED_REPAIR") {
         return v;
     }
-    if let Ok(out) = Command::new("stat")
-        .args(["-f", "%Su"])
-        .arg(home)
-        .output()
-    {
+    if let Ok(out) = Command::new("stat").args(["-f", "%Su"]).arg(home).output() {
         if out.status.success() {
             let owner = String::from_utf8_lossy(&out.stdout).trim().to_string();
             if let Ok(user) = std::env::var("USER") {
@@ -442,11 +441,7 @@ pub fn needs_disk_permissions_repair(home: &Path) -> bool {
         };
         if p.exists() {
             let probe = p.join(".vole-perm-probe");
-            match fs::OpenOptions::new()
-                .create(true)
-                .write(true)
-                .open(&probe)
-            {
+            match fs::OpenOptions::new().create(true).write(true).open(&probe) {
                 Ok(_) => {
                     let _ = fs::remove_file(&probe);
                 }
@@ -578,7 +573,9 @@ fn apply_memory_pressure_relief(
     }
 }
 
-fn map_privilege_result(r: Result<(), crate::privilege::PrivilegeError>) -> Result<(), OptimizeActionError> {
+fn map_privilege_result(
+    r: Result<(), crate::privilege::PrivilegeError>,
+) -> Result<(), OptimizeActionError> {
     use crate::privilege::PrivilegeError;
     match r {
         Ok(()) => Ok(()),

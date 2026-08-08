@@ -9,6 +9,7 @@ mod optimize;
 mod purge;
 mod signals;
 mod terminal;
+mod touchid;
 mod tui;
 mod uninstall;
 
@@ -222,6 +223,20 @@ enum Command {
         #[arg(long, conflicts_with = "apply")]
         plan_out: Option<PathBuf>,
     },
+    /// 配置 sudo 的 Touch ID（status / enable / disable；对齐 mole touchid）。
+    Touchid {
+        /// `status` | `enable` | `disable`；省略则进入交互切换。
+        action: Option<String>,
+        /// 只预览将执行的 PAM 变更，不写文件。
+        #[arg(long)]
+        plan: bool,
+        /// 同 `--plan`。
+        #[arg(long = "dry-run", short = 'n')]
+        dry_run: bool,
+        /// 输出 JSON。
+        #[arg(long)]
+        json: bool,
+    },
     /// 生成 shell 补全脚本（stdout）。
     #[command(visible_alias = "completion")]
     Completions {
@@ -371,6 +386,20 @@ fn main() {
                 plan_out,
                 apply_plan: apply,
                 permanent,
+            });
+            std::process::exit(code);
+        }
+        Some(Command::Touchid {
+            action,
+            plan,
+            dry_run,
+            json,
+        }) => {
+            let code = touchid::run_touchid(touchid::TouchidOptions {
+                action,
+                dry_run: dry_run || plan,
+                plan,
+                json,
             });
             std::process::exit(code);
         }

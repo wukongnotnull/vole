@@ -14,8 +14,8 @@
 
 - 规格权威：[`docs/wukong-code/specs/2026-08-08-1727-mole-parity-roadmap-design.md`](../specs/2026-08-08-1727-mole-parity-roadmap-design.md)
 - Mole 钉版：`third_party/mole-1.48.1`
-- 快照版本：**1.41.0**（已合入）；**收口轨不 bump 包版本**
-- **默认下一项实现：无**（规格 §1 / §4.1）
+- 快照版本：**1.42.0**（G1 已合入 PR #92 / `af69af8`）；收口轨核对时为 1.41.0
+- **默认下一项实现：无**（规格 §1 / §4.1；G2–G4 / D1 仍未批准）
 - 闸控轨开跑前：该轨必须已有（或本会话当场完成）**专用 design**，再按单轨单 PR
 - `disk_verify`：**默认拒绝升必做**（规格 §3.3 P5）
 - 本代际禁止实现：`purge` / `installer` / `touchid` / `hints` / Mole 式 `update`；禁止 `clean --apply` 删本地快照；禁止删 `/Library/Updates`、`/macOS Install Data`
@@ -29,7 +29,7 @@
 | `scripts/inventory-mole-rules.py` | Mole `safe_clean` vs `data/rules` 核对 |
 | `data/rules/*.toml` | 启用规则计数（期望 540） |
 | `crates/vole-core/src/ops/coverage.rs` | coverage 诚实面；「仍未移植」仅桌面特权助手 |
-| `crates/vole-core/src/optimize/catalog.rs` | 23 task；18 `in_m3: true`；5 长尾 `false` |
+| `crates/vole-core/src/optimize/catalog.rs` | 23 task；19 `in_m3: true`；4 长尾 `false`（G1 后） |
 | `crates/vole-core/src/optimize/tasks/actions.rs` | 闸控轨启用后的 plan/apply handler |
 | `crates/vole-core/src/ops/optimize_plan.rs` / `optimize_apply.rs` | 闸控轨接线 |
 | `docs/findings/2026-08-mole-parity-closeout.md` | 收口 findings |
@@ -255,9 +255,9 @@ EOF
 
 ### Task G1: `login_items_audit`（P1 · 闸控）
 
-> **状态（2026-08-08 复核）：进行中。** 人类已「批准执行轨 G1」。专用 design 在分支 `feat/optimize-login-items-audit`（commit `50d6000`，`docs/wukong-code/specs/2026-08-08-1754-optimize-login-items-audit-design.md`）。实现 WIP 在 worktree `.worktrees/feat-optimize-login-items-audit`（工作区已改 catalog/`actions` 等，**尚未 commit / 无 PR**）。**main** 上 `login_items_audit.in_m3` 仍为 `false`，未合入、未发 1.42.0。
+> **状态：已完成 · 1.42.0 / PR #92**（merge commit `af69af8`）。专用 design：[`2026-08-08-1754-optimize-login-items-audit-design.md`](../specs/2026-08-08-1754-optimize-login-items-audit-design.md)。`login_items_audit.in_m3 = true`；主路径 **19**。
 
-**Gate:** 未收到「批准执行轨 G1」→ 停。
+**Gate:** 已收到「批准执行轨 G1」并合入 main。
 
 **Files（批准后）：**
 - Modify: `crates/vole-core/src/optimize/catalog.rs`（`login_items_audit.in_m3: true`）
@@ -274,30 +274,17 @@ EOF
 
 若本会话无「批准执行轨 G1」：输出 `SKIP G1` 并结束本 Task。
 
-- [ ] **Step 1: 写/确认专用 design 已批准**
+- [x] **Step 1: 写/确认专用 design 已批准** — `docs/wukong-code/specs/2026-08-08-1754-optimize-login-items-audit-design.md`（`50d6000`，已随 PR #92 合入）
 
-路径示例：`docs/wukong-code/specs/YYYY-MM-DD-HHmm-optimize-login-items-audit-design.md`。无 design → 停，不写代码。  
-（分支上已有 `2026-08-08-1754-optimize-login-items-audit-design.md` @ `50d6000`；待合入/确认后勾选。）
+- [x] **Step 2: RED — catalog 期望含 login_items_audit 且 main.len 19**（TDD 已跑；合入后 `m3_main_path_flags` 期望 `main.len() == 19`）
 
-- [ ] **Step 2: RED — catalog 期望含 login_items_audit 且 main.len 19**
+- [x] **Step 3: GREEN — `login_items_audit.in_m3 = true`**（`c0e438a`）
 
-```rust
-assert!(main.contains(&"login_items_audit"));
-assert_eq!(main.len(), 19);
-```
+- [x] **Step 4: RED/GREEN — `plan_login_items_audit` / apply handler** — `login_items_audit.rs` + actions；只读 audit；禁非特权 `sfltool dumpbtm`；fail-closed（`22d379d` / `c0e438a`）
 
-Run: `cargo test -p vole-core catalog::tests::m3_main_path_flags -- --exact`  
-Expected: FAIL
+- [x] **Step 5: coverage / README / releases / 版本 bump** — **1.42.0**；`docs/releases/v1.42.0.md`
 
-- [ ] **Step 3: GREEN — `login_items_audit.in_m3 = true`**
-
-- [ ] **Step 4: RED/GREEN — `plan_login_items_audit` / apply handler**
-
-对齐 Mole：审计损坏登录项；AppleScript 路径；**禁止**默认调用会弹 GUI 的非特权 `sfltool dumpbtm`（Mole 注释已警示）。无凭证 / 探测失败 → skip + 响亮提示。单测用 hermetic fake。
-
-- [ ] **Step 5: coverage / README / releases / 版本 bump（design 写明的版本）**
-
-- [ ] **Step 6: Commit + PR（merge commit）**
+- [x] **Step 6: Commit + PR（merge commit）** — PR [#92](https://github.com/wukongnotnull/vole/pull/92) → `af69af8`
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -491,9 +478,9 @@ Task 1 → Task 2 → Task 3 → Task G5 Step1–2（保持 false）→ Task N1
 STOP
 ```
 
-> **进度（2026-08-08）：** 上列默认顺序已全部完成（findings + `9a780f0`）。其后仅闸控轨：G1 **进行中**（闸门已过；未合入 main）；G2–G4 / D1 仍未批准 · SKIP。
+> **进度（2026-08-08）：** 上列默认顺序已全部完成（findings + `9a780f0`）。闸控轨：**G1 已完成**（1.42.0 / PR #92 / `af69af8`）；G2–G4 / D1 仍未批准 · SKIP。
 
-之后仅在显式批准后按优先级：`G1 → G2 → G3 → G4`；`D1` 与 G* 可并行但分仓分 PR。  
+之后仅在显式批准后按优先级：`G2 → G3 → G4`；`D1` 与 G* 可并行但分仓分 PR。  
 **永不**默认进入：`purge` / `installer` / `touchid` / `hints` / `update` 实现任务（本计划不下发此类 Task）。
 
 ## Spec coverage

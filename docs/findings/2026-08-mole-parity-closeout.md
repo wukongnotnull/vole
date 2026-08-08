@@ -27,4 +27,4 @@
 
 近满配必做已关闭。默认下一项实现：无。闸控轨见计划 Part B/C；本代际永不做见 Part D。
 
-计划勾选已于同日同步：Part A / G5 保持 false / N1 完成；G1 进行中（未合入 main）。
+计划勾选已于同日同步：Part A / G5 保持 false / N1 完成。其后闸控轨 **G1 `login_items_audit` 已落地**（1.42.0 / PR #92 / `af69af8`；`in_m3: true`，主路径 19）；G2–G4 / D1 仍未批准。

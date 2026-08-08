@@ -438,7 +438,7 @@ Expected: `in_m3: false`
 - [x] **Step 1: 在 vole-macos 写专用 design 并批准** — `2026-08-08-1822-smappservice-privileged-helper-design.md`
 - [x] **Step 2: 按该 design 另写 `vole-macos` 实施 plan 并执行** — 骨架已落地（非可用通道）
 - [ ] **Step 3: vole coverage「仍未移植」句在 Helper 可用后删除或改写；发版说明双仓同步** — **阻塞：Helper 仍为骨架**
-- [ ] **Step 4: PR（各仓）用 merge commit** — vole-macos PR + 本仓计划状态 PR
+- [x] **Step 4: PR（各仓）用 merge commit** — vole-macos [#2](https://github.com/wukongnotnull/vole-macos/pull/2) (`2ab3081`)；本仓 [#94](https://github.com/wukongnotnull/vole/pull/94) (`d953756`)
 
 ---
 

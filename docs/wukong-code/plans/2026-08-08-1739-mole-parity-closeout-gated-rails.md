@@ -41,6 +41,8 @@
 
 ## Part A — 收口核对（默认执行）
 
+> **状态（2026-08-08）：已完成。** 依据 findings [`docs/findings/2026-08-mole-parity-closeout.md`](../../findings/2026-08-mole-parity-closeout.md) 与 commit `9a780f0`（`docs: record Mole near-parity closeout verification`）。另完成 Task G5「保持 false」核对与 Task N1 禁区核对（同日、同 findings）。
+
 ### Task 1: Inventory 与规格数字核对
 
 **Files:**
@@ -53,7 +55,7 @@
 - Consumes: 规格 §1 / §3.1 断言（规则 540；inventory 513/507；unported_all=0；match_reason none=6；optimize 18/5）
 - Produces: 核对通过记录（写入 Task 2 findings）
 
-- [ ] **Step 1: 跑 inventory 并落 JSON**
+- [x] **Step 1: 跑 inventory 并落 JSON**（2026-08-08 · findings）
 
 ```bash
 cd /Users/wukong/Documents/vole
@@ -68,7 +70,7 @@ Expected stdout 含：
 "unported_all": 0
 ```
 
-- [ ] **Step 2: 断言 6 条 none 全为 custom**
+- [x] **Step 2: 断言 6 条 none 全为 custom**（2026-08-08 · findings）
 
 ```bash
 python3 - <<'PY'
@@ -83,7 +85,7 @@ PY
 
 Expected: `ok` 打印 6 元组（含 `app_caches.sh` / `apps.sh` / `caches.sh` / `dev.sh` / `user.sh`）。
 
-- [ ] **Step 3: 断言启用规则数 = 540**
+- [x] **Step 3: 断言启用规则数 = 540**（2026-08-08 · findings）
 
 ```bash
 python3 - <<'PY'
@@ -105,7 +107,7 @@ PY
 
 Expected: `enabled 540`
 
-- [ ] **Step 4: 断言 optimize catalog 18/5**
+- [x] **Step 4: 断言 optimize catalog 18/5**（2026-08-08 · findings；main 仍 18/5）
 
 ```bash
 rg -n 'in_m3: true' crates/vole-core/src/optimize/catalog.rs | wc -l
@@ -120,7 +122,7 @@ rg -n 'in_m3: false' -B6 crates/vole-core/src/optimize/catalog.rs | rg 'id:'
 
 Expected 含：`spotlight_index_optimize`、`spotlight_orphan_rules_cleanup`、`shared_file_list_repair`、`disk_verify`、`login_items_audit`。
 
-- [ ] **Step 5: coverage「仍未移植」仅桌面特权助手**
+- [x] **Step 5: coverage「仍未移植」仅桌面特权助手**（2026-08-08 · findings）
 
 ```bash
 rg -n '仍未移植' crates/vole-core/src/ops/coverage.rs
@@ -128,9 +130,9 @@ rg -n '仍未移植' crates/vole-core/src/ops/coverage.rs
 
 Expected 唯一产品句类似：`仍未移植：桌面 SMAppService / 特权助手。`
 
-- [ ] **Step 6: Commit（若无文件变更则跳过 commit）**
+- [x] **Step 6: Commit（若无文件变更则跳过 commit）**
 
-本 Task 默认无源码改动。若本地为核对新建了不入库临时文件，勿 `git add /tmp/...`。
+本 Task 默认无源码改动。若本地为核对新建了不入库临时文件，勿 `git add /tmp/...`。核对无源码改动，跳过独立 commit；成果并入 Task 2 `9a780f0`。
 
 ---
 
@@ -144,7 +146,7 @@ Expected 唯一产品句类似：`仍未移植：桌面 SMAppService / 特权助
 - Consumes: Task 1 核对结果
 - Produces: findings 文档；规格 §5 回链
 
-- [ ] **Step 1: 写 findings**
+- [x] **Step 1: 写 findings**（2026-08-08 · `docs/findings/2026-08-mole-parity-closeout.md`）
 
 创建 `docs/findings/2026-08-mole-parity-closeout.md`：
 
@@ -174,7 +176,7 @@ Expected 唯一产品句类似：`仍未移植：桌面 SMAppService / 特权助
 
 把表格「实际」列换成 Task 1 真实输出数字。
 
-- [ ] **Step 2: 规格 §5 增回链**
+- [x] **Step 2: 规格 §5 增回链**（2026-08-08 · `9a780f0`）
 
 在 `2026-08-08-1727-mole-parity-roadmap-design.md` §5 表末追加：
 
@@ -182,7 +184,7 @@ Expected 唯一产品句类似：`仍未移植：桌面 SMAppService / 特权助
 | [`../plans/2026-08-08-1739-mole-parity-closeout-gated-rails.md`](../plans/2026-08-08-1739-mole-parity-closeout-gated-rails.md) | 本规格之收口核对 + 闸控任务轨计划 |
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit** — `9a780f0` `docs: record Mole near-parity closeout verification`
 
 ```bash
 git add docs/findings/2026-08-mole-parity-closeout.md \
@@ -205,7 +207,7 @@ EOF
 **Interfaces:**
 - Produces: findings 追加「禁区自检」小节（可 amend 进 Task 2 同 commit 若尚未 push；否则新 commit）
 
-- [ ] **Step 1: CLI 无本代际禁止子命令**
+- [x] **Step 1: CLI 无本代际禁止子命令**（2026-08-08 · findings「禁区自检」）
 
 ```bash
 rg -n 'Purge|Installer|TouchId|Touchid|Hints|enum Command' crates/vole-cli/src/main.rs | head -40
@@ -213,7 +215,7 @@ rg -n 'Purge|Installer|TouchId|Touchid|Hints|enum Command' crates/vole-cli/src/m
 
 Expected: `enum Command` 变体仅含 Clean / Uninstall / Optimize / Status / Analyze / History / Completions（及既有辅助），**无** Purge/Installer/TouchId/Hints。
 
-- [ ] **Step 2: 确认长尾仍 false**
+- [x] **Step 2: 确认长尾仍 false**（2026-08-08 · findings；main 仍 `main.len() == 18`）
 
 ```bash
 cargo test -p vole-core catalog::tests::m3_main_path_flags -- --exact
@@ -221,7 +223,9 @@ cargo test -p vole-core catalog::tests::m3_main_path_flags -- --exact
 
 Expected: PASS；且断言 `main.len() == 18`、不含五条长尾 id。
 
-- [ ] **Step 3: 在 findings 追加禁区自检通过句并 commit（若有改动）**
+- [x] **Step 3: 在 findings 追加禁区自检通过句并 commit（若有改动）**
+
+禁区自检已写入 findings「禁区自检」节，并入 `9a780f0`（未另开 commit）。
 
 ```bash
 git add docs/findings/2026-08-mole-parity-closeout.md
@@ -251,6 +255,8 @@ EOF
 
 ### Task G1: `login_items_audit`（P1 · 闸控）
 
+> **状态（2026-08-08 复核）：进行中。** 人类已「批准执行轨 G1」。专用 design 在分支 `feat/optimize-login-items-audit`（commit `50d6000`，`docs/wukong-code/specs/2026-08-08-1754-optimize-login-items-audit-design.md`）。实现 WIP 在 worktree `.worktrees/feat-optimize-login-items-audit`（工作区已改 catalog/`actions` 等，**尚未 commit / 无 PR**）。**main** 上 `login_items_audit.in_m3` 仍为 `false`，未合入、未发 1.42.0。
+
 **Gate:** 未收到「批准执行轨 G1」→ 停。
 
 **Files（批准后）：**
@@ -264,13 +270,14 @@ EOF
 - Consumes: 既有 uninstall login items 能力（避免重复破坏性删除语义冲突——design 须写清 audit vs uninstall）
 - Produces: `in_m3` 主路径含 `login_items_audit`；plan 可预览；apply fail-closed
 
-- [ ] **Step 0: 闸门**
+- [x] **Step 0: 闸门** — 已收到「批准执行轨 G1」（闸门已过）
 
 若本会话无「批准执行轨 G1」：输出 `SKIP G1` 并结束本 Task。
 
 - [ ] **Step 1: 写/确认专用 design 已批准**
 
-路径示例：`docs/wukong-code/specs/YYYY-MM-DD-HHmm-optimize-login-items-audit-design.md`。无 design → 停，不写代码。
+路径示例：`docs/wukong-code/specs/YYYY-MM-DD-HHmm-optimize-login-items-audit-design.md`。无 design → 停，不写代码。  
+（分支上已有 `2026-08-08-1754-optimize-login-items-audit-design.md` @ `50d6000`；待合入/确认后勾选。）
 
 - [ ] **Step 2: RED — catalog 期望含 login_items_audit 且 main.len 19**
 
@@ -304,6 +311,8 @@ EOF
 
 ### Task G2: `spotlight_orphan_rules_cleanup`（P2 · 闸控）
 
+> **状态：未批准 · SKIP**
+
 **Gate:** 未收到「批准执行轨 G2」→ 停。
 
 **Files（批准后）：**
@@ -334,6 +343,8 @@ EOF
 
 ### Task G3: `spotlight_index_optimize`（P3 · 闸控）
 
+> **状态：未批准 · SKIP**
+
 **Gate:** 未收到「批准执行轨 G3」→ 停。
 
 **Files（批准后）：**
@@ -362,6 +373,8 @@ EOF
 
 ### Task G4: `shared_file_list_repair`（P4 · 闸控）
 
+> **状态：未批准 · SKIP**
+
 **Gate:** 未收到「批准执行轨 G4」→ 停。
 
 **Files（批准后）：**
@@ -389,13 +402,15 @@ EOF
 
 ### Task G5: `disk_verify`（P5 · 默认拒绝升必做）
 
+> **状态（2026-08-08）：「保持 false」核对已完成**（findings / main `in_m3: false`）。实现轨仍默认永久 SKIP，无推翻批准。
+
 **Gate:** **默认永久 SKIP。** 仅当人类写出「推翻默认并批准执行轨 G5」才可进入实现；否则本 Task 只做「保持 false」核对。
 
 **Files:**
 - Read: `crates/vole-core/src/optimize/catalog.rs`
 - Mole: `opt_disk_verify`（`tasks.sh` 约 1189 行）
 
-- [ ] **Step 1: 确认仍为长尾**
+- [x] **Step 1: 确认仍为长尾**（2026-08-08 · findings；main 复核 `in_m3: false`）
 
 ```bash
 rg -n 'id: "disk_verify"' -A5 crates/vole-core/src/optimize/catalog.rs
@@ -403,7 +418,7 @@ rg -n 'id: "disk_verify"' -A5 crates/vole-core/src/optimize/catalog.rs
 
 Expected: `in_m3: false`
 
-- [ ] **Step 2: 无推翻批准 → 结束**
+- [x] **Step 2: 无推翻批准 → 结束**（2026-08-08）
 
 输出：`KEEP disk_verify out of main path (spec P5)`。**禁止**翻转 `in_m3`。
 
@@ -414,6 +429,8 @@ Expected: `in_m3: false`
 ## Part C — 闸控轨 D1（桌面特权助手）
 
 ### Task D1: SMAppService / PrivilegedHelper（延后 · 闸控）
+
+> **状态：未批准 · SKIP**
 
 **Gate:** 未收到「批准执行轨 D1」→ 停。规格 §4.2 亦要求**重新批准下一代际**。
 
@@ -440,10 +457,12 @@ Expected: `in_m3: false`
 
 ### Task N1: 禁区回归（只读核对）
 
+> **状态（2026-08-08）：已完成。** 依据 findings「禁区自检」与 commit `9a780f0`。
+
 **Files:**
 - Read: protection / install-macos / local snapshots 相关测试源
 
-- [ ] **Step 1: 无删除 Updates / Install Data 的 apply 路径**
+- [x] **Step 1: 无删除 Updates / Install Data 的 apply 路径**（2026-08-08 · findings）
 
 ```bash
 rg -n '/Library/Updates|Install Data' crates/vole-core/src --glob '*.rs' | head -40
@@ -451,7 +470,7 @@ rg -n '/Library/Updates|Install Data' crates/vole-core/src --glob '*.rs' | head 
 
 Expected: 仅 keep / 禁区 / 注释 / 测试断言，**无**删除这两个路径的 apply 实现。
 
-- [ ] **Step 2: 无 deletelocalsnapshots**
+- [x] **Step 2: 无 deletelocalsnapshots**（2026-08-08 · findings）
 
 ```bash
 rg -n 'deletelocalsnapshots' crates --glob '*.rs'
@@ -459,7 +478,7 @@ rg -n 'deletelocalsnapshots' crates --glob '*.rs'
 
 Expected: 无生产调用（测试里可断言「不得出现」）。
 
-- [ ] **Step 3: findings 记「禁区仍在」一句（可并入 Task 2 文档）**
+- [x] **Step 3: findings 记「禁区仍在」一句（可并入 Task 2 文档）**（2026-08-08 · findings「禁区自检」）
 
 无行为变更则可不单独 commit。
 
@@ -471,6 +490,8 @@ Expected: 无生产调用（测试里可断言「不得出现」）。
 Task 1 → Task 2 → Task 3 → Task G5 Step1–2（保持 false）→ Task N1
 STOP
 ```
+
+> **进度（2026-08-08）：** 上列默认顺序已全部完成（findings + `9a780f0`）。其后仅闸控轨：G1 **进行中**（闸门已过；未合入 main）；G2–G4 / D1 仍未批准 · SKIP。
 
 之后仅在显式批准后按优先级：`G1 → G2 → G3 → G4`；`D1` 与 G* 可并行但分仓分 PR。  
 **永不**默认进入：`purge` / `installer` / `touchid` / `hints` / `update` 实现任务（本计划不下发此类 Task）。

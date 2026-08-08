@@ -247,6 +247,7 @@ Catalog **23** 项；`in_m3: false` 仅剩 **5**（均已注册，plan 侧进 co
 | [`2026-07-30-1900-v2-product-goals-design.md`](2026-07-30-1900-v2-product-goals-design.md) | 代际外子命令与桌面边界权威 |
 | [`../../findings/2026-07-v2-m1-uninstall.md`](../../findings/2026-07-v2-m1-uninstall.md) | uninstall 长尾清单（已完成） |
 | [`../../findings/2026-07-v2-m2-optimize-spike.md`](../../findings/2026-07-v2-m2-optimize-spike.md) | optimize 主路径 vs 长尾划界 |
+| [`../plans/2026-08-08-1739-mole-parity-closeout-gated-rails.md`](../plans/2026-08-08-1739-mole-parity-closeout-gated-rails.md) | 本规格之收口核对 + 闸控任务轨计划 |
 
 ## 6. 验收（本文档）
 

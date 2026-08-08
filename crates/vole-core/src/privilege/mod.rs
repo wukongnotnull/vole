@@ -136,6 +136,8 @@ pub trait PrivilegeBackend: Send + Sync {
     fn launchctl_unload(&self, plist: &Path) -> Result<(), PrivilegeError>;
     /// `sudo -n dscacheutil -flushcache` + `sudo -n killall -HUP mDNSResponder`。
     fn flush_dns_cache(&self) -> Result<(), PrivilegeError>;
+    /// `sudo -n purge`（释放 inactive memory pages）。
+    fn purge_inactive_memory(&self) -> Result<(), PrivilegeError>;
 }
 
 const LIVE_PREFIXES: &[&str] = &[
@@ -1537,6 +1539,23 @@ mod tests {
         let b = RecordingPrivilege::allowing();
         b.flush_dns_cache().unwrap();
         assert_eq!(*b.flush_dns_calls.lock().unwrap(), 1);
+    }
+
+    #[test]
+    fn recording_purge_memory_requires_probe() {
+        let b = RecordingPrivilege::denying();
+        assert!(matches!(
+            b.purge_inactive_memory(),
+            Err(PrivilegeError::Unavailable)
+        ));
+        assert_eq!(*b.purge_memory_calls.lock().unwrap(), 0);
+    }
+
+    #[test]
+    fn recording_purge_memory_counts_when_allowing() {
+        let b = RecordingPrivilege::allowing();
+        b.purge_inactive_memory().unwrap();
+        assert_eq!(*b.purge_memory_calls.lock().unwrap(), 1);
     }
 
     #[test]

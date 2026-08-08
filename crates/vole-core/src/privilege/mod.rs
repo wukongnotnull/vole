@@ -204,12 +204,7 @@ fn is_uninstall_library_leaf_allowed(path_str: &str) -> bool {
         // 不得把 clean 系统日志根目录等误开提权删口
         if matches!(
             rest,
-            "DiagnosticReports"
-                | "Adobe"
-                | "CreativeCloud"
-                | "Apple"
-                | "Updates"
-                | "adobegc.log"
+            "DiagnosticReports" | "Adobe" | "CreativeCloud" | "Apple" | "Updates" | "adobegc.log"
         ) {
             return false;
         }

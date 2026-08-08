@@ -106,7 +106,6 @@ pub fn apply_uninstall_plan(
     Ok(report)
 }
 
-
 fn ensure_privilege_ready(
     ctx: &mut UninstallApplyContext<'_>,
     backend: &dyn PrivilegeBackend,
@@ -1346,5 +1345,4 @@ mod tests {
         assert!(fake.removed.lock().unwrap().is_empty());
         std::env::remove_var("VOLE_TEST_SYSTEM_LIBRARY");
     }
-
 }

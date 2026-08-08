@@ -7,7 +7,8 @@ use std::path::{Path, PathBuf};
 
 use crate::login_items::{percent_decode_token, percent_encode_token};
 use crate::protection::{
-    is_rejected_generic_name, is_reverse_dns_bundle_id, naming_variants, AppIdentity, SiblingPresence,
+    is_rejected_generic_name, is_reverse_dns_bundle_id, naming_variants, AppIdentity,
+    SiblingPresence,
 };
 
 pub const SYSTEM_LEFTOVER_PREFIX: &str = "uninstall:system-leftover:";
@@ -125,7 +126,11 @@ fn scan_launchd(root: &Path, identity: &AppIdentity, hits: &mut Vec<SystemLeftov
         };
         for entry in entries.flatten() {
             let path = entry.path();
-            let Some(name) = path.file_name().and_then(|n| n.to_str()).map(str::to_string) else {
+            let Some(name) = path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .map(str::to_string)
+            else {
                 continue;
             };
             if !name.ends_with(".plist") {
@@ -173,7 +178,11 @@ fn scan_pht(root: &Path, identity: &AppIdentity, hits: &mut Vec<SystemLeftoverHi
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        let Some(name) = path.file_name().and_then(|n| n.to_str()).map(str::to_string) else {
+        let Some(name) = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(str::to_string)
+        else {
             continue;
         };
         if is_apple_basename(&name) {
@@ -236,7 +245,11 @@ fn scan_receipts(identity: &AppIdentity, hits: &mut Vec<SystemLeftoverHit>) {
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        let Some(name) = path.file_name().and_then(|n| n.to_str()).map(str::to_string) else {
+        let Some(name) = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(str::to_string)
+        else {
             continue;
         };
         if is_apple_basename(&name) {
@@ -279,9 +292,15 @@ mod tests {
 
     #[test]
     fn bundle_id_boundary_rejects_prefix_collision() {
-        assert!(name_starts_with_bundle_id_boundary("com.foo.helper", "com.foo"));
+        assert!(name_starts_with_bundle_id_boundary(
+            "com.foo.helper",
+            "com.foo"
+        ));
         assert!(name_starts_with_bundle_id_boundary("com.foo", "com.foo"));
-        assert!(!name_starts_with_bundle_id_boundary("com.foobar.plist", "com.foo"));
+        assert!(!name_starts_with_bundle_id_boundary(
+            "com.foobar.plist",
+            "com.foo"
+        ));
         assert!(!name_starts_with_bundle_id_boundary("com.foo", "not-dns"));
     }
 
@@ -301,23 +320,19 @@ mod tests {
         let receipts = tmp.path().join("private/var/db/receipts");
         fs::create_dir_all(&receipts).unwrap();
 
-        fs::write(
-            lib.join("LaunchDaemons/com.example.app.plist"),
-            b"{}",
-        )
-        .unwrap();
+        fs::write(lib.join("LaunchDaemons/com.example.app.plist"), b"{}").unwrap();
         fs::write(
             lib.join("LaunchDaemons/com.example.app.helper.plist"),
             b"{}",
         )
         .unwrap();
+        fs::write(lib.join("LaunchDaemons/com.example.other.plist"), b"{}").unwrap();
+        fs::write(lib.join("LaunchDaemons/com.apple.evil.plist"), b"{}").unwrap();
         fs::write(
-            lib.join("LaunchDaemons/com.example.other.plist"),
-            b"{}",
+            lib.join("PrivilegedHelperTools/com.example.app.helper"),
+            b"x",
         )
         .unwrap();
-        fs::write(lib.join("LaunchDaemons/com.apple.evil.plist"), b"{}").unwrap();
-        fs::write(lib.join("PrivilegedHelperTools/com.example.app.helper"), b"x").unwrap();
         fs::write(lib.join("PrivilegedHelperTools/com.example.other"), b"x").unwrap();
         fs::create_dir_all(lib.join("Application Support/Example App")).unwrap();
         fs::write(receipts.join("com.example.app.bom"), b"x").unwrap();
@@ -327,8 +342,7 @@ mod tests {
         let id = identity("com.example.app", "Example App");
         let hits = find_system_leftovers(&id, &SiblingPresence::default());
         assert!(hits.iter().any(|h| {
-            h.kind == SystemLeftoverKind::Launchd
-                && h.path.ends_with("com.example.app.plist")
+            h.kind == SystemLeftoverKind::Launchd && h.path.ends_with("com.example.app.plist")
         }));
         assert!(hits.iter().any(|h| {
             h.kind == SystemLeftoverKind::Launchd
@@ -343,12 +357,10 @@ mod tests {
         assert!(hits.iter().any(|h| {
             h.kind == SystemLeftoverKind::Pht && h.path.ends_with("com.example.app.helper")
         }));
-        assert!(!hits
+        assert!(!hits.iter().any(|h| h.path.ends_with("com.example.other")));
+        assert!(hits
             .iter()
-            .any(|h| h.path.ends_with("com.example.other")));
-        assert!(hits.iter().any(|h| {
-            h.kind == SystemLeftoverKind::Library && h.path.ends_with("Example App")
-        }));
+            .any(|h| { h.kind == SystemLeftoverKind::Library && h.path.ends_with("Example App") }));
         assert!(hits.iter().any(|h| {
             h.kind == SystemLeftoverKind::Receipt && h.path.ends_with("com.example.app.bom")
         }));

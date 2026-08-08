@@ -12,6 +12,7 @@ mod plan;
 mod proto_plan;
 mod purge_apply;
 mod purge_plan;
+mod remove;
 mod touchid;
 mod uninstall_apply;
 mod uninstall_plan;

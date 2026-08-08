@@ -1,15 +1,15 @@
 # Mole 对齐路线图（近满配 backlog · CLI）
 
-- 日期：2026-08-08（修订：同日 W2c Batch 6+ Antigravity browser Cache / 1.39.0 合入后更新状态）
+- 日期：2026-08-08（修订：同日 W2c Batch 6+ Chrome DevTools MCP Cache / 1.40.0 合入后更新状态）
 - 状态：已批准（盘点文档）；**本文件仍不开实现**，不 bump 包版本
 - 依据：Mole `third_party/mole-1.48.1`；[`coverage_note`](../../../crates/vole-core/src/ops/coverage.rs)；[`2026-08-08-0025-mole-system-sh-backlog-design.md`](2026-08-08-0025-mole-system-sh-backlog-design.md)；[`2026-07-30-1900-v2-product-goals-design.md`](2026-07-30-1900-v2-product-goals-design.md)；uninstall / optimize findings
 - 范围：相对 Mole 家庭桶的 **近满配** 差距——system 余量、uninstall/optimize 长尾、子命令与桌面边界；**不含**具体实现 plan（开刀时另写 design + plans）
 
 ## 1. 结论
 
-产品 v2 CLI 主路径（`status` / `analyze` / `clean` / `history` / `uninstall` / `optimize`）已达；`clean` 的 `system.sh` 深扫主链已对齐。相对 Mole 剩余缺口按 **W0→W3** 收口：**W0（`tm-failed-backups` / 1.28.0）已合入 main（PR #67）**；**W1（本地快照报告 / 1.29.0）已合入 main（PR #70）**；**W2b①（`system_maintenance` + `network_optimization` / 1.31.0）已合入 main（PR #72）**；**W2c 首刀（`filo-production-cache` / 1.32.0）已合入 main（PR #71）**；**W2a①（uninstall brew cask / 1.33.0）已合入 main（PR #69）**；**W2a②（uninstall login items / 1.34.0）已合入 main（PR #77）**；**W2a③（uninstall 系统 LaunchDaemons / `/Library` sudo / 1.35.0）已合入 main（PR #79）**；**W2b②（`memory_pressure_relief` / 1.36.0）已合入 main（PR #81）**；**W2c 续刀（`zed-npm-system-cache` / 1.37.0）已合入 main（PR #82）**；**W2b③（network/disk/periodic / 1.38.0）已合入 main（PR #85）**；**W2c Batch 6+（`antigravity-browser-cache` / 1.39.0）已合入 main（PR #87）**；当前推荐继续 **W2 并行池**（**下一刀默认仍可续 W2c Batch 6+**：Chrome DevTools MCP / QQ Music iRRCache / Antigravity profile 兄弟路径等价值窄规则；若无可再续则 **optimize 后置长尾（spotlight* 等）保持 coverage** 或 W3 记档即可）；**W3 永不做或延后，只记档**。
+产品 v2 CLI 主路径（`status` / `analyze` / `clean` / `history` / `uninstall` / `optimize`）已达；`clean` 的 `system.sh` 深扫主链已对齐。相对 Mole 剩余缺口按 **W0→W3** 收口：**W0（`tm-failed-backups` / 1.28.0）已合入 main（PR #67）**；**W1（本地快照报告 / 1.29.0）已合入 main（PR #70）**；**W2b①（`system_maintenance` + `network_optimization` / 1.31.0）已合入 main（PR #72）**；**W2c 首刀（`filo-production-cache` / 1.32.0）已合入 main（PR #71）**；**W2a①（uninstall brew cask / 1.33.0）已合入 main（PR #69）**；**W2a②（uninstall login items / 1.34.0）已合入 main（PR #77）**；**W2a③（uninstall 系统 LaunchDaemons / `/Library` sudo / 1.35.0）已合入 main（PR #79）**；**W2b②（`memory_pressure_relief` / 1.36.0）已合入 main（PR #81）**；**W2c 续刀（`zed-npm-system-cache` / 1.37.0）已合入 main（PR #82）**；**W2b③（network/disk/periodic / 1.38.0）已合入 main（PR #85）**；**W2c Batch 6+（`antigravity-browser-cache` / 1.39.0）已合入 main（PR #87）**；**W2c Batch 6+（`chrome-devtools-mcp-cache` / 1.40.0）已合入 main（PR #89）**。路径级主空洞（新家族 `Default/Cache`）已收口；**暂停 Batch6 必做**；**optimize 后置长尾（spotlight* 等）保持 coverage**；**W3 不开发**（仅记档）。兄弟路径 / QQ Music `iRRCache` 等若日后要补齐，属可选非必做续刀，须另开 design。
 
-下一刀从 §3 优先级表取项后走 brainstorming / writing-plans（本文件本身不触发实现 PR）。
+本文件本身不触发实现 PR。
 
 ## 2. 波次顺序与并行矩阵
 
@@ -35,7 +35,7 @@ flowchart LR
 |---|---|---|
 | **W0** | **已完成**（1.28.0 / PR #67） | 可删（TM 失败备份） |
 | **W1** | **已完成**（1.29.0 / PR #70） | 仅报告 |
-| **W2a/b/c** | W0/W1 已解除阻塞；三轨彼此可并行；**轨内串行发版**；**W2b①②③ / W2c 首刀+续刀+Batch6 Antigravity / W2a①②③ 已完成**；**当前推荐**若仍有价值窄规则则续 W2c，否则 coverage / W3 记档 | 可删 / 需特权 action |
+| **W2a/b/c** | W0/W1 已解除阻塞；三轨彼此可并行；**轨内串行发版**；**W2a①②③ / W2b①②③ / W2c 首刀+续刀+Batch6 Antigravity+Chrome DevTools MCP 已完成**；**Batch6 必做已暂停**；optimize 后置长尾 / W3 仅 coverage 记档 | 可删 / 需特权 action |
 | **W3** | 不开发 | 永不做 / 延后 |
 
 并行波次现状（与 main 对齐）：
@@ -53,9 +53,10 @@ flowchart LR
 | W2c 续刀 `zed-npm-system-cache` | 1.37.0 / #82 | ✅ |
 | W2b③ network/disk/periodic | 1.38.0 / #85 | ✅ |
 | W2c Batch 6+ `antigravity-browser-cache` | 1.39.0 / #87 | ✅ |
-| W2c Batch 6+ 再续挑 | — | 可继续（有价值窄规则时 **默认续刀**；候选：Chrome DevTools MCP / QQ Music iRRCache / Antigravity profile 兄弟） |
-| W2b spotlight* 等后置 | — | 保持长尾（无可续 W2c 时 **维持 coverage**，不默认开刀） |
-| W3 | — | 永不做 / 延后 |
+| W2c Batch 6+ `chrome-devtools-mcp-cache` | 1.40.0 / #89 | ✅ |
+| W2c Batch 6+ 再续挑 | — | **暂停必做**（余量仅为兄弟路径 / QQ Music `iRRCache` 等可选长尾，不默认开刀） |
+| W2b spotlight* 等后置 | — | **保持 coverage**（不默认开刀） |
+| W3 | — | **不开发** / 延后记档 |
 
 ### 2.1 W0 — Time Machine 失败备份（已完成）
 
@@ -100,7 +101,7 @@ flowchart LR
 
 - **触点**：`optimize/catalog.rs`、tasks、optimize_plan/apply
 - **并行**：与 W2a / W2c 并行；**轨内串行**；catalog `in_m3` 翻转单刀单 PR。
-- **现状**：①②③ 已合入；spotlight* / disk_verify / login_items / shared_file_list 保持长尾。
+- **现状**：①②③ 已合入；spotlight* / disk_verify / login_items / shared_file_list **保持长尾 coverage**。
 - **设计 / 计划（③）**：[`2026-08-08-1200-optimize-w2b3-trio-design.md`](2026-08-08-1200-optimize-w2b3-trio-design.md)；[`../plans/2026-08-08-1201-optimize-w2b3-trio.md`](../plans/2026-08-08-1201-optimize-w2b3-trio.md)
 
 #### W2c — clean 规则 Batch 6+
@@ -110,12 +111,13 @@ flowchart LR
 | **首刀已完成** | `filo-production-cache`（规则 534；**1.32.0** / PR #71） | 可删 |
 | **续刀已完成** | `zed-npm-system-cache`（规则 535；**1.37.0** / PR #82） | 可删 |
 | **Batch 6+ 已完成** | `antigravity-browser-cache`（规则 536；**1.39.0** / PR #87） | 可删 |
-| 按价值再续挑窄规则 | `dev.sh` / `app_caches` 其余纯 `all`（仍有候选则可续；否则转 coverage / W3） | 可删 |
+| **Batch 6+ 已完成** | `chrome-devtools-mcp-cache`（规则 537；**1.40.0** / PR #89） | 可删 |
+| **暂停必做** | 余下兄弟路径 / QQ Music `iRRCache` 等 | 可选长尾；不默认开刀 |
 | **不进本波必做** | `user.sh` 广域、盲扩 `custom` | 保持「继续用 Mole」 |
 
 - **触点**：`data/rules/`、handlers、coverage 规则计数
-- **并行**：与 W2a / W2b 并行；**Batch 6+ 仍可继续挑窄 `all` 规则**（单刀单 PR），直至价值候选耗尽。
-- **设计 / 计划**：[`2026-08-08-1230-antigravity-browser-cache-design.md`](2026-08-08-1230-antigravity-browser-cache-design.md)；[`../plans/2026-08-08-1231-antigravity-browser-cache.md`](../plans/2026-08-08-1231-antigravity-browser-cache.md)；前序 [`2026-08-08-1121-zed-npm-system-cache-design.md`](2026-08-08-1121-zed-npm-system-cache-design.md)
+- **并行**：与 W2a / W2b 并行；**Batch 6 必做已暂停**；若日后补齐可选窄规则，单刀单 PR + 另开 design。
+- **设计 / 计划**：[`2026-08-08-1310-chrome-devtools-mcp-cache-design.md`](2026-08-08-1310-chrome-devtools-mcp-cache-design.md)；[`../plans/2026-08-08-1311-chrome-devtools-mcp-cache.md`](../plans/2026-08-08-1311-chrome-devtools-mcp-cache.md)；前序 [`2026-08-08-1230-antigravity-browser-cache-design.md`](2026-08-08-1230-antigravity-browser-cache-design.md)
 
 ### 2.4 W3 — 永不做 / 明确延后（只记档）
 
@@ -143,16 +145,14 @@ flowchart LR
 9. ~~**并行池 · W2c 续刀**~~ **已完成**：`zed-npm-system-cache`（1.37.0 / PR #82）
 10. ~~**并行池 · W2b③**~~ **已完成**：`network_stack_optimize` / `disk_permissions_repair` / `periodic_maintenance`（1.38.0 / PR #85）
 11. ~~**并行池 · W2c Batch 6+**~~ **已完成**：`antigravity-browser-cache`（1.39.0 / PR #87）
-12. **并行池续刀**（**推荐下一刀写死**）：
-   - **若 Batch 6 仍有价值窄规则 → 续 W2c**（默认推荐；候选：Chrome DevTools MCP `Default/Cache`、QQ Music `iRRCache`、Antigravity profile Code/GPU/Dawn/crx 兄弟）
-   - **否则** → optimize 后置长尾（spotlight* 等）**保持 coverage**，或 **W3 记档**即可（不默认开刀）
-13. **W3** 仅维持 coverage / README 诚实句，不排开发
+12. ~~**并行池 · W2c Batch 6+**~~ **已完成**：`chrome-devtools-mcp-cache`（1.40.0 / PR #89）
+13. **默认下一刀写死**：**暂停 Batch6 必做**；**optimize 后置长尾保持 coverage**；**W3 不开发**。若刻意补齐可选窄规则（Antigravity/MCP 兄弟路径、QQ Music `iRRCache` 等），须另开 design，**不**视为本路线图必做。
 
 ## 4. 与既有文档关系
 
 | 文档 | 关系 |
 |---|---|
-| [`2026-08-08-0025-mole-system-sh-backlog-design.md`](2026-08-08-0025-mole-system-sh-backlog-design.md) | **system 对照表仍权威**；本文件为其 **超集**；W0/W1/W2a①②③/W2b①②③/W2c 首刀+续刀+Batch6 Antigravity 状态以本文件为准 |
+| [`2026-08-08-0025-mole-system-sh-backlog-design.md`](2026-08-08-0025-mole-system-sh-backlog-design.md) | **system 对照表仍权威**；本文件为其 **超集**；W0/W1/W2a①②③/W2b①②③/W2c 首刀+续刀+Batch6 Antigravity+Chrome DevTools MCP 状态以本文件为准 |
 | [`../plans/2026-08-08-0057-tm-failed-backups.md`](../plans/2026-08-08-0057-tm-failed-backups.md) | W0 实施计划（已落地） |
 | [`2026-08-08-0156-optimize-system-network-design.md`](2026-08-08-0156-optimize-system-network-design.md) | W2b① 设计（已落地，1.31.0） |
 | [`2026-08-08-1121-optimize-memory-pressure-design.md`](2026-08-08-1121-optimize-memory-pressure-design.md) | W2b② 设计（已落地，1.36.0） |
@@ -161,6 +161,7 @@ flowchart LR
 | [`2026-08-08-1031-uninstall-system-launchdaemons-design.md`](2026-08-08-1031-uninstall-system-launchdaemons-design.md) | W2a③ 设计（已落地，1.35.0） |
 | [`2026-08-08-1121-zed-npm-system-cache-design.md`](2026-08-08-1121-zed-npm-system-cache-design.md) | W2c 续刀设计（已落地，1.37.0） |
 | [`2026-08-08-1230-antigravity-browser-cache-design.md`](2026-08-08-1230-antigravity-browser-cache-design.md) | W2c Batch 6+ 设计（已落地，1.39.0） |
+| [`2026-08-08-1310-chrome-devtools-mcp-cache-design.md`](2026-08-08-1310-chrome-devtools-mcp-cache-design.md) | W2c Batch 6+ 设计（已落地，1.40.0） |
 | [`../../findings/2026-07-v2-m1-uninstall.md`](../../findings/2026-07-v2-m1-uninstall.md) | W2a 长尾清单 |
 | [`../../findings/2026-07-v2-m2-optimize-spike.md`](../../findings/2026-07-v2-m2-optimize-spike.md) | W2b 长尾清单 |
 | [`2026-07-30-1900-v2-product-goals-design.md`](2026-07-30-1900-v2-product-goals-design.md) | W3「代际外」边界权威 |
@@ -171,6 +172,6 @@ flowchart LR
 - [x] 每项标明：可删 / 仅报告 / 永不做 / 延后
 - [x] 指向 system backlog、TM plan、M1/M2 findings、product goals
 - [x] 声明本文件不触发实现、不 bump 版本
-- [x] W0/W1/W2a①②③/W2b①②③/W2c 首刀+续刀+Batch6 Antigravity 状态与 main（含 1.39.0 / PR #87）一致
+- [x] W0/W1/W2a①②③/W2b①②③/W2c 首刀+续刀+Batch6 Antigravity+Chrome DevTools MCP 状态与 main（含 1.40.0 / PR #89）一致；**暂停 Batch6 必做** 写死
 
-下一步：从 §3 第 12 项选刀——**默认续 W2c**（有价值窄规则时）；否则 **optimize 后置长尾保持 coverage / W3 记档** → 单独 design + implementation plan（仅当续 W2c 时）。
+下一步：**无默认实现刀**。暂停 Batch6 必做；optimize 后置长尾保持 coverage；W3 不开发。

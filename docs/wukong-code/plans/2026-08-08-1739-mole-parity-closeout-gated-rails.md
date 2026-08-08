@@ -15,7 +15,7 @@
 - 规格权威：[`docs/wukong-code/specs/2026-08-08-1727-mole-parity-roadmap-design.md`](../specs/2026-08-08-1727-mole-parity-roadmap-design.md)
 - Mole 钉版：`third_party/mole-1.48.1`
 - 快照版本：**1.42.0**（G1 已合入 PR #92 / `af69af8`）；收口轨核对时为 1.41.0
-- **默认下一项实现：无**（规格 §1 / §4.1；G2–G4 / D1 仍未批准）
+- **默认下一项实现：无**（规格 §1 / §4.1；G2–G4 仍未批准；D1 骨架部分完成、可用通道仍阻塞）
 - 闸控轨开跑前：该轨必须已有（或本会话当场完成）**专用 design**，再按单轨单 PR
 - `disk_verify`：**默认拒绝升必做**（规格 §3.3 P5）
 - 本代际禁止实现：`purge` / `installer` / `touchid` / `hints` / Mole 式 `update`；禁止 `clean --apply` 删本地快照；禁止删 `/Library/Updates`、`/macOS Install Data`
@@ -417,9 +417,13 @@ Expected: `in_m3: false`
 
 ### Task D1: SMAppService / PrivilegedHelper（延后 · 闸控）
 
-> **状态：未批准 · SKIP**
+> **状态：部分完成 · 骨架（2026-08-08）**  
+> 闸门已过（「批准执行轨 D1」）。vole-macos 已交付 design + 可编译 Helper 骨架 / SMAppService 注册点 / XPC `ping`；**尚未**形成可用提权删除通道。  
+> **阻塞项（可用通道）：** 真机批准流验收（uid==0）；XPC 白名单 `removeAuthorizedPaths` / `bootoutLaunchdLabel`；Clean/Uninstall UI 接线；Hardened Runtime / 公证；此后才改本仓 coverage「仍未移植」。  
+> 专用 design：[`vole-macos` `2026-08-08-1822-smappservice-privileged-helper-design.md`](https://github.com/wukongnotnull/vole-macos/blob/main/docs/wukong-code/specs/2026-08-08-1822-smappservice-privileged-helper-design.md)（以 PR 合入路径为准）  
+> 实施 plan：[`vole-macos` `2026-08-08-1823-smappservice-privileged-helper.md`](https://github.com/wukongnotnull/vole-macos/blob/main/docs/wukong-code/plans/2026-08-08-1823-smappservice-privileged-helper.md)
 
-**Gate:** 未收到「批准执行轨 D1」→ 停。规格 §4.2 亦要求**重新批准下一代际**。
+**Gate:** 已收到「批准执行轨 D1」。规格 §4.2 下一代际队列项；本轨骨架不改 CLI `sudo -v`。
 
 **Files（批准后 · 主要在另仓）：**
 - `vole-macos/` Xcode 工程、Helper target、SMAppService 注册
@@ -430,13 +434,11 @@ Expected: `in_m3: false`
 - Consumes: 现有 Clean MVP sidecar；覆盖笔记「仍未移植：桌面 SMAppService / 特权助手」
 - Produces: 用户批准一次后的持久提权删除/unload 通道（具体 API 以 D1 design 为准）
 
-- [ ] **Step 0: 闸门** — 无「批准执行轨 D1」则 `SKIP D1`
-- [ ] **Step 1: 在 vole-macos 写专用 design 并批准**（本 plan 不内嵌 Helper 实现代码）
-- [ ] **Step 2: 按该 design 另写 `vole-macos` 实施 plan 并执行**
-- [ ] **Step 3: vole coverage「仍未移植」句在 Helper 可用后删除或改写；发版说明双仓同步**
-- [ ] **Step 4: PR（各仓）用 merge commit
-
-未批准时零文件变更。
+- [x] **Step 0: 闸门** — 已收到「批准执行轨 D1」
+- [x] **Step 1: 在 vole-macos 写专用 design 并批准** — `2026-08-08-1822-smappservice-privileged-helper-design.md`
+- [x] **Step 2: 按该 design 另写 `vole-macos` 实施 plan 并执行** — 骨架已落地（非可用通道）
+- [ ] **Step 3: vole coverage「仍未移植」句在 Helper 可用后删除或改写；发版说明双仓同步** — **阻塞：Helper 仍为骨架**
+- [ ] **Step 4: PR（各仓）用 merge commit** — vole-macos PR + 本仓计划状态 PR
 
 ---
 
@@ -478,7 +480,7 @@ Task 1 → Task 2 → Task 3 → Task G5 Step1–2（保持 false）→ Task N1
 STOP
 ```
 
-> **进度（2026-08-08）：** 上列默认顺序已全部完成（findings + `9a780f0`）。闸控轨：**G1 已完成**（1.42.0 / PR #92 / `af69af8`）；G2–G4 / D1 仍未批准 · SKIP。
+> **进度（2026-08-08）：** 上列默认顺序已全部完成（findings + `9a780f0`）。闸控轨：**G1 已完成**（1.42.0 / PR #92 / `af69af8`）；**D1 部分完成**（vole-macos Helper 骨架；coverage 仍保留「仍未移植」）；G2–G4 仍未批准 · SKIP。
 
 之后仅在显式批准后按优先级：`G2 → G3 → G4`；`D1` 与 G* 可并行但分仓分 PR。  
 **永不**默认进入：`purge` / `installer` / `touchid` / `hints` / `update` 实现任务（本计划不下发此类 Task）。

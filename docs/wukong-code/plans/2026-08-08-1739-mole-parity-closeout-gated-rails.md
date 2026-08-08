@@ -480,7 +480,7 @@ Task 1 → Task 2 → Task 3 → Task G5 Step1–2（保持 false）→ Task N1
 STOP
 ```
 
-> **进度（2026-08-08）：** 上列默认顺序已全部完成（findings + `9a780f0`）。闸控轨：**G1–G4 已完成**（1.42.0–1.45.0 / PR #92 #93 #95 #97）；**G5** 保持 `disk_verify` false；**D1 部分完成**（vole-macos Helper 骨架；coverage 仍保留「仍未移植」）。
+> **进度（2026-08-08）：** 上列默认顺序已全部完成（findings + `9a780f0`）。闸控轨：**G1–G4 已完成**（1.42.0–1.45.0 / PR #92 #93 #95 #97）；**G5** 保持 `disk_verify` false；**D1 可用通道代码**见 vole-macos [#3](https://github.com/wukongnotnull/vole-macos/pull/3)（待真机 uid==0；coverage 仍保留「仍未移植」）。
 
 之后仅在显式批准后：`D1`（分仓）或推翻默认的 `G5`。  
 **永不**默认进入：`purge` / `installer` / `touchid` / `hints` / `update` 实现任务（本计划不下发此类 Task）。

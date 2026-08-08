@@ -1,6 +1,7 @@
 //! 编排骨架：进度事件经 channel 发出，供 CLI/TUI/sidecar 消费。
 
 mod apply_plan;
+mod clean_hints;
 mod coverage;
 mod optimize_apply;
 mod optimize_plan;
@@ -23,6 +24,10 @@ use crate::rules::{PgrepProcessProbe, ProcessProbe, StrategyBuildError};
 pub use apply_plan::{
     apply_plan, apply_proto_plan, ApplyPlanContext, ApplyPlanError, ApplyPlanOptions,
 };
+pub use clean_hints::{
+    collect_clean_hints, quick_hint_target_names, CleanHints, CleanHintsOptions, DuPathSize,
+    HintItem, HintKind, PathSizeKb, DEFAULT_HINT_SCAN_BUDGET_SECS,
+};
 pub use coverage::{
     coverage_note, coverage_with_apply_permission_hint, coverage_with_orphan_notices,
     enabled_rule_count, report_has_permission_skips, APPLY_PERMISSION_WARN,
@@ -41,8 +46,9 @@ pub use purge_apply::{
     apply_purge_plan, apply_purge_proto_plan, PurgeApplyContext, PurgeApplyError, PurgeApplyOptions,
 };
 pub use purge_plan::{
-    build_purge_plan, is_protected_purge_artifact, PurgePlanError, PurgePlanOptions,
-    DEFAULT_PURGE_MIN_AGE_DAYS, PURGE_TARGETS,
+    build_purge_plan, is_project_root_for_hints, is_protected_purge_artifact,
+    quick_hint_search_roots, PurgePlanError, PurgePlanOptions, DEFAULT_PURGE_MIN_AGE_DAYS,
+    PURGE_TARGETS, QUICK_HINT_EXCLUDED_TARGETS,
 };
 pub use uninstall_apply::{
     apply_uninstall_plan, apply_uninstall_proto_plan, UninstallApplyContext, UninstallApplyError,

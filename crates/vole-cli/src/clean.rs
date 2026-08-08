@@ -8,17 +8,17 @@ use crossbeam_channel::unbounded;
 use vole_core::cancel::CancelToken;
 use vole_core::mutex::{try_lock_clean, MutexError};
 use vole_core::ops::{
-    apply_proto_plan, coverage_note, coverage_with_apply_permission_hint,
+    apply_proto_plan, collect_clean_hints, coverage_note, coverage_with_apply_permission_hint,
     coverage_with_orphan_notices, enabled_rule_count, plan_to_proto, report_has_permission_skips,
-    ApplyPlanError, ApplyPlanOptions, OpsError, Orchestrator, Plan, PlanNotice, ProtoPlanError,
-    APPLY_PERMISSION_WARN, GROUP_CONTAINERS_TRUNCATED_WARN, GROUP_CONTAINERS_WARN,
-    HANDOFF_PASTEBOARD_TRUNCATED_WARN, HANDOFF_PASTEBOARD_WARN, ORPHAN_LIBRARY_WARN,
-    SYSTEM_SERVICES_WARN,
+    ApplyPlanError, ApplyPlanOptions, CleanHints, CleanHintsOptions, HintItem, OpsError,
+    Orchestrator, Plan, PlanNotice, ProtoPlanError, APPLY_PERMISSION_WARN,
+    GROUP_CONTAINERS_TRUNCATED_WARN, GROUP_CONTAINERS_WARN, HANDOFF_PASTEBOARD_TRUNCATED_WARN,
+    HANDOFF_PASTEBOARD_WARN, ORPHAN_LIBRARY_WARN, SYSTEM_SERVICES_WARN,
 };
 use vole_core::protection::AppProtection;
 use vole_core::rules::{default_rules_dir, load_rules_from_dir, LoadError, PgrepProcessProbe};
 use vole_core::units;
-use vole_core::vole_proto::{Plan as ProtoPlan, Report, StreamEvent, SCHEMA_VERSION};
+use vole_core::vole_proto::{HintNotice, Plan as ProtoPlan, Report, StreamEvent, SCHEMA_VERSION};
 use vole_core::whitelist;
 
 use crate::signals;
@@ -131,8 +131,44 @@ fn run_plan(opts: CleanOptions) -> io::Result<()> {
 
     let mut proto = plan_to_proto(&plan).map_err(map_proto_error)?;
     proto.coverage_note = Some(note.clone());
-    write_plan_output(&opts, &plan, &proto, &base_note)?;
+    let hints = collect_plan_hints();
+    write_plan_output(&opts, &plan, &proto, &base_note, &hints)?;
     Ok(())
+}
+
+fn collect_plan_hints() -> CleanHints {
+    let home = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .filter(|p| !p.as_os_str().is_empty());
+    let Some(home) = home else {
+        return CleanHints::default();
+    };
+    collect_clean_hints(&CleanHintsOptions::production(&home))
+}
+
+fn hint_items_to_notices(items: &[HintItem]) -> Vec<HintNotice> {
+    items
+        .iter()
+        .map(|h| HintNotice {
+            kind: h.kind.as_str().into(),
+            summary: h.summary.clone(),
+            detail: h.detail.clone(),
+        })
+        .collect()
+}
+
+fn plan_json_with_hints(
+    proto: &ProtoPlan,
+    notices: &[HintNotice],
+) -> io::Result<serde_json::Value> {
+    let mut value = serde_json::to_value(proto).map_err(io::Error::other)?;
+    if !notices.is_empty() {
+        let hints = serde_json::to_value(notices).map_err(io::Error::other)?;
+        if let Some(obj) = value.as_object_mut() {
+            obj.insert("hints".into(), hints);
+        }
+    }
+    Ok(value)
 }
 
 fn run_apply(opts: &CleanOptions, plan_path: &PathBuf) -> io::Result<()> {
@@ -216,9 +252,13 @@ fn write_plan_output(
     plan: &Plan,
     proto: &ProtoPlan,
     base_coverage: &str,
+    hints: &CleanHints,
 ) -> io::Result<()> {
+    let notices = hint_items_to_notices(&hints.items);
+    let payload = plan_json_with_hints(proto, &notices)?;
+
     if let Some(path) = &opts.plan_out {
-        let json = serde_json::to_string_pretty(proto).map_err(io::Error::other)?;
+        let json = serde_json::to_string_pretty(&payload).map_err(io::Error::other)?;
         std::fs::write(path, format!("{json}\n"))?;
     }
 
@@ -227,13 +267,27 @@ fn write_plan_output(
     }
 
     if should_use_json(opts.json) {
-        let json = serde_json::to_string(proto).map_err(io::Error::other)?;
+        let json = serde_json::to_string(&payload).map_err(io::Error::other)?;
         println!("{json}");
         return Ok(());
     }
 
     print_human_plan(plan, base_coverage);
+    print_human_hints(hints);
     Ok(())
+}
+
+fn print_human_hints(hints: &CleanHints) {
+    if hints.items.is_empty() {
+        return;
+    }
+    eprintln!();
+    for item in &hints.items {
+        eprintln!("  ! {}", item.summary);
+        if let Some(detail) = &item.detail {
+            eprintln!("    {detail}");
+        }
+    }
 }
 
 fn write_apply_output(opts: &CleanOptions, mut report: Report) -> io::Result<()> {

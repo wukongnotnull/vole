@@ -42,6 +42,15 @@ pub struct PlanEntry {
     pub mtime: SystemTime,
 }
 
+/// clean plan 只读提示（hints 模块；可选追加，不 bump schema_version）。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct HintNotice {
+    pub kind: String,
+    pub summary: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Plan {
     pub schema_version: u32,

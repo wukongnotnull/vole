@@ -55,7 +55,21 @@
 
 ### 3.2 `hints`（→ M6，非顶层命令）
 
-（Task 3 填写）
+**硬核定：** Mole `mole` 路由表**无** `hints`；由 `bin/clean.sh` `source lib/clean/hints.sh` 并在 clean 流程调用 `show_*_hint_notice`。**禁止**实现顶层 `vole hints`。
+
+**对照 bats：** `tests/clean_hints.bats`。
+
+| 家族 | 关键函数 | 备注 |
+|---|---|---|
+| 项目产物提示 | `probe_project_artifact_hints` / `show_project_artifact_hint_notice` | wall-clock `MOLE_TIMEOUT_HINT_SCAN_SEC`（默认 ~15s）；慢扫跳过 |
+| 系统数据提示 | `show_system_data_hint_notice` | 大路径线索，只读 |
+| LaunchAgent 提示 | `show_user_launch_agent_hint_notice` | 缺失 app 目标等；信任已有可执行 Program |
+| 孤儿点目录 | `show_orphan_dotdir_hint_notice` | GUI app / claude plugin 归属探测 |
+| quick purge 探针 | `load_quick_purge_hint_paths` / `is_quick_purge_project_root` / `record_project_artifact_hint` | 与 purge targets 复用精神 |
+
+**主路径：** 只读；超时与浅扫预算；慢路径降级跳过，不阻塞 clean；可含 purge 快捷探针子集。  
+**长尾：** 全量 Mole 文案/交互细节；任何第二套删除路径（禁止）。  
+**安全面：** hints 不得调用删除漏斗；超时失败偏向「跳过提示」而非阻塞。
 
 ### 3.3 `installer`（→ M7）
 

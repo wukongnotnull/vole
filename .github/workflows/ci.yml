@@ -33,6 +33,9 @@ jobs:
       - name: Protocol doc
         run: ./scripts/check-protocol-doc.sh
 
+      - name: Command surface (v2 CLI ⊇ Mole routes)
+        run: ./scripts/check-command-surface.sh --enforce
+
       - name: Format
         run: cargo fmt --all -- --check
 

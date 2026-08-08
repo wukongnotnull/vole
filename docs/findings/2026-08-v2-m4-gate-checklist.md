@@ -2,7 +2,7 @@
 
 **规格**：[`2026-08-08-2030-v2-cli-complete-design.md`](../wukong-code/specs/2026-08-08-2030-v2-cli-complete-design.md) §3.2  
 **Stub**：[`scripts/check-command-surface.sh`](../../scripts/check-command-surface.sh)  
-**完整 CI 强制**：留给**收口**里程碑；M4 仅 stub + 本清单。
+**完整 CI 强制**：已在收口落地（`.github/workflows/ci.yml` → `--enforce`）；见 [`2026-08-v2-cli-complete-closeout.md`](2026-08-v2-cli-complete-closeout.md)。
 
 ## 必覆盖集合（Mole 路由 − 豁免）
 
@@ -21,11 +21,11 @@ purge installer touchid update remove
 3. 断言必覆盖集合 ⊆ Vole 命令面（差集为空）。
 4. 断言**无**顶层 `Hints` / `vole hints`。
 5. 断言裸调用路径无 `check_for_updates` 等价联网：静态检查 `crates/vole-cli/src/interactive.rs` 无 GitHub/brew/版本探测调用。
-6. 收口：将 stub 的 `--enforce` 接入 CI，gaps≠0 即红。
+6. ~~收口：将 stub 的 `--enforce` 接入 CI，gaps≠0 即红。~~ ✅
 
-## M4 验收
+## M4 验收（历史）
 
 ```bash
-./scripts/check-command-surface.sh          # report-only，exit 0，打印 MISSING
-./scripts/check-command-surface.sh --enforce  # 当前应非 0（M5 前）
+./scripts/check-command-surface.sh          # report-only
+./scripts/check-command-surface.sh --enforce  # 收口后期望 exit 0、无 MISSING
 ```

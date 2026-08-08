@@ -35,7 +35,9 @@
 - **冻结 NDJSON 协议**：CLI、脚本与未来桌面 app 共用同一编排层
 - **规则数据化**：**540** 条高价值清理规则以 TOML 声明，可 diff、可禁用、可 fixture 回归（含用户域 orphaned app data）
 
-适合：想要更现代、更可脚本化、更偏「安全预览再执行」的日常清理与磁盘洞察。若你需要完整 `/Library` 扫描或尚未移植的自更新 / 自卸载，请继续用 [Mole](https://github.com/tw93/Mole)。
+**产品 v2 CLI 全家桶**（包线 **`2.x`**，当前 **`2.5.0`**）：顶层命令面已覆盖 Mole 1.48.1 路由表（豁免见规格），含 `purge` / `installer` / `touchid` / 自更新 `update` / 自卸载 `remove`，以及挂在 `clean` 内的只读 **hints**；英式/兼容别名 `optimise` / `analyse` / `completion`。命令面闸门：`scripts/check-command-surface.sh --enforce`（CI 硬门禁）。
+
+适合：想要更现代、更可脚本化、更偏「安全预览再执行」的日常清理与磁盘洞察。Mole 广谱 `/Library` 边缘与桌面 Helper 仍非本仓主路径；需要时请对照 [Mole](https://github.com/tw93/Mole) 或 [vole-macos](https://github.com/wukongnotnull/vole-macos)。
 
 ---
 
@@ -80,15 +82,20 @@ export PATH="$HOME/.local/bin:$PATH"
 ### 运行
 
 ```bash
-vole                           # 交互菜单
+vole                           # 交互菜单（默认不联网）
 vole status                    # 实时健康面板
-vole analyze                   # 目录磁盘下钻（默认 $HOME）
-vole clean --plan              # 清理预览（默认行为）
+vole analyze                   # 目录磁盘下钻（默认 $HOME；别名 analyse）
+vole clean --plan              # 清理预览（含只读 hints）
 vole uninstall --plan          # 卸载预览
-vole optimize --plan           # 系统优化预览
+vole optimize --plan           # 系统优化预览（别名 optimise）
+vole purge --plan              # 项目构建物清理
+vole installer --plan          # 安装包扫描清理
+vole touchid status            # sudo Touch ID
+vole update                    # 自更新（显式才联网）
+vole remove --dry-run          # 自卸载预览
 vole history                   # 操作历史
 
-vole completions zsh > ~/.zfunc/_vole
+vole completions zsh > ~/.zfunc/_vole   # 别名 completion
 vole --help
 vole --version
 ```
@@ -216,6 +223,19 @@ $ vole history --json --limit 50
 $ vole completions zsh > ~/.zfunc/_vole
 ```
 
+### 产品 v2 续篇命令（摘要）
+
+| 命令 | 说明 |
+|------|------|
+| `vole purge` | 陈旧项目构建物；`--plan` / `--apply` |
+| `vole clean` | 深度清理；内含只读 **hints**（非顶层 `vole hints`） |
+| `vole installer` | 安装包扫描清理；`--plan` / `--apply` |
+| `vole touchid` | sudo Touch ID：`status` / `enable` / `disable` |
+| `vole update` | 自更新通道（校验失败 fail-closed） |
+| `vole remove` | 自卸载；`--dry-run` 预览 |
+
+权威规格与收口 findings：[`docs/wukong-code/specs/2026-08-08-2030-v2-cli-complete-design.md`](docs/wukong-code/specs/2026-08-08-2030-v2-cli-complete-design.md)、[`docs/findings/2026-08-v2-cli-complete-closeout.md`](docs/findings/2026-08-v2-cli-complete-closeout.md)。
+
 ---
 
 ## 与 Mole 对比
@@ -225,8 +245,8 @@ $ vole completions zsh > ~/.zfunc/_vole
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | **2.5.0**（产品 v2）：自卸载 `remove` + 自更新 `update` + `touchid` + `installer` + `clean` hints + `purge` + 命令别名（`optimise`/`analyse`/`completion`）+ 近满配 optimize/uninstall/clean；余项：命令面收口 / Mole 广谱 `/Library` 边缘 / 桌面 Helper | 成熟、功能最全 |
-| 核心命令 | `status` / `analyze` / `clean` / `history` / `uninstall` / `optimize` / `purge` / `installer` / `touchid` / `update` / `remove` | 对齐 Mole 顶层路由（收口闸门） |
+| 成熟度 | **2.5.0**：**产品 v2 CLI 全家桶已收口**（M5–M10 + §3.2 闸门）；余项：Mole 广谱 `/Library` 边缘 / 桌面 Helper（非续篇主路径） | 成熟、功能最全 |
+| 核心命令 | `status` / `analyze` / `clean`（+hints）/ `history` / `uninstall` / `optimize` / `purge` / `installer` / `touchid` / `update` / `remove` + 别名 | Mole 顶层路由 ⊇（`check-command-surface.sh --enforce`） |
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓；orphaned 启发式 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |
 | 外部依赖 | 无第三方 CLI 依赖 | 部分场景推荐 `fd` 等 |

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# M4 stub for §3.2 command-surface gate (spec 2026-08-08-2030).
-# Full CI enforcement lands at closeout; default is report-only.
+# §3.2 command-surface gate (spec 2026-08-08-2030).
+# Default: report-only (exit 0 even with gaps). CI uses --enforce (gaps ≠ 0 → fail).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -81,7 +81,7 @@ else
 fi
 
 if [[ "$gaps" -gt 0 ]]; then
-  echo "gaps=$gaps (expected residual aliases/closeout only after M10; closeout --enforce must be 0)"
+  echo "gaps=$gaps (--enforce requires 0)"
   if [[ "$REPORT_ONLY" -eq 1 ]]; then
     exit 0
   fi

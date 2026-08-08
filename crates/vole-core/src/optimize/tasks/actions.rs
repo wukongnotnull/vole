@@ -327,6 +327,31 @@ pub fn plan_network_optimization(home: &Path) -> OptimizeCandidate {
     action_sentinel(home, "network_optimization", "Network Cache Refresh")
 }
 
+pub fn plan_memory_pressure_relief(home: &Path) -> OptimizeCandidate {
+    action_sentinel(home, "memory_pressure_relief", "Memory Optimization")
+}
+
+/// 对齐 Mole `is_memory_pressure_high`：`memory_pressure -Q` 含 warning/critical。
+/// `VOLE_TEST_MEMORY_PRESSURE=1|0` 强制高压/低压。
+pub fn is_memory_pressure_high() -> bool {
+    if let Ok(v) = std::env::var("VOLE_TEST_MEMORY_PRESSURE") {
+        match v.trim() {
+            "1" | "true" | "TRUE" | "yes" | "YES" => return true,
+            "0" | "false" | "FALSE" | "no" | "NO" => return false,
+            _ => {}
+        }
+    }
+    let Ok(out) = Command::new("memory_pressure")
+        .arg("-Q")
+        .stderr(std::process::Stdio::null())
+        .output()
+    else {
+        return false;
+    };
+    let text = String::from_utf8_lossy(&out.stdout).to_ascii_lowercase();
+    text.contains("warning") || text.contains("critical")
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OptimizeActionError {
     Failed,
@@ -353,7 +378,28 @@ pub fn apply_optimize_action(
         "system_maintenance" | "network_optimization" => {
             apply_dns_optimize(task_id, privilege, dns_flushed)
         }
+        "memory_pressure_relief" => apply_memory_pressure_relief(privilege),
         _ => Err(OptimizeActionError::Failed),
+    }
+}
+
+fn apply_memory_pressure_relief(
+    privilege: Option<&dyn crate::privilege::PrivilegeBackend>,
+) -> Result<(), OptimizeActionError> {
+    use crate::privilege::PrivilegeError;
+
+    if !is_memory_pressure_high() {
+        return Ok(());
+    }
+    let Some(backend) = privilege else {
+        return Err(OptimizeActionError::NeedsPrivilege);
+    };
+    match backend.purge_inactive_memory() {
+        Ok(()) => Ok(()),
+        Err(PrivilegeError::Unavailable) | Err(PrivilegeError::Refused) => {
+            Err(OptimizeActionError::NeedsPrivilege)
+        }
+        Err(PrivilegeError::CommandFailed(_)) => Err(OptimizeActionError::Failed),
     }
 }
 
@@ -580,6 +626,60 @@ mod tests {
             plan_launch_services_rebuild(home).task_id,
             "launch_services_rebuild"
         );
+        assert_eq!(
+            plan_memory_pressure_relief(home).task_id,
+            "memory_pressure_relief"
+        );
+    }
+
+    #[test]
+    fn memory_pressure_env_override() {
+        let _guard = crate::test_env::lock();
+        std::env::set_var("VOLE_TEST_MEMORY_PRESSURE", "1");
+        assert!(is_memory_pressure_high());
+        std::env::set_var("VOLE_TEST_MEMORY_PRESSURE", "0");
+        assert!(!is_memory_pressure_high());
+        std::env::remove_var("VOLE_TEST_MEMORY_PRESSURE");
+    }
+
+    #[test]
+    fn apply_memory_noop_when_pressure_low() {
+        let _guard = crate::test_env::lock();
+        std::env::set_var("VOLE_TEST_MEMORY_PRESSURE", "0");
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        apply_optimize_action(
+            "memory_pressure_relief",
+            Path::new("/tmp"),
+            Some(&backend),
+            &mut false,
+        )
+        .unwrap();
+        assert_eq!(*backend.purge_memory_calls.lock().unwrap(), 0);
+        std::env::remove_var("VOLE_TEST_MEMORY_PRESSURE");
+    }
+
+    #[test]
+    fn apply_memory_needs_privilege_when_high() {
+        let _guard = crate::test_env::lock();
+        std::env::set_var("VOLE_TEST_MEMORY_PRESSURE", "1");
+        let err = apply_optimize_action(
+            "memory_pressure_relief",
+            Path::new("/tmp"),
+            Some(&crate::privilege::NoPrivilege),
+            &mut false,
+        )
+        .unwrap_err();
+        assert_eq!(err, OptimizeActionError::NeedsPrivilege);
+        let backend = crate::privilege::RecordingPrivilege::allowing();
+        apply_optimize_action(
+            "memory_pressure_relief",
+            Path::new("/tmp"),
+            Some(&backend),
+            &mut false,
+        )
+        .unwrap();
+        assert_eq!(*backend.purge_memory_calls.lock().unwrap(), 1);
+        std::env::remove_var("VOLE_TEST_MEMORY_PRESSURE");
     }
 
     #[test]

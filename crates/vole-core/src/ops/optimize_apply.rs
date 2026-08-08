@@ -71,8 +71,12 @@ fn ensure_privilege_ready(
     backend.acquire_interactive() && backend.probe_noninteractive()
 }
 
-fn needs_dns_privilege(task_id: &str) -> bool {
-    matches!(task_id, "system_maintenance" | "network_optimization")
+fn needs_optimize_privilege(task_id: &str) -> bool {
+    match task_id {
+        "system_maintenance" | "network_optimization" => true,
+        "memory_pressure_relief" => crate::optimize::is_memory_pressure_high(),
+        _ => false,
+    }
 }
 
 pub fn apply_optimize_plan(
@@ -205,7 +209,7 @@ pub fn apply_optimize_proto_plan(
             OptimizeTaskKind::Action => {
                 let fallback = NoPrivilege;
                 let backend: &dyn PrivilegeBackend = ctx.privilege.unwrap_or(&fallback);
-                if needs_dns_privilege(task_id) && !ensure_privilege_ready(ctx, backend) {
+                if needs_optimize_privilege(task_id) && !ensure_privilege_ready(ctx, backend) {
                     skipped += 1;
                     skip_tracker.record(SkipReason::NeedsPrivilege, &entry.rule_id);
                     continue;
@@ -422,6 +426,124 @@ mod tests {
         assert_eq!(report.skipped, 0);
         assert_eq!(*backend.flush_dns_calls.lock().unwrap(), 1);
         assert!(ctx.dns_flushed);
+        fs::remove_dir_all(&root).ok();
+    }
+
+    fn memory_plan(home: &std::path::Path) -> ProtoPlan {
+        let path = home.join(".vole-optimize-action/memory_pressure_relief");
+        ProtoPlan {
+            schema_version: SCHEMA_VERSION,
+            created_at: SystemTime::now(),
+            ttl_secs: 900,
+            entries: vec![ProtoPlanEntry {
+                id: "memory_pressure_relief-0".into(),
+                path,
+                label: "Memory Optimization".into(),
+                size: 0,
+                rule_id: "optimize:action:memory_pressure_relief".into(),
+                skip_reason: None,
+                dev: 0,
+                ino: 0,
+                mtime: UNIX_EPOCH,
+            }],
+            coverage_note: None,
+        }
+    }
+
+    #[test]
+    fn apply_memory_low_pressure_skips_purge() {
+        let _guard = test_env::lock();
+        std::env::set_var("VOLE_TEST_MEMORY_PRESSURE", "0");
+        let root = scratch("mem-low");
+        let plan = memory_plan(&root);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("optimize");
+        let trash = MacTrash;
+        let backend = RecordingPrivilege::allowing();
+        let mut ctx = OptimizeApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: OptimizeApplyOptions { permanent: true },
+            trash: &trash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            privilege: Some(&backend),
+            privilege_acquire_attempted: false,
+            dns_flushed: false,
+        };
+        let report = apply_optimize_proto_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 1);
+        assert_eq!(*backend.purge_memory_calls.lock().unwrap(), 0);
+        std::env::remove_var("VOLE_TEST_MEMORY_PRESSURE");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_memory_high_pressure_needs_privilege() {
+        let _guard = test_env::lock();
+        std::env::set_var("VOLE_TEST_MEMORY_PRESSURE", "1");
+        let root = scratch("mem-deny");
+        let plan = memory_plan(&root);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("optimize");
+        let trash = MacTrash;
+        let backend = NoPrivilege;
+        let mut ctx = OptimizeApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: OptimizeApplyOptions { permanent: true },
+            trash: &trash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            privilege: Some(&backend),
+            privilege_acquire_attempted: false,
+            dns_flushed: false,
+        };
+        let report = apply_optimize_proto_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(report
+            .skipped_by_reason
+            .iter()
+            .any(|s| s.reason == SkipReason::NeedsPrivilege && s.count == 1));
+        std::env::remove_var("VOLE_TEST_MEMORY_PRESSURE");
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_memory_high_pressure_purges_with_recording() {
+        let _guard = test_env::lock();
+        std::env::set_var("VOLE_TEST_MEMORY_PRESSURE", "1");
+        let root = scratch("mem-ok");
+        let plan = memory_plan(&root);
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("optimize");
+        let trash = MacTrash;
+        let backend = RecordingPrivilege::allowing();
+        let mut ctx = OptimizeApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: OptimizeApplyOptions { permanent: true },
+            trash: &trash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            privilege: Some(&backend),
+            privilege_acquire_attempted: false,
+            dns_flushed: false,
+        };
+        let report = apply_optimize_proto_plan(&plan, &mut ctx).unwrap();
+        assert_eq!(report.succeeded, 1);
+        assert_eq!(*backend.purge_memory_calls.lock().unwrap(), 1);
+        std::env::remove_var("VOLE_TEST_MEMORY_PRESSURE");
         fs::remove_dir_all(&root).ok();
     }
 

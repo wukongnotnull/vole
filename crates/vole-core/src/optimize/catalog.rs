@@ -120,7 +120,7 @@ const CATALOG: &[OptimizeTask] = &[
         kind: OptimizeTaskKind::Action,
         title: "Spotlight Orphan Rules",
         description: "Remove Spotlight search-rule entries for apps that are no longer installed",
-        in_m3: false,
+        in_m3: true,
     },
     OptimizeTask {
         id: "periodic_maintenance",
@@ -255,11 +255,11 @@ mod tests {
         assert!(main.contains(&"disk_permissions_repair"));
         assert!(main.contains(&"periodic_maintenance"));
         assert!(main.contains(&"login_items_audit"));
+        assert!(main.contains(&"spotlight_orphan_rules_cleanup"));
         assert!(!main.contains(&"spotlight_index_optimize"));
         assert!(!main.contains(&"disk_verify"));
         assert!(!main.contains(&"shared_file_list_repair"));
-        assert!(!main.contains(&"spotlight_orphan_rules_cleanup"));
-        assert_eq!(main.len(), 19);
+        assert_eq!(main.len(), 20);
     }
 
     #[test]

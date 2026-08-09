@@ -8,7 +8,7 @@ mod theme;
 mod widgets;
 
 pub use analyze_view::render_analyze;
-// Re-exported for uninstall TTY wiring (Task 4+) and external unit tests.
+// Re-exported for uninstall / whitelist TTY wiring and external unit tests.
 #[allow(unused_imports)]
 pub use menu_state::{
     EmptyMenuError, MenuConfig, MenuItem, MenuKey, MenuState, SelectOutcome, SortMode,

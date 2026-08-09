@@ -1,6 +1,6 @@
 //! `vole clean` plan / apply / whitelist 接线。
 
-use std::io::{self, BufRead, IsTerminal, Write};
+use std::io::{self, IsTerminal, Write};
 use std::path::PathBuf;
 use std::thread;
 
@@ -22,6 +22,7 @@ use vole_core::vole_proto::{HintNotice, Plan as ProtoPlan, Report, StreamEvent, 
 use vole_core::whitelist;
 
 use crate::signals;
+use crate::tui::{run_paginated_select, MenuItem, MenuState, SelectOutcome, SortMode};
 
 pub struct CleanOptions {
     pub json: bool,
@@ -432,65 +433,60 @@ fn print_whitelist_list(patterns: &[String]) {
 }
 
 fn run_whitelist_interactive() -> io::Result<()> {
-    let stdin = io::stdin();
-    let mut stdout = io::stdout();
-    loop {
-        let patterns = whitelist::load_clean()?;
-        print_whitelist_list(&patterns);
-        writeln!(stdout)?;
-        write!(stdout, "[a] 添加  [r] 移除  [q] 退出 > ")?;
-        stdout.flush()?;
-
-        let mut action = String::new();
-        stdin.lock().read_line(&mut action)?;
-        let action = action.trim().to_lowercase();
-        match action.as_str() {
-            "q" | "quit" | "" => break,
-            "a" | "add" => {
-                write!(stdout, "路径 pattern: ")?;
-                stdout.flush()?;
-                let mut path = String::new();
-                stdin.lock().read_line(&mut path)?;
-                let path = path.trim();
-                if path.is_empty() {
-                    continue;
-                }
-                whitelist::add_clean(path)?;
-                println!("已添加: {path}");
-            }
-            "r" | "remove" => {
-                if patterns.is_empty() {
-                    println!("白名单为空，无可移除项");
-                    continue;
-                }
-                write!(stdout, "编号或路径: ")?;
-                stdout.flush()?;
-                let mut input = String::new();
-                stdin.lock().read_line(&mut input)?;
-                let input = input.trim();
-                if input.is_empty() {
-                    continue;
-                }
-                let target = if let Ok(num) = input.parse::<usize>() {
-                    patterns.get(num.saturating_sub(1)).map(String::as_str)
-                } else {
-                    Some(input)
-                };
-                let Some(pattern) = target else {
-                    println!("无效编号: {input}");
-                    continue;
-                };
-                if whitelist::remove_clean(pattern)? {
-                    println!("已移除: {pattern}");
-                } else {
-                    println!("未找到: {pattern}");
-                }
-            }
-            _ => println!("未知操作，请输入 a / r / q"),
-        }
-        writeln!(stdout)?;
+    let home = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("/"));
+    let current = whitelist::load_clean_for_manage()?;
+    let build = whitelist::build_clean_whitelist_menu(&current, &home);
+    if build.entries.is_empty() {
+        return Err(io::Error::other("No items provided"));
     }
-    Ok(())
+
+    let items: Vec<MenuItem> = build
+        .entries
+        .iter()
+        .map(|e| MenuItem {
+            label: e.label.clone(),
+            filter_name: Some(e.label.clone()),
+            epoch: None,
+            size_kb: None,
+        })
+        .collect();
+
+    let mut cfg = MenuState::config_from_env();
+    cfg.sort_mode = SortMode::Name;
+    cfg.ignore_initial_enter = true;
+    cfg.preselected = build.preselected.clone();
+    if let Ok((_, rows)) = crossterm::terminal::size() {
+        cfg.term_height = rows;
+    }
+
+    let title = format!(
+        "Whitelist Manager, Select caches to protect\nEdit: {}",
+        whitelist::clean_config_display_path()
+    );
+
+    match run_paginated_select(&title, items, cfg)? {
+        SelectOutcome::Cancelled => {
+            println!("Cancelled, no changes saved");
+            Ok(())
+        }
+        SelectOutcome::Confirmed(idxs) => {
+            let merged =
+                whitelist::merge_whitelist_selection(&build.entries, &idxs, &build.custom_patterns);
+            whitelist::save_clean(&merged)?;
+            let predefined = idxs.len();
+            let custom = build.custom_patterns.len();
+            println!("Whitelist Updated");
+            if custom > 0 {
+                println!("Protected {predefined} predefined + {custom} custom patterns");
+            } else {
+                println!("Protected {} caches", predefined);
+            }
+            println!("Config: {}", whitelist::clean_config_display_path());
+            Ok(())
+        }
+    }
 }
 
 fn plan_done_report(coverage: &str) -> Report {

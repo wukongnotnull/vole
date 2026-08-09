@@ -66,7 +66,7 @@ enum Command {
         /// 将 plan JSON 写入文件。
         #[arg(long, conflicts_with = "apply")]
         plan_out: Option<PathBuf>,
-        /// 交互式管理受保护路径白名单（对齐 mole `clean --whitelist`）。
+        /// TTY 分页多选管理受保护缓存白名单（对齐 mole `clean --whitelist`）；脚本用 --whitelist-add/remove/list。
         #[arg(
             long,
             conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent"]

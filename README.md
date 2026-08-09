@@ -153,7 +153,7 @@ Vole 是本地系统维护工具，部分命令会执行破坏性文件操作。
 
 - **先预览再执行**：`clean` / `optimize` 默认 `--plan`；`uninstall` / `purge` / `installer` 在 TTY 裸调用为交互多选，脚本用 `--plan` / `--apply`
 - **已卸载 vs 仍安装**：应用已卸干净用 `vole clean`；仍装着用 `vole uninstall`
-- **白名单持久化**：`vole clean --whitelist` 的选择会写入配置，后续扫描自动跳过
+- **白名单持久化**：TTY 下 `vole clean --whitelist` 用分页多选保护缓存目录（对齐 mole）；脚本用 `--whitelist-add` / `--whitelist-remove` / `--whitelist-list`；选择写入 `~/.config/mole/whitelist`，后续扫描自动跳过
 - **自动化**：`--json` / `--json-stream` 对齐 Mole 同名字段口径；详见协议文档
 - **本地验证**：`bash scripts/verify-local.sh`（跳过交叉编译：`VERIFY_LOCAL_SKIP_CROSS=1`）
 

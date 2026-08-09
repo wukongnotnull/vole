@@ -1,5 +1,7 @@
 //! Pure menu logic for paginated multi-select (mole MenuContract A).
 
+#![allow(dead_code)] // Public API; wired by paginated_select / uninstall interactive path.
+
 use std::collections::HashSet;
 use std::env;
 use std::fmt;

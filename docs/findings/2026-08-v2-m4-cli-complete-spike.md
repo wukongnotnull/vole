@@ -158,9 +158,9 @@ M4 **docs-only** 已完成：核定 Mole 1.48.1 命令面（§3.1）、六命令
 
 | 能力 | 主路径 | 长尾 / 不做 |
 |---|---|---|
-| purge | 发现→targets→年龄/超时→plan/apply→废纸篓→JSON→配置 | TTY 多选；worktree 整树删除；未证明 target 扩张 |
+| purge | 发现→targets→年龄/超时→plan/apply→废纸篓→JSON→配置；**TTY 分页多选已落地**（T1 / 2.8.0） | worktree 整树删除；未证明 target 扩张；完整 activity 分类 / cloud 确认 |
 | hints | clean 内只读探针子集 + 预算降级 | 顶层命令；第二套删除 |
-| installer | 扫描→immutable plan→apply→漏斗 | 冷门扫描根；TTY 分页全量 |
+| installer | 扫描→immutable plan→apply→漏斗；**TTY 分页多选已落地**（T1 / 2.8.0） | 冷门扫描根；fd 扫描分支 |
 | touchid | status/enable/disable；sudo_local；可测无真授权 | 真机演示；非 sudo PAM |
 | update | 显式自更新；校验 fail-closed；brew 共存策略 | 裸调用联网检查（禁止） |
 | remove | dry-run；三类安装形态；自身产物/配置 | 用户数据；其它 brew 包 |

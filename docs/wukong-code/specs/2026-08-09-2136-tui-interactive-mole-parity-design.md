@@ -110,7 +110,7 @@ TTY 下裸 `vole uninstall`：从「打印 plan」改为「多选并可能删除
 | **T1** | 挂载 `purge` / `installer` 交互多选 | 另开 design |
 | **T2** | `whitelist` 切到同组件 | 另开 design |
 | **T3** | `status` / `analyze` 视觉同构 | 另开 design（可与 T1 并行） |
-| **T4** | 收口：对照表勾选 + README「TUI 交互对齐」+ 清 coverage 长尾 | 另开 design |
+| **T4** | 收口：对照表勾选 + README「TUI 交互对齐」+ 清 coverage 长尾 | [`2026-08-09-2303-tui-t4-interactive-closeout-design.md`](2026-08-09-2303-tui-t4-interactive-closeout-design.md)（**2.8.0**） |
 
 ## 6. 测试与验收（T0）
 

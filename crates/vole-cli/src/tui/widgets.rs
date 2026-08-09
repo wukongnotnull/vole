@@ -231,7 +231,10 @@ mod tests {
         assert!(plain_progress_bar(0.0).chars().all(|c| c == '░'));
         assert!(plain_progress_bar(100.0).chars().all(|c| c == '█'));
         assert_eq!(
-            plain_progress_bar(50.0).chars().filter(|c| *c == '█').count(),
+            plain_progress_bar(50.0)
+                .chars()
+                .filter(|c| *c == '█')
+                .count(),
             8
         );
     }
@@ -253,11 +256,7 @@ mod tests {
                 "macOS 15".into(),
                 "up 10d".into(),
             ],
-            vec![
-                "MacBook Pro".into(),
-                "RAM 16 GB".into(),
-                "Disk 1 TB".into(),
-            ],
+            vec!["MacBook Pro".into(), "RAM 16 GB".into(), "Disk 1 TB".into()],
             vec!["RAM 16 GB".into(), "Disk 1 TB".into()],
         ];
         let wide = fit_status_header(head, &candidates, 120);

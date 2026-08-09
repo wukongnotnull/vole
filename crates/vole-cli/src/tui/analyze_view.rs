@@ -124,7 +124,11 @@ pub fn render_analyze(
     );
 }
 
-pub fn build_analyze_header(out: &AnalyzeOutput, scanning: bool, theme: &Theme) -> Vec<Line<'static>> {
+pub fn build_analyze_header(
+    out: &AnalyzeOutput,
+    scanning: bool,
+    theme: &Theme,
+) -> Vec<Line<'static>> {
     if out.overview {
         let mut lines = vec![Line::from(Span::styled(
             "Analyze Disk".to_string(),
@@ -147,14 +151,14 @@ pub fn build_analyze_header(out: &AnalyzeOutput, scanning: bool, theme: &Theme) 
         spans.push(Span::styled("  — scanning…".to_string(), theme.subtle));
     } else {
         spans.push(Span::styled(
-            format!("  |  Total: {}", format_bytes_si(out.total_size.max(0) as u64)),
+            format!(
+                "  |  Total: {}",
+                format_bytes_si(out.total_size.max(0) as u64)
+            ),
             theme.value,
         ));
         if let Some(files) = out.total_files {
-            spans.push(Span::styled(
-                format!("  · {} files", files),
-                theme.subtle,
-            ));
+            spans.push(Span::styled(format!("  · {} files", files), theme.subtle));
         }
     }
     vec![Line::from(spans), Line::from("")]

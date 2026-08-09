@@ -172,12 +172,7 @@ pub fn build_status_header(snap: &StatusSnapshot, width: usize, theme: &Theme) -
     };
 
     let mut candidates = vec![
-        join(&[
-            identity.clone(),
-            specs.clone(),
-            refresh.clone(),
-            optional,
-        ]),
+        join(&[identity.clone(), specs.clone(), refresh.clone(), optional]),
         join(&[identity.clone(), specs.clone(), refresh.clone()]),
         join(&[identity.clone(), specs.clone()]),
     ];
@@ -349,11 +344,7 @@ fn render_memory_card(mem: &MemoryStatus, theme: &Theme) -> Vec<Line<'static>> {
                 ),
             ));
         } else {
-            lines.push(line_pair(
-                theme,
-                "Avail",
-                &format_bytes_bin(mem.available),
-            ));
+            lines.push(line_pair(theme, "Avail", &format_bytes_bin(mem.available)));
         }
     }
     if !mem.pressure.is_empty() {

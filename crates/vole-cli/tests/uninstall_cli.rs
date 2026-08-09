@@ -18,6 +18,21 @@ fn uninstall_help_lists_command() {
 }
 
 #[test]
+fn uninstall_help_mentions_interactive_tty() {
+    let output = Command::new(env!("CARGO_BIN_EXE_vole"))
+        .args(["uninstall", "--help"])
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.to_lowercase().contains("interactive")
+            || stdout.contains("TTY")
+            || stdout.contains("多选"),
+        "{stdout}"
+    );
+}
+
+#[test]
 fn uninstall_plan_json_with_fixture_apps_dir() {
     let dir = tempfile::tempdir().unwrap();
     let apps = dir.path().join("Applications");

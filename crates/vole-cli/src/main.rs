@@ -93,9 +93,11 @@ enum Command {
         )]
         whitelist_list: bool,
     },
-    /// 卸载应用及其用户域残留（plan → apply）。
+    /// 卸载应用及其用户域残留。
+    ///
+    /// TTY 裸调用：分页多选 → 确认 → 卸载；`--plan` / `--json` / 非 TTY 只产出计划。
     Uninstall {
-        /// 只产出候选集，不改动任何文件（默认）。
+        /// 只产出候选集，不改动任何文件（非 TTY 默认；TTY 显式指定时跳过交互）。
         #[arg(long, conflicts_with = "apply")]
         plan: bool,
         /// 同 `--plan`。
@@ -104,8 +106,8 @@ enum Command {
         /// 执行 plan 文件中的条目。
         #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
         apply: Option<PathBuf>,
-        /// 永久删除而非移入废纸篓（仅与 `--apply` 联用）。
-        #[arg(long, requires = "apply")]
+        /// 永久删除而非移入废纸篓（`--apply` 或交互卸载）。
+        #[arg(long)]
         permanent: bool,
         /// 输出 JSON。
         #[arg(long)]
@@ -332,8 +334,8 @@ fn main() {
             std::process::exit(code);
         }
         Some(Command::Uninstall {
-            plan: _,
-            dry_run: _,
+            plan,
+            dry_run,
             apply,
             permanent,
             json,
@@ -342,6 +344,7 @@ fn main() {
             target,
         }) => {
             let code = uninstall::run_uninstall(uninstall::UninstallOptions {
+                explicit_plan: plan || dry_run,
                 json,
                 json_stream,
                 plan_out,

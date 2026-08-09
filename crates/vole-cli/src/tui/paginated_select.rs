@@ -117,7 +117,11 @@ fn render_menu(frame: &mut Frame, title: &str, state: &MenuState, theme: &Theme)
         .enumerate()
         .map(|(row, &orig)| {
             let item = &state.items()[orig];
-            let mark = if state.is_selected(orig) { "[x]" } else { "[ ]" };
+            let mark = if state.is_selected(orig) {
+                "[x]"
+            } else {
+                "[ ]"
+            };
             let size = item
                 .size_kb
                 .map(|kb| format!("  ({kb} KB)"))

@@ -133,9 +133,10 @@ impl MenuState {
         if let Some(rev) = env_first(&["VOLE_MENU_SORT_REVERSE", "MOLE_MENU_SORT_REVERSE"]) {
             cfg.sort_reverse = parse_bool(&rev);
         }
-        if let Some(ignore) =
-            env_first(&["VOLE_MENU_IGNORE_INITIAL_ENTER", "MOLE_MENU_IGNORE_INITIAL_ENTER"])
-        {
+        if let Some(ignore) = env_first(&[
+            "VOLE_MENU_IGNORE_INITIAL_ENTER",
+            "MOLE_MENU_IGNORE_INITIAL_ENTER",
+        ]) {
             cfg.ignore_initial_enter = parse_bool(&ignore);
         }
         cfg

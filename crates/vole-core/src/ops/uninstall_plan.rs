@@ -654,8 +654,16 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let apps_dir = dir.path().join("Applications");
         fs::create_dir_all(&apps_dir).unwrap();
-        write_app(&apps_dir.join("FixtureA.app"), "com.example.fixturea", "FixtureA");
-        write_app(&apps_dir.join("FixtureB.app"), "com.example.fixtureb", "FixtureB");
+        write_app(
+            &apps_dir.join("FixtureA.app"),
+            "com.example.fixturea",
+            "FixtureA",
+        );
+        write_app(
+            &apps_dir.join("FixtureB.app"),
+            "com.example.fixtureb",
+            "FixtureB",
+        );
 
         let scanned = scan_applications(std::slice::from_ref(&apps_dir)).unwrap();
         assert_eq!(scanned.len(), 2);
@@ -673,10 +681,7 @@ mod tests {
         };
         let plan = build_uninstall_plan_for_apps(&catalog, &protection, &opts, &only).unwrap();
         assert!(plan.entries.iter().any(|e| e.path == only[0].app_path));
-        assert!(!plan
-            .entries
-            .iter()
-            .any(|e| e.path == scanned[1].app_path));
+        assert!(!plan.entries.iter().any(|e| e.path == scanned[1].app_path));
     }
 
     fn write_app(app: &Path, bundle_id: &str, name: &str) {

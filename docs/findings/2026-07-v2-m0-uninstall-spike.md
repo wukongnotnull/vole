@@ -17,7 +17,7 @@ M1 按计划交付 **高对齐主路径**（枚举 → 保护策略 → 用户�
 | Mole | 路径 | Vole M1 对应 |
 |---|---|---|
 | `scan_applications` | `bin/uninstall.sh` | `ops/uninstall_plan::scan_applications` |
-| `uninstall_list_apps` / `--dry-run` | `bin/uninstall.sh` | `--plan` / `--json`（无 TTY 多选 UI） |
+| `uninstall_list_apps` / `--dry-run` | `bin/uninstall.sh` | `--plan` / `--json`（自动化）；TTY 裸调用分页多选见 [T0 design](../wukong-code/specs/2026-08-09-2136-tui-interactive-mole-parity-design.md) |
 | `should_protect_from_uninstall` | `lib/core/app_protection.sh` | `protection/uninstall.rs` |
 | `official_uninstaller_vendor` | 同上 | 同上 |
 | `find_app_files`（用户域子集） | 同上 | `protection/leftovers.rs` |
@@ -51,7 +51,7 @@ M1 按计划交付 **高对齐主路径**（枚举 → 保护策略 → 用户�
 | Login items / AppleScript | `batch.sh` | 跳过 |
 | 系统 LaunchDaemons / PrivilegedHelperTools | batch | 跳过（需 sudo） |
 | `/Library` 广域残留 / sudo 删除 | batch `needs_sudo` | 跳过 |
-| TTY 分页多选 UI | `menu_paginated` | 用 plan JSON 代替 |
+| TTY 分页多选 UI | `menu_paginated` | T0 已落地（`PaginatedMultiSelect` + 裸 `vole uninstall`）；自动化仍用 plan/json |
 | ByHost preferences 全量清理 | `find_app_files` 旁路 | 首版不做（安全面大） |
 | 独立 CLI 保护名单（Claude/Codex/opencode home 目录） | naming_variants #993 | **主路径必须保留**：对齐 bats，禁止误删 `~/.claude` 等 |
 | orphaned / purge | 另轨 | 不做 |

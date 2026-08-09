@@ -86,7 +86,8 @@ vole                           # 交互菜单（默认不联网）
 vole status                    # 实时健康面板
 vole analyze                   # 目录磁盘下钻（默认 $HOME；别名 analyse）
 vole clean --plan              # 清理预览（含只读 hints）
-vole uninstall --plan          # 卸载预览
+vole uninstall                 # TTY：分页多选卸载；脚本用 --plan
+vole uninstall --plan          # 卸载预览（自动化）
 vole optimize --plan           # 系统优化预览（别名 optimise）
 vole purge --plan              # 项目构建物清理
 vole installer --plan          # 安装包扫描清理
@@ -177,11 +178,15 @@ $ vole clean --apply plan.json
 ### 智能卸载
 
 ```bash
-$ vole uninstall --plan
-# 或按名称 / bundle id 过滤
-$ vole uninstall --plan "Some App"
+# TTY 裸调用：分页多选 → 确认 → 卸载（默认废纸篓；可加 --permanent）
+vole uninstall
 
-$ vole uninstall --apply uninstall-plan.json
+# 自动化 / 脚本：只产出 plan
+vole uninstall --plan --json
+vole uninstall --apply /path/to/plan.json
+
+# 或按名称 / bundle id 过滤
+vole uninstall --plan "Some App"
 ```
 
 移除应用本体 + 用户域残留（Application Support、Caches、Preferences、LaunchAgents 等），以及可读的系统 LaunchDaemons/Agents/PHT 与窄 `/Library` 叶（需 `sudo -n`；TTY 可先 `sudo -v`）。`rule_id` 前缀为 `uninstall:` / `uninstall:leftover:` / `uninstall:system-leftover:`——勿用 `vole clean --apply` 执行卸载 plan。

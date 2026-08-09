@@ -80,8 +80,9 @@ pub use uninstall_apply::{
     UninstallApplyOptions,
 };
 pub use uninstall_plan::{
-    build_uninstall_plan, build_uninstall_plan_with_brew, default_applications_dirs,
-    scan_applications, UninstallPlanOptions,
+    build_uninstall_plan, build_uninstall_plan_for_apps, build_uninstall_plan_for_apps_with_brew,
+    build_uninstall_plan_with_brew, default_applications_dirs, scan_applications,
+    UninstallPlanOptions,
 };
 pub use update::{
     run_update, verify_sha256, CurlUpdateTransport, ExecVersionProbe, FakeUpdateTransport,

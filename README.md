@@ -56,7 +56,7 @@ brew install vole
 
 源码 HEAD：`brew install --HEAD wukongnotnull/vole/vole`
 
-**预编译包**（[v2.7.0](https://github.com/wukongnotnull/vole/releases/tag/v2.7.0)，Developer ID 签名 + 公证；Release 资产就绪后可用）
+**预编译包**（[v2.7.0](https://github.com/wukongnotnull/vole/releases/tag/v2.7.0)，Developer ID 签名 + 公证）
 
 ```bash
 # Apple Silicon；Intel 将 aarch64 换为 x86_64

@@ -39,8 +39,8 @@ sha_x86 = os.environ["SHA_X86"]
 
 text = p.read_text()
 text = re.sub(r'^\s*version\s+"[^"]*"', f'  version "{version}"', text, count=1, flags=re.M)
-text = re.sub(r'(on_macos do\n\s*on_arm do\n\s*url )"[^"]*"', f'\\1"https://github.com/wukongnotnull/vole/releases/download/{tag}/{aarch64}"', text, count=1)
-text = re.sub(r'(on_macos do\n\s*on_arm do\n\s*url[^\n]*\n\s*sha256 )"[^"]*"', f'\\1"{sha_arm}"', text, count=1)
+text = re.sub(r'(on_arm do\n\s*url )"[^"]*"', f'\\1"https://github.com/wukongnotnull/vole/releases/download/{tag}/{aarch64}"', text, count=1)
+text = re.sub(r'(on_arm do\n\s*url[^\n]*\n\s*sha256 )"[^"]*"', f'\\1"{sha_arm}"', text, count=1)
 text = re.sub(r'(on_intel do\n\s*url )"[^"]*"', f'\\1"https://github.com/wukongnotnull/vole/releases/download/{tag}/{x86_64}"', text, count=1)
 text = re.sub(r'(on_intel do\n\s*url[^\n]*\n\s*sha256 )"[^"]*"', f'\\1"{sha_x86}"', text, count=1)
 p.write_text(text)

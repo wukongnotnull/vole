@@ -89,8 +89,10 @@ vole clean --plan              # 清理预览（含只读 hints）
 vole uninstall                 # TTY：分页多选卸载；脚本用 --plan
 vole uninstall --plan          # 卸载预览（自动化）
 vole optimize --plan           # 系统优化预览（别名 optimise）
-vole purge --plan              # 项目构建物清理
-vole installer --plan          # 安装包扫描清理
+vole purge                     # TTY：分页多选清理；脚本用 --plan
+vole purge --plan              # 项目构建物预览（自动化）
+vole installer                 # TTY：分页多选清理；脚本用 --plan
+vole installer --plan          # 安装包扫描预览（自动化）
 vole touchid status            # sudo Touch ID
 vole update                    # 自更新（显式才联网）
 vole remove --dry-run          # 自卸载预览
@@ -149,7 +151,7 @@ Vole 是本地系统维护工具，部分命令会执行破坏性文件操作。
 
 ## 使用提示
 
-- **先预览再执行**：`clean` / `optimize` 默认 `--plan`；`uninstall` 在 TTY 裸调用为交互多选，脚本用 `--plan` / `--apply`
+- **先预览再执行**：`clean` / `optimize` 默认 `--plan`；`uninstall` / `purge` / `installer` 在 TTY 裸调用为交互多选，脚本用 `--plan` / `--apply`
 - **已卸载 vs 仍安装**：应用已卸干净用 `vole clean`；仍装着用 `vole uninstall`
 - **白名单持久化**：`vole clean --whitelist` 的选择会写入配置，后续扫描自动跳过
 - **自动化**：`--json` / `--json-stream` 对齐 Mole 同名字段口径；详见协议文档
@@ -232,9 +234,9 @@ $ vole completions zsh > ~/.zfunc/_vole
 
 | 命令 | 说明 |
 |------|------|
-| `vole purge` | 陈旧项目构建物；`--plan` / `--apply` |
+| `vole purge` | 陈旧项目构建物；TTY 多选或 `--plan` / `--apply` |
 | `vole clean` | 深度清理；内含只读 **hints**（非顶层 `vole hints`） |
-| `vole installer` | 安装包扫描清理；`--plan` / `--apply` |
+| `vole installer` | 安装包扫描清理；TTY 多选或 `--plan` / `--apply` |
 | `vole touchid` | sudo Touch ID：`status` / `enable` / `disable` |
 | `vole update` | 自更新通道（校验失败 fail-closed） |
 | `vole remove` | 自卸载；`--dry-run` 预览 |

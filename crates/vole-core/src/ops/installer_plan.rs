@@ -95,10 +95,7 @@ pub fn build_installer_plan(
         created_at: opts.now,
         ttl_secs: opts.ttl_secs,
         entries,
-        coverage_note: Some(
-            "installer long-tail skipped: TTY paginated multi-select UI; fd-specific scan branch."
-                .into(),
-        ),
+        coverage_note: Some("installer long-tail skipped: fd-specific scan branch.".into()),
     })
 }
 

@@ -18,6 +18,21 @@ fn purge_help_lists_command() {
 }
 
 #[test]
+fn purge_help_mentions_interactive_tty() {
+    let output = Command::new(env!("CARGO_BIN_EXE_vole"))
+        .args(["purge", "--help"])
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.to_lowercase().contains("interactive")
+            || stdout.contains("TTY")
+            || stdout.contains("多选"),
+        "{stdout}"
+    );
+}
+
+#[test]
 fn purge_plan_json_with_temp_home() {
     let dir = tempfile::tempdir().unwrap();
     let home = dir.path();

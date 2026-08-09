@@ -1383,6 +1383,8 @@ mod tests {
 
     #[test]
     fn allowlist_accepts_uninstall_library_and_receipt_leaves() {
+        // Live `/Library/...` paths must not race with tests that set VOLE_TEST_SYSTEM_LIBRARY.
+        let _guard = crate::test_env::lock();
         assert!(path_allowed_for_privilege(Path::new(
             "/Library/Application Support/Foo"
         )));

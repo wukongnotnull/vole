@@ -1,24 +1,32 @@
-//! `vole uninstall` plan / apply 接线。
+//! `vole uninstall` plan / apply / TTY interactive 接线。
 
 use std::env;
-use std::io::{self, IsTerminal, Write};
+use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::thread;
 
 use crossbeam_channel::unbounded;
+use vole_core::delete::{measure_path_size_kb, PathSizeKb};
 use vole_core::mutex::{try_lock_uninstall, MutexError};
 use vole_core::ops::{
-    apply_uninstall_plan, build_uninstall_plan, coverage_with_apply_permission_hint,
-    default_applications_dirs, report_has_permission_skips, UninstallApplyError,
-    UninstallApplyOptions, UninstallPlanOptions, APPLY_PERMISSION_WARN,
+    apply_uninstall_plan, build_uninstall_plan, build_uninstall_plan_for_apps,
+    coverage_with_apply_permission_hint, default_applications_dirs, report_has_permission_skips,
+    scan_applications, UninstallApplyError, UninstallApplyOptions, UninstallPlanOptions,
+    APPLY_PERMISSION_WARN,
 };
-use vole_core::protection::{AppProtection, ProtectionCatalog};
+use vole_core::protection::{
+    official_uninstaller_vendor, should_protect_from_uninstall, AppIdentity, AppProtection,
+    ProtectionCatalog,
+};
 use vole_core::units;
 use vole_core::vole_proto::{Plan as ProtoPlan, Report, StreamEvent, SCHEMA_VERSION};
 
 use crate::signals;
+use crate::tui::{run_paginated_select, MenuItem, MenuState, SelectOutcome};
 
 pub struct UninstallOptions {
+    /// `--plan` / `--dry-run` / `-n`：强制走自动化 plan 路径。
+    pub explicit_plan: bool,
     pub json: bool,
     pub json_stream: bool,
     pub plan_out: Option<PathBuf>,
@@ -44,7 +52,132 @@ fn run_uninstall_inner(opts: UninstallOptions) -> io::Result<()> {
     if let Some(ref plan_path) = opts.apply_plan {
         return run_apply(&opts, plan_path);
     }
+    if gate_interactive(io::stdin().is_terminal(), io::stdout().is_terminal(), &opts) {
+        return run_interactive(&opts);
+    }
     run_plan(opts)
+}
+
+/// TTY 裸调用进入交互多选的门控（可单测，不依赖真实 TTY）。
+pub(crate) fn gate_interactive(stdin_tty: bool, stdout_tty: bool, opts: &UninstallOptions) -> bool {
+    stdin_tty
+        && stdout_tty
+        && !opts.explicit_plan
+        && !opts.json
+        && !opts.json_stream
+        && opts.plan_out.is_none()
+        && opts.apply_plan.is_none()
+        && opts.target.is_none()
+}
+
+fn run_interactive(opts: &UninstallOptions) -> io::Result<()> {
+    let home = env::var_os("HOME")
+        .map(PathBuf::from)
+        .ok_or_else(|| io::Error::other("HOME not set"))?;
+    let apps_dirs = applications_dirs_from_env(&home);
+    let catalog = ProtectionCatalog::embedded();
+    let protection = AppProtection::new();
+
+    let scanned = scan_applications(&apps_dirs).map_err(|e| io::Error::other(e.to_string()))?;
+    let candidates: Vec<AppIdentity> = scanned
+        .into_iter()
+        .filter(|app| {
+            if should_protect_from_uninstall(&app.bundle_id, &catalog) {
+                return false;
+            }
+            if official_uninstaller_vendor(
+                &app.bundle_id,
+                &app.display_name,
+                &app.app_path.display().to_string(),
+                &catalog,
+            )
+            .is_some()
+            {
+                return false;
+            }
+            true
+        })
+        .collect();
+
+    if candidates.is_empty() {
+        eprintln!("No removable apps found.");
+        return Ok(());
+    }
+
+    let selected_apps = loop {
+        let items: Vec<MenuItem> = candidates
+            .iter()
+            .map(|app| {
+                let path_str = app.app_path.display().to_string();
+                let size_kb = match measure_path_size_kb(&path_str) {
+                    PathSizeKb::Known(kb) => Some(kb),
+                    PathSizeKb::Unknown => None,
+                };
+                MenuItem {
+                    label: app.display_name.clone(),
+                    filter_name: Some(app.display_name.clone()),
+                    epoch: None,
+                    size_kb,
+                }
+            })
+            .collect();
+
+        let mut cfg = MenuState::config_from_env();
+        cfg.ignore_initial_enter = true;
+        if let Ok((_, rows)) = crossterm::terminal::size() {
+            cfg.term_height = rows;
+        }
+
+        match run_paginated_select("Select Apps to Remove", items, cfg)? {
+            SelectOutcome::Cancelled => return Ok(()),
+            SelectOutcome::Confirmed(idxs) if idxs.is_empty() => {
+                eprintln!("No apps selected");
+                continue;
+            }
+            SelectOutcome::Confirmed(idxs) => {
+                break idxs
+                    .into_iter()
+                    .map(|i| candidates[i].clone())
+                    .collect::<Vec<_>>();
+            }
+        }
+    };
+
+    eprintln!("Selected {} app(s) for removal:", selected_apps.len());
+    for app in &selected_apps {
+        eprintln!("  - {} ({})", app.display_name, app.app_path.display());
+    }
+    eprint!("Proceed with uninstallation? [y/N] ");
+    let _ = io::stderr().flush();
+    let mut line = String::new();
+    io::stdin().lock().read_line(&mut line)?;
+    let answer = line.trim();
+    if !answer.eq_ignore_ascii_case("y") {
+        eprintln!("Aborted.");
+        return Ok(());
+    }
+
+    let plan_opts = UninstallPlanOptions {
+        applications_dirs: &apps_dirs,
+        home: &home,
+        target_bundle_or_name: None,
+        ttl_secs: 900,
+    };
+    let plan = build_uninstall_plan_for_apps(&catalog, &protection, &plan_opts, &selected_apps)
+        .map_err(|e| io::Error::other(e.to_string()))?;
+
+    if plan.entries.is_empty() {
+        eprintln!("Nothing to uninstall for the selected apps.");
+        return Ok(());
+    }
+
+    let apply_opts = UninstallApplyOptions {
+        permanent: opts.permanent,
+    };
+    let report =
+        apply_uninstall_plan(&plan, &protection, apply_opts, None).map_err(map_apply_error)?;
+    print_human_report(&report);
+    Ok(())
 }
 
 fn run_plan(opts: UninstallOptions) -> io::Result<()> {
@@ -235,4 +368,52 @@ fn map_mutex_error(e: MutexError) -> io::Error {
 
 fn map_apply_error(e: UninstallApplyError) -> io::Error {
     io::Error::other(e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn bare_opts() -> UninstallOptions {
+        UninstallOptions {
+            explicit_plan: false,
+            json: false,
+            json_stream: false,
+            plan_out: None,
+            apply_plan: None,
+            permanent: false,
+            target: None,
+        }
+    }
+
+    #[test]
+    fn interactive_gate_requires_bare_tty_flags() {
+        let bare = bare_opts();
+        assert!(!gate_interactive(false, false, &bare));
+        assert!(gate_interactive(true, true, &bare));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &UninstallOptions {
+                explicit_plan: true,
+                ..bare_opts()
+            }
+        ));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &UninstallOptions {
+                json: true,
+                ..bare_opts()
+            }
+        ));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &UninstallOptions {
+                target: Some("Foo".into()),
+                ..bare_opts()
+            }
+        ));
+    }
 }

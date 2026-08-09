@@ -85,10 +85,62 @@ pub fn build_uninstall_plan_with_brew(
         .map(|s| s.trim().to_ascii_lowercase())
         .filter(|s| !s.is_empty());
 
+    let mut skipped_filter = 0u64;
+    let apps: Vec<AppIdentity> = match target {
+        Some(ref t) => apps
+            .into_iter()
+            .filter(|app| {
+                if app_matches_target(app, t) {
+                    true
+                } else {
+                    skipped_filter += 1;
+                    false
+                }
+            })
+            .collect(),
+        None => apps,
+    };
+
+    build_uninstall_plan_for_apps_with_brew_inner(
+        catalog,
+        protection,
+        opts,
+        &apps,
+        brew,
+        skipped_filter,
+    )
+}
+
+pub fn build_uninstall_plan_for_apps(
+    catalog: &ProtectionCatalog,
+    protection: &AppProtection,
+    opts: &UninstallPlanOptions<'_>,
+    apps: &[AppIdentity],
+) -> Result<ProtoPlan, OpsError> {
+    build_uninstall_plan_for_apps_with_brew(catalog, protection, opts, apps, &LiveBrewDeps)
+}
+
+pub fn build_uninstall_plan_for_apps_with_brew(
+    catalog: &ProtectionCatalog,
+    protection: &AppProtection,
+    opts: &UninstallPlanOptions<'_>,
+    apps: &[AppIdentity],
+    brew: &dyn BrewDeps,
+) -> Result<ProtoPlan, OpsError> {
+    build_uninstall_plan_for_apps_with_brew_inner(catalog, protection, opts, apps, brew, 0)
+}
+
+fn build_uninstall_plan_for_apps_with_brew_inner(
+    catalog: &ProtectionCatalog,
+    protection: &AppProtection,
+    opts: &UninstallPlanOptions<'_>,
+    apps: &[AppIdentity],
+    brew: &dyn BrewDeps,
+    skipped_filter: u64,
+) -> Result<ProtoPlan, OpsError> {
     let mut entries = Vec::new();
     let mut skipped_protected = 0u64;
     let mut skipped_official = 0u64;
-    let mut skipped_filter = 0u64;
     let mut sibling_notes = 0u64;
     let mut brew_cask = 0u64;
     let mut login_items = 0u64;
@@ -98,24 +150,6 @@ pub fn build_uninstall_plan_with_brew(
     let search_roots = opts.applications_dirs.to_vec();
 
     for app in apps {
-        if let Some(ref t) = target {
-            let name_l = app.display_name.to_ascii_lowercase();
-            let bundle_l = app.bundle_id.to_ascii_lowercase();
-            let stem = app
-                .app_path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("")
-                .to_ascii_lowercase();
-            if !bundle_l.contains(t.as_str())
-                && !name_l.contains(t.as_str())
-                && !stem.contains(t.as_str())
-            {
-                skipped_filter += 1;
-                continue;
-            }
-        }
-
         if should_protect_from_uninstall(&app.bundle_id, catalog) {
             skipped_protected += 1;
             continue;
@@ -165,7 +199,7 @@ pub fn build_uninstall_plan_with_brew(
             }
         }
 
-        let leftovers = find_app_leftovers(&app, opts.home, &siblings);
+        let leftovers = find_app_leftovers(app, opts.home, &siblings);
         let (rule_app, label) = if let Some(token) = detect_cask_name(brew, &app.app_path) {
             brew_cask += 1;
             let mode = if siblings.has_siblings() {
@@ -194,7 +228,7 @@ pub fn build_uninstall_plan_with_brew(
             }
         }
 
-        for hit in find_system_leftovers(&app, &siblings) {
+        for hit in find_system_leftovers(app, &siblings) {
             let rule = encode_system_leftover_rule_id(hit.kind, &app.bundle_id, &hit.path);
             let label = format!("System leftover: {}", hit.label);
             if let Some(entry) = try_plan_entry(&hit.path, &label, &rule, &uninstall_protect) {
@@ -220,6 +254,18 @@ Long-tail not covered (use Mole): broad /Library system leftovers (Frameworks/ke
         entries,
         coverage_note,
     })
+}
+
+fn app_matches_target(app: &AppIdentity, target: &str) -> bool {
+    let name_l = app.display_name.to_ascii_lowercase();
+    let bundle_l = app.bundle_id.to_ascii_lowercase();
+    let stem = app
+        .app_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    bundle_l.contains(target) || name_l.contains(target) || stem.contains(target)
 }
 
 fn try_plan_entry(
@@ -601,6 +647,41 @@ mod tests {
             .entries
             .iter()
             .any(|e| e.rule_id.starts_with("uninstall:login-item:name:")));
+    }
+
+    #[test]
+    fn plan_for_apps_only_includes_selected() {
+        let dir = tempfile::tempdir().unwrap();
+        let apps_dir = dir.path().join("Applications");
+        fs::create_dir_all(&apps_dir).unwrap();
+        write_app(
+            &apps_dir.join("FixtureA.app"),
+            "com.example.fixturea",
+            "FixtureA",
+        );
+        write_app(
+            &apps_dir.join("FixtureB.app"),
+            "com.example.fixtureb",
+            "FixtureB",
+        );
+
+        let scanned = scan_applications(std::slice::from_ref(&apps_dir)).unwrap();
+        assert_eq!(scanned.len(), 2);
+        let only = vec![scanned[0].clone()];
+
+        let catalog = ProtectionCatalog::embedded();
+        let protection = AppProtection::new();
+        let home = dir.path().join("home");
+        fs::create_dir_all(home.join("Library")).unwrap();
+        let opts = UninstallPlanOptions {
+            applications_dirs: &[],
+            home: &home,
+            target_bundle_or_name: None,
+            ttl_secs: 900,
+        };
+        let plan = build_uninstall_plan_for_apps(&catalog, &protection, &opts, &only).unwrap();
+        assert!(plan.entries.iter().any(|e| e.path == only[0].app_path));
+        assert!(!plan.entries.iter().any(|e| e.path == scanned[1].app_path));
     }
 
     fn write_app(app: &Path, bundle_id: &str, name: &str) {

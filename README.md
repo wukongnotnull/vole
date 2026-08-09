@@ -35,7 +35,7 @@
 - **冻结 NDJSON 协议**：CLI、脚本与未来桌面 app 共用同一编排层
 - **规则数据化**：**540** 条高价值清理规则以 TOML 声明，可 diff、可禁用、可 fixture 回归（含用户域 orphaned app data）
 
-**产品 v2 CLI 全家桶**（包线 **`2.x`**，当前 **`2.6.0`**）：顶层命令面已覆盖 Mole 1.48.1 路由表（豁免见规格），含 `purge` / `installer` / `touchid` / 自更新 `update` / 自卸载 `remove`，以及挂在 `clean` 内的只读 **hints**；英式/兼容别名 `optimise` / `analyse` / `completion`。命令面闸门：`scripts/check-command-surface.sh --enforce`（CI 硬门禁）。
+**产品 v2 CLI 全家桶**（包线 **`2.x`**，当前 **`2.7.0`**）：顶层命令面已覆盖 Mole 1.48.1 路由表（豁免见规格），含 `purge` / `installer` / `touchid` / 自更新 `update` / 自卸载 `remove`，以及挂在 `clean` 内的只读 **hints**；英式/兼容别名 `optimise` / `analyse` / `completion`。命令面闸门：`scripts/check-command-surface.sh --enforce`（CI 硬门禁）。
 
 适合：想要更现代、更可脚本化、更偏「安全预览再执行」的日常清理与磁盘洞察。Mole 广谱 `/Library` 边缘与桌面 Helper 仍非本仓主路径；需要时请对照 [Mole](https://github.com/tw93/Mole) 或 [vole-macos](https://github.com/wukongnotnull/vole-macos)。
 
@@ -56,14 +56,14 @@ brew install vole
 
 源码 HEAD：`brew install --HEAD wukongnotnull/vole/vole`
 
-**预编译包**（[v2.6.0](https://github.com/wukongnotnull/vole/releases/tag/v2.6.0)，Developer ID 签名 + 公证）
+**预编译包**（[v2.7.0](https://github.com/wukongnotnull/vole/releases/tag/v2.7.0)，Developer ID 签名 + 公证；Release 资产就绪后可用）
 
 ```bash
 # Apple Silicon；Intel 将 aarch64 换为 x86_64
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v2.6.0/vole-2.6.0-aarch64-apple-darwin.tar.gz
-tar xzf vole-2.6.0-aarch64-apple-darwin.tar.gz
-install -m 755 vole-2.6.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-mkdir -p ~/.local/share/vole && cp -R vole-2.6.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v2.7.0/vole-2.7.0-aarch64-apple-darwin.tar.gz
+tar xzf vole-2.7.0-aarch64-apple-darwin.tar.gz
+install -m 755 vole-2.7.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+mkdir -p ~/.local/share/vole && cp -R vole-2.7.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 ```
 
 保持 `bin` + `share/vole/rules` 相对布局即可；自定义规则目录时再设 `VOLE_RULES_DIR`。
@@ -86,7 +86,8 @@ vole                           # 交互菜单（默认不联网）
 vole status                    # 实时健康面板
 vole analyze                   # 目录磁盘下钻（默认 $HOME；别名 analyse）
 vole clean --plan              # 清理预览（含只读 hints）
-vole uninstall --plan          # 卸载预览
+vole uninstall                 # TTY：分页多选卸载；脚本用 --plan
+vole uninstall --plan          # 卸载预览（自动化）
 vole optimize --plan           # 系统优化预览（别名 optimise）
 vole purge --plan              # 项目构建物清理
 vole installer --plan          # 安装包扫描清理
@@ -148,7 +149,7 @@ Vole 是本地系统维护工具，部分命令会执行破坏性文件操作。
 
 ## 使用提示
 
-- **先预览再执行**：`clean` / `uninstall` / `optimize` 默认 `--plan`；确认后再 `--apply`
+- **先预览再执行**：`clean` / `optimize` 默认 `--plan`；`uninstall` 在 TTY 裸调用为交互多选，脚本用 `--plan` / `--apply`
 - **已卸载 vs 仍安装**：应用已卸干净用 `vole clean`；仍装着用 `vole uninstall`
 - **白名单持久化**：`vole clean --whitelist` 的选择会写入配置，后续扫描自动跳过
 - **自动化**：`--json` / `--json-stream` 对齐 Mole 同名字段口径；详见协议文档
@@ -177,11 +178,15 @@ $ vole clean --apply plan.json
 ### 智能卸载
 
 ```bash
-$ vole uninstall --plan
-# 或按名称 / bundle id 过滤
-$ vole uninstall --plan "Some App"
+# TTY 裸调用：分页多选 → 确认 → 卸载（默认废纸篓；可加 --permanent）
+vole uninstall
 
-$ vole uninstall --apply uninstall-plan.json
+# 自动化 / 脚本：只产出 plan
+vole uninstall --plan --json
+vole uninstall --apply /path/to/plan.json
+
+# 或按名称 / bundle id 过滤
+vole uninstall --plan "Some App"
 ```
 
 移除应用本体 + 用户域残留（Application Support、Caches、Preferences、LaunchAgents 等），以及可读的系统 LaunchDaemons/Agents/PHT 与窄 `/Library` 叶（需 `sudo -n`；TTY 可先 `sudo -v`）。`rule_id` 前缀为 `uninstall:` / `uninstall:leftover:` / `uninstall:system-leftover:`——勿用 `vole clean --apply` 执行卸载 plan。
@@ -245,7 +250,7 @@ $ vole completions zsh > ~/.zfunc/_vole
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | **2.6.0**：plan 广域目录体积对齐 Mole；**产品 v2 CLI 全家桶已收口**（M5–M10 + §3.2 闸门）；余项：Mole 广谱 `/Library` 边缘（非续篇主路径） | 成熟、功能最全 |
+| 成熟度 | **2.7.0**：TTY 交互卸载（分页多选）；**产品 v2 CLI 全家桶已收口**（M5–M10 + §3.2 闸门）；余项：Mole 广谱 `/Library` 边缘（非续篇主路径） | 成熟、功能最全 |
 | 核心命令 | `status` / `analyze` / `clean`（+hints）/ `history` / `uninstall` / `optimize` / `purge` / `installer` / `touchid` / `update` / `remove` + 别名 | Mole 顶层路由 ⊇（`check-command-surface.sh --enforce`） |
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓；orphaned 启发式 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |

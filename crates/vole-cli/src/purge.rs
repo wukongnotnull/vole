@@ -1,10 +1,10 @@
-//! `vole purge` plan / apply 接线。
+//! `vole purge` plan / apply / TTY interactive 接线。
 
 use std::env;
-use std::io::{self, IsTerminal, Write};
+use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::thread;
-use std::time::SystemTime;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crossbeam_channel::unbounded;
 use vole_core::mutex::{try_lock_purge, MutexError};
@@ -15,11 +15,14 @@ use vole_core::ops::{
 };
 use vole_core::protection::AppProtection;
 use vole_core::units;
-use vole_core::vole_proto::{Plan as ProtoPlan, Report, StreamEvent, SCHEMA_VERSION};
+use vole_core::vole_proto::{Plan as ProtoPlan, PlanEntry, Report, StreamEvent, SCHEMA_VERSION};
 
 use crate::signals;
+use crate::tui::{run_paginated_select, MenuItem, MenuState, SelectOutcome};
 
 pub struct PurgeOptions {
+    /// `--plan` / `--dry-run` / `-n`：强制走自动化 plan 路径。
+    pub explicit_plan: bool,
     pub json: bool,
     pub json_stream: bool,
     pub plan_out: Option<PathBuf>,
@@ -45,7 +48,90 @@ fn run_purge_inner(opts: PurgeOptions) -> io::Result<()> {
     if let Some(ref plan_path) = opts.apply_plan {
         return run_apply(&opts, plan_path);
     }
+    if gate_interactive(io::stdin().is_terminal(), io::stdout().is_terminal(), &opts) {
+        return run_interactive(&opts);
+    }
     run_plan(opts)
+}
+
+/// TTY 裸调用进入交互多选的门控（可单测，不依赖真实 TTY）。
+pub(crate) fn gate_interactive(stdin_tty: bool, stdout_tty: bool, opts: &PurgeOptions) -> bool {
+    stdin_tty
+        && stdout_tty
+        && !opts.explicit_plan
+        && !opts.json
+        && !opts.json_stream
+        && opts.plan_out.is_none()
+        && opts.apply_plan.is_none()
+}
+
+fn run_interactive(opts: &PurgeOptions) -> io::Result<()> {
+    let home = env::var_os("HOME")
+        .map(PathBuf::from)
+        .ok_or_else(|| io::Error::other("HOME not set"))?;
+    let protection = AppProtection::new();
+    let plan_opts = PurgePlanOptions {
+        home: &home,
+        ttl_secs: 900,
+        search_roots: None,
+        include_empty: opts.include_empty,
+        min_age_days: DEFAULT_PURGE_MIN_AGE_DAYS,
+        now: SystemTime::now(),
+    };
+    let plan =
+        build_purge_plan(&protection, &plan_opts).map_err(|e| io::Error::other(e.to_string()))?;
+
+    if plan.entries.is_empty() {
+        eprintln!("No old project artifacts to purge.");
+        return Ok(());
+    }
+
+    let selected_idxs = loop {
+        let items: Vec<MenuItem> = plan.entries.iter().map(menu_item_from_entry).collect();
+        let mut cfg = MenuState::config_from_env();
+        cfg.ignore_initial_enter = true;
+        cfg.preselected = (0..items.len()).collect();
+        if let Ok((_, rows)) = crossterm::terminal::size() {
+            cfg.term_height = rows;
+        }
+
+        match run_paginated_select("Select Artifacts to Purge", items, cfg)? {
+            SelectOutcome::Cancelled => return Ok(()),
+            SelectOutcome::Confirmed(idxs) if idxs.is_empty() => {
+                eprintln!("No items selected");
+                continue;
+            }
+            SelectOutcome::Confirmed(idxs) => break idxs,
+        }
+    };
+
+    eprintln!("Selected {} artifact(s) for purge:", selected_idxs.len());
+    for &i in &selected_idxs {
+        let entry = &plan.entries[i];
+        eprintln!("  - {} ({})", entry.label, entry.path.display());
+    }
+    eprint!("Proceed with purge? [y/N] ");
+    let _ = io::stderr().flush();
+    let mut line = String::new();
+    io::stdin().lock().read_line(&mut line)?;
+    if !line.trim().eq_ignore_ascii_case("y") {
+        eprintln!("Aborted.");
+        return Ok(());
+    }
+
+    let apply_plan = filter_plan_entries(plan, &selected_idxs);
+    if apply_plan.entries.is_empty() {
+        eprintln!("Nothing to purge for the selection.");
+        return Ok(());
+    }
+
+    let apply_opts = PurgeApplyOptions {
+        permanent: opts.permanent,
+    };
+    let report =
+        apply_purge_plan(&apply_plan, &protection, apply_opts, None).map_err(map_apply_error)?;
+    print_human_report(&report);
+    Ok(())
 }
 
 fn run_plan(opts: PurgeOptions) -> io::Result<()> {
@@ -142,6 +228,35 @@ fn run_apply(opts: &PurgeOptions, plan_path: &Path) -> io::Result<()> {
     Ok(())
 }
 
+fn menu_item_from_entry(entry: &PlanEntry) -> MenuItem {
+    let path_str = entry.path.display().to_string();
+    MenuItem {
+        label: format!("{}  {}", entry.label, path_str),
+        filter_name: Some(path_str),
+        epoch: mtime_epoch(entry.mtime),
+        size_kb: Some(entry.size / 1024),
+    }
+}
+
+fn filter_plan_entries(mut plan: ProtoPlan, idxs: &[usize]) -> ProtoPlan {
+    let keep: std::collections::HashSet<usize> = idxs.iter().copied().collect();
+    plan.entries = plan
+        .entries
+        .into_iter()
+        .enumerate()
+        .filter(|(i, _)| keep.contains(i))
+        .map(|(_, e)| e)
+        .collect();
+    plan
+}
+
+fn mtime_epoch(mtime: SystemTime) -> Option<i64> {
+    mtime
+        .duration_since(UNIX_EPOCH)
+        .ok()
+        .map(|d| d.as_secs() as i64)
+}
+
 fn write_plan_output(opts: &PurgeOptions, plan: &ProtoPlan) -> io::Result<()> {
     let json = serde_json::to_string_pretty(plan).map_err(io::Error::other)?;
     if let Some(ref path) = opts.plan_out {
@@ -224,4 +339,60 @@ fn map_mutex_error(e: MutexError) -> io::Error {
 
 fn map_apply_error(e: PurgeApplyError) -> io::Error {
     io::Error::other(e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn bare_opts() -> PurgeOptions {
+        PurgeOptions {
+            explicit_plan: false,
+            json: false,
+            json_stream: false,
+            plan_out: None,
+            apply_plan: None,
+            permanent: false,
+            include_empty: false,
+        }
+    }
+
+    #[test]
+    fn interactive_gate_requires_bare_tty_flags() {
+        let bare = bare_opts();
+        assert!(!gate_interactive(false, false, &bare));
+        assert!(gate_interactive(true, true, &bare));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &PurgeOptions {
+                explicit_plan: true,
+                ..bare_opts()
+            }
+        ));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &PurgeOptions {
+                json: true,
+                ..bare_opts()
+            }
+        ));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &PurgeOptions {
+                apply_plan: Some(PathBuf::from("p.json")),
+                ..bare_opts()
+            }
+        ));
+        assert!(gate_interactive(
+            true,
+            true,
+            &PurgeOptions {
+                include_empty: true,
+                ..bare_opts()
+            }
+        ));
+    }
 }

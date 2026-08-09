@@ -153,7 +153,7 @@ pub fn build_purge_plan(
         ttl_secs: opts.ttl_secs,
         entries,
         coverage_note: Some(
-            "purge long-tail skipped: TTY multi-select UI; full Mole activity classifier; \
+            "purge long-tail skipped: full Mole activity classifier; \
 cloud sync interactive confirm (fail-closed skip uncertain ages)."
                 .into(),
         ),

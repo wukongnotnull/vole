@@ -51,7 +51,7 @@ M1 按计划交付 **高对齐主路径**（枚举 → 保护策略 → 用户�
 | Login items / AppleScript | `batch.sh` | 跳过 |
 | 系统 LaunchDaemons / PrivilegedHelperTools | batch | 跳过（需 sudo） |
 | `/Library` 广域残留 / sudo 删除 | batch `needs_sudo` | 跳过 |
-| TTY 分页多选 UI | `menu_paginated` | T0 已落地（`PaginatedMultiSelect` + 裸 `vole uninstall`）；自动化仍用 plan/json |
+| TTY 分页多选 UI | `menu_paginated` | T0–T4 已收口（共享组件 + uninstall/purge/installer/whitelist 双轨；**2.8.0**）；自动化仍用 plan/json |
 | ByHost preferences 全量清理 | `find_app_files` 旁路 | 首版不做（安全面大） |
 | 独立 CLI 保护名单（Claude/Codex/opencode home 目录） | naming_variants #993 | **主路径必须保留**：对齐 bats，禁止误删 `~/.claude` 等 |
 | orphaned / purge | 另轨 | 不做 |

@@ -591,6 +591,7 @@ fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
                 scanning,
                 &theme,
                 local_snapshots_tip.as_deref(),
+                stack.len() > 1,
             )
         })?;
 

@@ -96,7 +96,8 @@
 - ~~`optimize` · `spotlight_index_optimize`~~ → **已落地 1.44.0** / PR #95
 - ~~`optimize` · `shared_file_list_repair`~~ → **已落地 1.45.0** / PR #97
 - ~~`optimize` · `disk_verify`~~ → **已落地 1.46.0**（推翻默认；仍须 `VOLE_ENABLE_DISK_VERIFY=1`；主路径 **23**）
-- clean · `user.sh` 广域扫描 / 盲扩 bash custom 循环（继续用 Mole；非路径级缺漏）
+- ~~clean · `user.sh` 广域 `Caches/*` / `Logs/*` plan 体积~~ → **已落地 2.6.0**（规则早在；修目录 du + 重叠扣减；见 [`2026-08-09-1322-user-broad-cache-size-design.md`](2026-08-09-1322-user-broad-cache-size-design.md)）
+- clean · 盲扩 bash custom 循环（继续用 Mole；非路径级缺漏）
 - uninstall · 广谱边缘卸载场景（非主路径）
 
 **B. 本代际明确不做（产品 v2 §4.2 / 安全边界）**

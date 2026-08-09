@@ -5,6 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
+use crate::delete::measure_path_size_bytes;
 use crate::protection::AppProtection;
 use crate::rules::{
     collect_path_candidates, resolve_strategy, select_custom, should_skip_for_guards,
@@ -15,6 +16,9 @@ use crate::safety::{
 };
 use crate::vole_proto::{SkipReason, StreamEvent};
 use crate::whitelist;
+
+/// 目录 `du` 有界并行度（广域 `Caches/*` 常见百余顶层目录）。
+const PLAN_DIR_SIZE_PARALLELISM: usize = 8;
 
 use super::{OpsError, Orchestrator};
 
@@ -315,7 +319,6 @@ impl Orchestrator {
                     }
                 };
 
-                let size = path_size(&path);
                 let id = format!("{}-{}", rule.id, next_id);
                 next_id += 1;
 
@@ -333,25 +336,29 @@ impl Orchestrator {
                     rule.label.clone()
                 };
 
-                self.emit(StreamEvent::Candidate {
-                    id: id.clone(),
-                    path: path_str,
-                    label: label.clone(),
-                    size,
-                    rule_id: rule.id.clone(),
-                });
-
                 seen_paths.insert(path.clone());
                 entries.push(PlanEntry {
                     id,
                     path,
                     label,
-                    size,
+                    size: 0,
                     rule_id: rule.id.clone(),
                     skip_reason: None,
                     identity: Some(identity),
                 });
             }
+        }
+
+        finalize_plan_sizes(&mut entries);
+
+        for entry in &entries {
+            self.emit(StreamEvent::Candidate {
+                id: entry.id.clone(),
+                path: entry.path.display().to_string(),
+                label: entry.label.clone(),
+                size: entry.size,
+                rule_id: entry.rule_id.clone(),
+            });
         }
 
         self.emit(StreamEvent::Progress {
@@ -396,8 +403,95 @@ fn build_path_entries(paths: &[PathBuf]) -> Vec<PathEntry> {
         .collect()
 }
 
-fn path_size(path: &Path) -> u64 {
-    fs::metadata(path).map(|m| m.len()).unwrap_or(0)
+/// 填充 plan entry 体积：文件/symlink 用 metadata；目录并行 `du`；再按直接 plan 子孙扣减，避免合计双计。
+fn finalize_plan_sizes(entries: &mut [PlanEntry]) {
+    if entries.is_empty() {
+        return;
+    }
+
+    let mut raw = vec![0u64; entries.len()];
+    let mut dir_jobs: Vec<(usize, PathBuf)> = Vec::new();
+
+    for (i, entry) in entries.iter().enumerate() {
+        match fs::symlink_metadata(&entry.path) {
+            Ok(m) if m.file_type().is_symlink() || m.is_file() => {
+                raw[i] = m.len();
+            }
+            Ok(m) if m.is_dir() => {
+                dir_jobs.push((i, entry.path.clone()));
+            }
+            _ => {}
+        }
+    }
+
+    for (i, size) in parallel_dir_sizes(&dir_jobs) {
+        raw[i] = size;
+    }
+
+    for i in 0..entries.len() {
+        let mut subtract = 0u64;
+        for (j, child) in entries.iter().enumerate() {
+            if i == j {
+                continue;
+            }
+            if is_immediate_plan_child(&child.path, &entries[i].path, entries) {
+                subtract = subtract.saturating_add(raw[j]);
+            }
+        }
+        entries[i].size = raw[i].saturating_sub(subtract);
+    }
+}
+
+fn parallel_dir_sizes(jobs: &[(usize, PathBuf)]) -> Vec<(usize, u64)> {
+    if jobs.is_empty() {
+        return Vec::new();
+    }
+
+    use std::sync::{Arc, Mutex};
+
+    let queue = Arc::new(Mutex::new(jobs.to_vec()));
+    let results = Arc::new(Mutex::new(Vec::with_capacity(jobs.len())));
+    let workers = PLAN_DIR_SIZE_PARALLELISM.min(jobs.len()).max(1);
+
+    std::thread::scope(|scope| {
+        for _ in 0..workers {
+            let queue = Arc::clone(&queue);
+            let results = Arc::clone(&results);
+            scope.spawn(move || loop {
+                let job = queue.lock().ok().and_then(|mut q| q.pop());
+                let Some((idx, path)) = job else {
+                    break;
+                };
+                let size = measure_path_size_bytes(&path.to_string_lossy()).unwrap_or(0);
+                if let Ok(mut out) = results.lock() {
+                    out.push((idx, size));
+                }
+            });
+        }
+    });
+
+    results.lock().map(|g| g.clone()).unwrap_or_default()
+}
+
+fn is_strict_descendant(child: &Path, ancestor: &Path) -> bool {
+    child.starts_with(ancestor) && child != ancestor
+}
+
+/// `child` 是否为 `parent` 在 plan 中的直接子孙（中间无其它 plan 路径）。
+fn is_immediate_plan_child(child: &Path, parent: &Path, entries: &[PlanEntry]) -> bool {
+    if !is_strict_descendant(child, parent) {
+        return false;
+    }
+    for entry in entries {
+        let mid = entry.path.as_path();
+        if mid == child || mid == parent {
+            continue;
+        }
+        if is_strict_descendant(mid, parent) && is_strict_descendant(child, mid) {
+            return false;
+        }
+    }
+    true
 }
 
 fn skip_reason_for_validation(err: &ValidationError) -> SkipReason {
@@ -626,6 +720,95 @@ mod tests {
         assert!(entry.identity.is_some());
         assert_eq!(entry.size, 1);
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn plan_directory_entry_reports_content_size() {
+        let _guard = test_env::lock();
+        let home = scratch("dir-content-size");
+        let cache = home.join("Library/Caches/bigapp");
+        fs::create_dir_all(&cache).unwrap();
+        let payload = vec![0u8; 16 * 1024];
+        fs::write(cache.join("blob.bin"), &payload).unwrap();
+        std::env::set_var("VOLE_TEST_HOME", &home);
+        std::env::set_var("HOME", &home);
+
+        let pattern = cache.to_string_lossy().into_owned();
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), None);
+        let plan = orch
+            .build_plan(
+                &[all_rule("dir", vec![pattern], false)],
+                &AppProtection::new(),
+                &[],
+            )
+            .unwrap();
+
+        assert_eq!(plan.entries.len(), 1);
+        assert!(
+            plan.entries[0].size >= payload.len() as u64,
+            "expected content size, got {}",
+            plan.entries[0].size
+        );
+        // Inode-only metadata.len() for directories is typically a few KB at most.
+        assert!(
+            plan.entries[0].size > 8 * 1024,
+            "size looks like inode metadata: {}",
+            plan.entries[0].size
+        );
+
+        std::env::remove_var("VOLE_TEST_HOME");
+        std::env::remove_var("HOME");
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn plan_parent_size_excludes_immediate_plan_children() {
+        let _guard = test_env::lock();
+        let home = scratch("dir-overlap-size");
+        let parent = home.join("Library/Caches/app");
+        let child = parent.join("child");
+        fs::create_dir_all(&child).unwrap();
+        fs::write(parent.join("top.bin"), vec![0u8; 8192]).unwrap();
+        fs::write(child.join("nested.bin"), vec![0u8; 4096]).unwrap();
+        std::env::set_var("VOLE_TEST_HOME", &home);
+        std::env::set_var("HOME", &home);
+
+        let specific = all_rule("child", vec![child.to_string_lossy().into_owned()], false);
+        let broad = all_rule("parent", vec![parent.to_string_lossy().into_owned()], false);
+        let orch = Orchestrator::new(crate::cancel::CancelToken::new(), None);
+        let plan = orch
+            .build_plan(&[specific, broad], &AppProtection::new(), &[])
+            .unwrap();
+
+        assert_eq!(plan.entries.len(), 2);
+        let parent_e = plan
+            .entries
+            .iter()
+            .find(|e| e.rule_id == "parent")
+            .expect("parent");
+        let child_e = plan
+            .entries
+            .iter()
+            .find(|e| e.rule_id == "child")
+            .expect("child");
+        assert!(child_e.size >= 4096, "child size {}", child_e.size);
+        assert!(parent_e.size >= 8192, "parent size {}", parent_e.size);
+        assert!(
+            parent_e.size < 8192 + 4096,
+            "parent must exclude child bytes, got {}",
+            parent_e.size
+        );
+
+        let union = measure_path_size_bytes(&parent.to_string_lossy()).unwrap_or(0);
+        let sum = parent_e.size + child_e.size;
+        assert_eq!(
+            sum, union,
+            "sum of adjusted sizes must equal parent tree du ({sum} vs {union})"
+        );
+
+        std::env::remove_var("VOLE_TEST_HOME");
+        std::env::remove_var("HOME");
+        let _ = fs::remove_dir_all(&home);
     }
 
     #[test]

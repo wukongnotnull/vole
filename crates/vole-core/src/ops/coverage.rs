@@ -87,9 +87,10 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          Group Containers logs/caches（含受保护容器 Logs / bundle 命名日志）、\
          Handoff pasteboard（mtime>60min）、\
          Toolbox keep-N、Codex staging、not_running（精确名 + cmdline）、\
-         FCP / 剪映 generated、XCTestDevices 已落地。\
+         FCP / 剪映 generated、XCTestDevices 已落地、\
+         user.sh 广域 `~/Library/Caches/*` / `~/Library/Logs/*`（plan 目录递归 du + 父子重叠扣减；保护跳过子集仍 keep）。\
          桌面 SMAppService / 特权助手见 vole-macos（真机通道已验收）。\
-         如需完整清理，请继续使用 Mole：https://github.com/tw93/Mole"
+         如需完整清理（含 Developer 大户整树等长尾），请继续使用 Mole：https://github.com/tw93/Mole"
     )
 }
 
@@ -256,6 +257,8 @@ mod tests {
         assert!(note.contains("Group Containers logs/caches"));
         assert!(note.contains("含受保护容器 Logs"));
         assert!(note.contains("Handoff pasteboard"));
+        assert!(note.contains("user.sh 广域"));
+        assert!(note.contains("`~/Library/Caches/*`"));
         assert!(
             !note.contains("受保护容器与 bundle 命名文件除外"),
             "partial Group Containers caveat must be removed"

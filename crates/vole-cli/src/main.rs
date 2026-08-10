@@ -672,9 +672,8 @@ fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
                         } else {
                             format!("{n} items")
                         };
-                        state.status = format!(
-                            "Delete: {label}  Press Enter to confirm  |  ESC cancel"
-                        );
+                        state.status =
+                            format!("Delete: {label}  Press Enter to confirm  |  ESC cancel");
                     }
                     tui::AnalyzeEffect::ConfirmDelete => {
                         let report = tui::trash_analyze_paths(&pending_delete);

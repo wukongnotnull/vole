@@ -411,7 +411,6 @@ impl AnalyzeState {
     }
 
     fn begin_open(&mut self, out: &AnalyzeOutput) -> AnalyzeEffect {
-        const MAX_BATCH_OPEN: usize = 20;
         let paths = self.paths_for_action(out);
         if paths.is_empty() {
             return AnalyzeEffect::None;

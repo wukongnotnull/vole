@@ -17,6 +17,7 @@ pub struct AnalyzeRenderOpts<'a> {
     pub selected: usize,
     pub scanning: bool,
     pub local_snapshots_tip: Option<&'a str>,
+    #[allow(dead_code)]
     pub can_go_back: bool,
     pub show_large_files: bool,
     pub multi_selected: &'a std::collections::BTreeSet<String>,

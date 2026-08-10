@@ -531,4 +531,37 @@ mod tests {
         st.handle_key(AnalyzeKey::Top, &out, false, false);
         assert!(!st.show_large_files);
     }
+
+    #[test]
+    fn delete_enters_confirm_then_cancel() {
+        let out = sample_out();
+        let mut st = AnalyzeState::default();
+        let eff = st.handle_key(AnalyzeKey::Delete, &out, false, false);
+        assert!(matches!(eff, AnalyzeEffect::RequestDelete(_)));
+        assert!(st.delete_confirm);
+        st.handle_key(AnalyzeKey::Esc, &out, false, false);
+        assert!(!st.delete_confirm);
+    }
+
+    #[test]
+    fn open_caps_batch_at_20() {
+        let mut out = sample_out();
+        out.entries = (0..25)
+            .map(|i| AnalyzeEntry {
+                name: format!("f{i}"),
+                path: format!("/tmp/a/f{i}"),
+                size: 1,
+                is_dir: false,
+                ..Default::default()
+            })
+            .collect();
+        let mut st = AnalyzeState::default();
+        for i in 0..25 {
+            st.selected = i;
+            st.handle_key(AnalyzeKey::Space, &out, false, false);
+        }
+        let eff = st.handle_key(AnalyzeKey::Open, &out, false, false);
+        assert_eq!(eff, AnalyzeEffect::None);
+        assert!(st.status.contains("max 20"));
+    }
 }

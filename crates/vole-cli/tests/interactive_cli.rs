@@ -60,3 +60,19 @@ fn clean_help_mentions_tty_confirm() {
         "clean help={stdout}"
     );
 }
+
+#[test]
+fn optimize_help_mentions_tty_confirm() {
+    let output = Command::new(env!("CARGO_BIN_EXE_vole"))
+        .args(["optimize", "--help"])
+        .output()
+        .expect("help");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("确认")
+            || stdout.to_lowercase().contains("confirm")
+            || stdout.contains("Proceed"),
+        "optimize help={stdout}"
+    );
+}

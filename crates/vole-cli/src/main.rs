@@ -128,10 +128,12 @@ enum Command {
         /// 可选：按 bundle id / 应用名过滤。
         target: Option<String>,
     },
-    /// 系统优化任务（plan → apply；特权 DNS 经 sudo -n；其余长尾进 coverage_note）。
+    /// 系统优化任务（特权 DNS 经 sudo -n；其余长尾进 coverage_note）。
+    ///
+    /// TTY 裸调用：扫 plan → 确认 → apply；`--plan` / `--json` / 非 TTY 只产出计划。
     #[command(visible_alias = "optimise")]
     Optimize {
-        /// 只产出候选集，不改动任何文件（默认）。
+        /// 只产出候选集，不改动任何文件（非 TTY 默认；TTY 显式指定时跳过确认）。
         #[arg(long, conflicts_with = "apply")]
         plan: bool,
         /// 同 `--plan`。
@@ -140,8 +142,8 @@ enum Command {
         /// 执行 plan 文件中的条目。
         #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
         apply: Option<PathBuf>,
-        /// 永久删除而非移入废纸篓（仅与 `--apply` 联用；仅影响 delete 类条目）。
-        #[arg(long, requires = "apply")]
+        /// 永久删除而非移入废纸篓（`--apply` 或交互确认后 apply；仅影响 delete 类条目）。
+        #[arg(long)]
         permanent: bool,
         /// 输出 JSON。
         #[arg(long)]
@@ -367,8 +369,8 @@ fn main() {
             std::process::exit(code);
         }
         Some(Command::Optimize {
-            plan: _,
-            dry_run: _,
+            plan,
+            dry_run,
             apply,
             permanent,
             json,
@@ -377,6 +379,7 @@ fn main() {
             task,
         }) => {
             let code = optimize::run_optimize(optimize::OptimizeOptions {
+                explicit_plan: plan || dry_run,
                 json,
                 json_stream,
                 plan_out,

@@ -1,7 +1,7 @@
 //! `vole optimize` plan / apply 接线。
 
 use std::env;
-use std::io::{self, IsTerminal, Write};
+use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::thread;
 
@@ -19,6 +19,8 @@ use vole_core::vole_proto::{Plan as ProtoPlan, Report, StreamEvent, SCHEMA_VERSI
 use crate::signals;
 
 pub struct OptimizeOptions {
+    /// `--plan` / `--dry-run` / `-n`：强制走自动化 plan 路径。
+    pub explicit_plan: bool,
     pub json: bool,
     pub json_stream: bool,
     pub plan_out: Option<PathBuf>,
@@ -44,7 +46,64 @@ fn run_optimize_inner(opts: OptimizeOptions) -> io::Result<()> {
     if let Some(ref plan_path) = opts.apply_plan {
         return run_apply(&opts, plan_path);
     }
+    if gate_interactive(io::stdin().is_terminal(), io::stdout().is_terminal(), &opts) {
+        return run_interactive(&opts);
+    }
     run_plan(opts)
+}
+
+/// TTY 裸调用进入确认轨的门控（可单测，不依赖真实 TTY）。
+pub(crate) fn gate_interactive(stdin_tty: bool, stdout_tty: bool, opts: &OptimizeOptions) -> bool {
+    stdin_tty
+        && stdout_tty
+        && !opts.explicit_plan
+        && !opts.json
+        && !opts.json_stream
+        && opts.plan_out.is_none()
+        && opts.apply_plan.is_none()
+}
+
+fn run_interactive(opts: &OptimizeOptions) -> io::Result<()> {
+    let home = env::var_os("HOME")
+        .map(PathBuf::from)
+        .ok_or_else(|| io::Error::other("HOME not set"))?;
+    let catalog = ProtectionCatalog::embedded();
+    let protection = AppProtection::new();
+    let plan_opts = OptimizePlanOptions {
+        home: &home,
+        ttl_secs: 900,
+        only_task: opts.task.as_deref(),
+    };
+
+    let cancel = vole_core::cancel::CancelToken::new();
+    signals::spawn_signal_cancel(cancel);
+
+    let plan = build_optimize_plan(&catalog, &protection, &plan_opts)
+        .map_err(|e| io::Error::other(e.to_string()))?;
+
+    if plan.entries.is_empty() {
+        eprintln!("Nothing to optimize.");
+        return Ok(());
+    }
+
+    print_human_plan(&plan);
+
+    eprint!("Proceed with optimize? [y/N] ");
+    let _ = io::stderr().flush();
+    let mut line = String::new();
+    io::stdin().lock().read_line(&mut line)?;
+    if !line.trim().eq_ignore_ascii_case("y") {
+        eprintln!("Aborted.");
+        return Ok(());
+    }
+
+    let apply_opts = OptimizeApplyOptions {
+        permanent: opts.permanent,
+    };
+    let report =
+        apply_optimize_plan(&plan, &protection, apply_opts, None).map_err(map_apply_error)?;
+    print_human_report(&report);
+    Ok(())
 }
 
 fn run_plan(opts: OptimizeOptions) -> io::Result<()> {
@@ -221,4 +280,52 @@ fn map_mutex_error(e: MutexError) -> io::Error {
 
 fn map_apply_error(e: OptimizeApplyError) -> io::Error {
     io::Error::other(e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn bare_opts() -> OptimizeOptions {
+        OptimizeOptions {
+            explicit_plan: false,
+            json: false,
+            json_stream: false,
+            plan_out: None,
+            apply_plan: None,
+            permanent: false,
+            task: None,
+        }
+    }
+
+    #[test]
+    fn interactive_gate_requires_bare_tty_flags() {
+        let bare = bare_opts();
+        assert!(!gate_interactive(false, false, &bare));
+        assert!(gate_interactive(true, true, &bare));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &OptimizeOptions {
+                explicit_plan: true,
+                ..bare_opts()
+            }
+        ));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &OptimizeOptions {
+                json_stream: true,
+                ..bare_opts()
+            }
+        ));
+        assert!(gate_interactive(
+            true,
+            true,
+            &OptimizeOptions {
+                task: Some("dns_flush".into()),
+                ..bare_opts()
+            }
+        ));
+    }
 }

@@ -1,5 +1,6 @@
 //! ratatui 立即模式 TUI。
 
+mod analyze_state;
 mod analyze_view;
 mod home_menu;
 mod home_menu_state;

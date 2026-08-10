@@ -61,8 +61,21 @@ fn run_update_inner(opts: UpdateCliOptions) -> io::Result<i32> {
     let transport = transport_for(&repo);
     let outcome = run_update(&update_opts, transport.as_ref(), &ExecVersionProbe)
         .map_err(io::Error::other)?;
+    sync_update_banner_cache(&outcome)?;
     emit_outcome(&outcome, opts.json)?;
     Ok(outcome_exit(&outcome))
+}
+
+fn sync_update_banner_cache(outcome: &UpdateOutcome) -> io::Result<()> {
+    match outcome {
+        UpdateOutcome::Check {
+            current, latest, ..
+        } => crate::update_banner::sync_cache_from_check(current, latest.as_deref()),
+        UpdateOutcome::AlreadyLatest { .. } | UpdateOutcome::Updated { .. } => {
+            crate::update_banner::write_update_message_cache(None)
+        }
+        _ => Ok(()),
+    }
 }
 
 fn peek_origin(binary: &Path, config: &Path) -> io::Result<InstallOrigin> {

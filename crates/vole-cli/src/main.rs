@@ -14,6 +14,7 @@ mod touchid;
 mod tui;
 mod uninstall;
 mod update;
+mod update_banner;
 
 use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};

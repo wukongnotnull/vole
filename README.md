@@ -85,9 +85,11 @@ export PATH="$HOME/.local/bin:$PATH"
 vole                           # ratatui 首页（默认不联网）
 vole status                    # 实时健康面板
 vole analyze                   # 目录磁盘下钻（默认 $HOME；别名 analyse）
+vole clean                     # TTY：扫 plan → 确认 → apply；脚本用 --plan
 vole clean --plan              # 清理预览（含只读 hints）
 vole uninstall                 # TTY：分页多选卸载；脚本用 --plan
 vole uninstall --plan          # 卸载预览（自动化）
+vole optimize                  # TTY：扫 plan → 确认 → apply；脚本用 --plan
 vole optimize --plan           # 系统优化预览（别名 optimise）
 vole purge                     # TTY：分页多选清理；脚本用 --plan
 vole purge --plan              # 项目构建物预览（自动化）
@@ -156,17 +158,19 @@ Vole 是本地系统维护工具，部分命令会执行破坏性文件操作。
 | 命令 | TTY 裸调用（stdin+stdout 均为终端） | 自动化 / 脚本 |
 |---|---|---|
 | 裸 `vole`（无子命令） | ratatui 首页：品牌 + Clean/Uninstall/Optimize/Analyze/Status；↑↓/数字/Enter；M help·V version·条件 T/U；Q 退出；Enter 后 **exec 式**进子命令（不回菜单） | 非 TTY：stderr + exit 2；已带子命令：不变 |
+| `vole clean` | 扫 plan → `Proceed? [y/N]` → apply（默认废纸篓） | `--plan` / `--apply` / `--json*` / whitelist 系 / 非 TTY |
+| `vole optimize` | 同上 | `--plan` / `--apply` / `--json*` / 非 TTY |
 | `vole uninstall` | 分页多选 → 确认 → apply（默认废纸篓） | `--plan` / `--apply` / `--json*` / `target` / 非 TTY |
 | `vole purge` | 同上（构建物条目） | `--plan` / `--apply` / `--json*` / 非 TTY |
 | `vole installer` | 同上（安装包条目） | `--plan` / `--apply` / `--json*` / 非 TTY |
 | `vole clean --whitelist` | 分页多选保护目录并写盘 | `--whitelist-add` / `--whitelist-remove` / `--whitelist-list` |
 | `vole status` / `vole analyze` | mole 同构视觉面板（诚实 footer，仅已接线键） | `--json` / `--json-stream` |
 
-共享组件：`PaginatedMultiSelect`（键位/过滤/排序/预选；env `VOLE_MENU_*`，可选兼容 `MOLE_MENU_*`）。有意未接线：analyze 删除/多选/Open/Preview、status 动画 cat 等——见 [`docs/releases/v2.9.0.md`](docs/releases/v2.9.0.md)。
+共享组件：`PaginatedMultiSelect`（键位/过滤/排序/预选；env `VOLE_MENU_*`，可选兼容 `MOLE_MENU_*`）。有意未接线：analyze 删除/多选/Open/Preview、status 动画 cat、`optimize --whitelist` 等——见 [`docs/releases/v2.10.0.md`](docs/releases/v2.10.0.md)。
 
-首页 Enter 进 **Clean / Optimize** 时目前仍为既有 plan-only 行为（TTY 确认执行见后续 T6 / 下一版本）；Uninstall / Analyze / Status 已接 TTY 交互或 TUI。
+首页 Enter 进 **Clean / Optimize** 即 TTY 确认流（扫 plan → `Proceed? [y/N]` → apply）；Uninstall / Analyze / Status 已接 TTY 交互或 TUI。
 
-- **先预览再执行**：`clean` / `optimize` 默认 `--plan`；上表删除类命令在 TTY 为交互多选，脚本请显式 `--plan` / `--apply`
+- **先预览再执行**：TTY 裸 `clean` / `optimize` 为确认后执行（默认 N）；脚本与非 TTY 请显式 `--plan` / `--apply`；上表多选类命令同理
 - **已卸载 vs 仍安装**：应用已卸干净用 `vole clean`；仍装着用 `vole uninstall`
 - **白名单持久化**：选择写入 `~/.config/mole/whitelist`，后续扫描自动跳过
 - **自动化**：`--json` / `--json-stream` 对齐 Mole 同名字段口径；详见协议文档
@@ -179,10 +183,10 @@ Vole 是本地系统维护工具，部分命令会执行破坏性文件操作。
 ### 深度清理
 
 ```bash
-$ vole clean --plan
+$ vole clean                   # TTY：扫 plan → Proceed? [y/N] → apply
+$ vole clean --plan            # 脚本 / 非 TTY：只产出候选
 
 # 扫描缓存、日志、残留与孤儿应用数据
-# 产出 plan.json（候选集 + 体积），不改动文件
 
 $ vole clean --apply plan.json
 
@@ -211,7 +215,8 @@ vole uninstall --plan "Some App"
 ### 系统优化
 
 ```bash
-$ vole optimize --plan
+$ vole optimize                # TTY：扫 plan → Proceed? [y/N] → apply
+$ vole optimize --plan         # 脚本 / 非 TTY：只产出候选
 $ vole optimize --apply optimize-plan.json
 ```
 
@@ -267,7 +272,7 @@ $ vole completions zsh > ~/.zfunc/_vole
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | **2.9.0**：**裸 `vole` ratatui 首页**（mole 同构）+ **TUI 交互对齐**（uninstall/purge/installer/whitelist 双轨多选 + status/analyze 视觉同构）；**产品 v2 CLI 全家桶已收口**（M5–M10 + §3.2 闸门）；余项：Clean/Optimize 确认双轨（T6）、analyze 进阶键等有意长尾 | 成熟、功能最全 |
+| 成熟度 | **2.10.0**：**裸 `vole` ratatui 首页** + **Clean/Optimize TTY 确认双轨** + **TUI 交互对齐**（uninstall/purge/installer/whitelist 双轨多选 + status/analyze 视觉同构）；**产品 v2 CLI 全家桶已收口**（M5–M10 + §3.2 闸门）；余项：analyze 进阶键（T7）、status 抛光 / `optimize --whitelist`（T8） | 成熟、功能最全 |
 | 核心命令 | `status` / `analyze` / `clean`（+hints）/ `history` / `uninstall` / `optimize` / `purge` / `installer` / `touchid` / `update` / `remove` + 别名 | Mole 顶层路由 ⊇（`check-command-surface.sh --enforce`） |
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓；orphaned 启发式 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |

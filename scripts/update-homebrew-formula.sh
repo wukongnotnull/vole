@@ -40,9 +40,20 @@ sha_x86 = os.environ["SHA_X86"]
 text = p.read_text()
 text = re.sub(r'^\s*version\s+"[^"]*"', f'  version "{version}"', text, count=1, flags=re.M)
 text = re.sub(r'(on_arm do\n\s*url )"[^"]*"', f'\\1"https://github.com/wukongnotnull/vole/releases/download/{tag}/{aarch64}"', text, count=1)
-text = re.sub(r'(on_arm do\n\s*url[^\n]*\n\s*sha256 )"[^"]*"', f'\\1"{sha_arm}"', text, count=1)
 text = re.sub(r'(on_intel do\n\s*url )"[^"]*"', f'\\1"https://github.com/wukongnotnull/vole/releases/download/{tag}/{x86_64}"', text, count=1)
-text = re.sub(r'(on_intel do\n\s*url[^\n]*\n\s*sha256 )"[^"]*"', f'\\1"{sha_x86}"', text, count=1)
+# Allow optional comment lines between url and sha256 (placeholder formula style).
+text = re.sub(
+    r'(on_arm do\n\s*url[^\n]*\n)(?:\s*#[^\n]*\n)*(\s*sha256 )"[^"]*"',
+    f'\\1\\2"{sha_arm}"',
+    text,
+    count=1,
+)
+text = re.sub(
+    r'(on_intel do\n\s*url[^\n]*\n)(?:\s*#[^\n]*\n)*(\s*sha256 )"[^"]*"',
+    f'\\1\\2"{sha_x86}"',
+    text,
+    count=1,
+)
 p.write_text(text)
 print(f"Updated {p} -> {tag}")
 print(f"  aarch64 {sha_arm}")

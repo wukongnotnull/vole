@@ -82,7 +82,7 @@ export PATH="$HOME/.local/bin:$PATH"
 ### 运行
 
 ```bash
-vole                           # 交互菜单（默认不联网）
+vole                           # ratatui 首页（默认不联网）
 vole status                    # 实时健康面板
 vole analyze                   # 目录磁盘下钻（默认 $HOME；别名 analyse）
 vole clean --plan              # 清理预览（含只读 hints）
@@ -155,6 +155,7 @@ Vole 是本地系统维护工具，部分命令会执行破坏性文件操作。
 
 | 命令 | TTY 裸调用（stdin+stdout 均为终端） | 自动化 / 脚本 |
 |---|---|---|
+| 裸 `vole`（无子命令） | ratatui 首页：品牌 + Clean/Uninstall/Optimize/Analyze/Status；↑↓/数字/Enter；M help·V version·条件 T/U；Q 退出；Enter 后 **exec 式**进子命令（不回菜单） | 非 TTY：stderr + exit 2；已带子命令：不变 |
 | `vole uninstall` | 分页多选 → 确认 → apply（默认废纸篓） | `--plan` / `--apply` / `--json*` / `target` / 非 TTY |
 | `vole purge` | 同上（构建物条目） | `--plan` / `--apply` / `--json*` / 非 TTY |
 | `vole installer` | 同上（安装包条目） | `--plan` / `--apply` / `--json*` / 非 TTY |
@@ -162,6 +163,8 @@ Vole 是本地系统维护工具，部分命令会执行破坏性文件操作。
 | `vole status` / `vole analyze` | mole 同构视觉面板（诚实 footer，仅已接线键） | `--json` / `--json-stream` |
 
 共享组件：`PaginatedMultiSelect`（键位/过滤/排序/预选；env `VOLE_MENU_*`，可选兼容 `MOLE_MENU_*`）。有意未接线：analyze 删除/多选/Open/Preview、status 动画 cat 等——见 [`docs/releases/v2.8.0.md`](docs/releases/v2.8.0.md)。
+
+首页 Enter 进 **Clean / Optimize** 时目前仍为既有 plan-only 行为（TTY 确认执行见后续 T6 / 下一版本）；Uninstall / Analyze / Status 已接 TTY 交互或 TUI。
 
 - **先预览再执行**：`clean` / `optimize` 默认 `--plan`；上表删除类命令在 TTY 为交互多选，脚本请显式 `--plan` / `--apply`
 - **已卸载 vs 仍安装**：应用已卸干净用 `vole clean`；仍装着用 `vole uninstall`

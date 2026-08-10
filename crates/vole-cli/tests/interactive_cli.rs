@@ -26,8 +26,12 @@ fn top_level_help_mentions_home_menu_not_numbered_plan_list() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     // after_help 或 about：指向终端首页，而非暗示 11 项数字菜单
     assert!(
-        stdout.to_lowercase().contains("menu") || stdout.contains("terminal"),
+        stdout.to_lowercase().contains("home menu") || stdout.contains("mole-style"),
         "help={stdout}"
+    );
+    assert!(
+        stdout.contains("plan-only") || stdout.to_lowercase().contains("clean/optimize"),
+        "expected Clean/Optimize caveat in help: {stdout}"
     );
     assert!(
         !stdout.contains("Select [1-11]"),

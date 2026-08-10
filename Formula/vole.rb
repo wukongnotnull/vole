@@ -22,11 +22,11 @@ class Vole < Formula
     #   bash scripts/update-homebrew-formula.sh 2.12.0
     on_arm do
       url "https://github.com/wukongnotnull/vole/releases/download/v2.12.0/vole-2.12.0-aarch64-apple-darwin.tar.gz"
-      sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+      sha256 "7882c3a7639336ab9d43c60d63e38381f4f226183b2974396dd3a698abb60553"
     end
     on_intel do
       url "https://github.com/wukongnotnull/vole/releases/download/v2.12.0/vole-2.12.0-x86_64-apple-darwin.tar.gz"
-      sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+      sha256 "5772ee7181075f4986b29ef327f4094a01a00ed3dfdd7be22126b5349201f4fe"
     end
   end
 

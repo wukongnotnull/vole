@@ -22,6 +22,7 @@ use crate::vole_proto::{
     Plan as ProtoPlan, PlanEntry as ProtoPlanEntry, Report, SkipReason, SkipSummary, StreamEvent,
     SCHEMA_VERSION,
 };
+use crate::whitelist;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum OptimizeApplyError {
@@ -39,6 +40,8 @@ pub struct OptimizeApplyOptions {
 pub struct OptimizeApplyContext<'a> {
     pub protection: &'a AppProtection,
     pub whitelist_patterns: &'a [String],
+    /// Optimize task ids skipped by user whitelist (`whitelist_optimize`).
+    pub task_whitelist: &'a [String],
     pub options: OptimizeApplyOptions,
     pub trash: &'a dyn Trash,
     pub deletion_log: &'a DeletionLogger,
@@ -91,6 +94,7 @@ pub fn apply_optimize_plan(
     plan: &ProtoPlan,
     protection: &AppProtection,
     options: OptimizeApplyOptions,
+    task_whitelist: &[String],
     on_event: Option<&dyn Fn(StreamEvent)>,
 ) -> Result<Report, OptimizeApplyError> {
     let deletion_log = DeletionLogger::from_env();
@@ -100,6 +104,7 @@ pub fn apply_optimize_plan(
     let mut ctx = OptimizeApplyContext {
         protection,
         whitelist_patterns: &[],
+        task_whitelist,
         options,
         trash: &vole_sys::macos::MacTrash,
         deletion_log: &deletion_log,
@@ -168,6 +173,12 @@ pub fn apply_optimize_proto_plan(
             skip_tracker.record(SkipReason::Whitelisted, &entry.rule_id);
             continue;
         };
+
+        if whitelist::is_task_whitelisted(task_id, ctx.task_whitelist) {
+            skipped += 1;
+            skip_tracker.record(SkipReason::Whitelisted, &entry.rule_id);
+            continue;
+        }
 
         match kind {
             OptimizeTaskKind::Delete => {
@@ -388,6 +399,7 @@ mod tests {
         let mut ctx = OptimizeApplyContext {
             protection: &protection,
             whitelist_patterns: &[],
+            task_whitelist: &[],
             options: OptimizeApplyOptions { permanent: true },
             trash: &trash,
             deletion_log: &deletion_log,
@@ -421,6 +433,7 @@ mod tests {
         let mut ctx = OptimizeApplyContext {
             protection: &protection,
             whitelist_patterns: &[],
+            task_whitelist: &[],
             options: OptimizeApplyOptions { permanent: true },
             trash: &trash,
             deletion_log: &deletion_log,
@@ -474,6 +487,7 @@ mod tests {
         let mut ctx = OptimizeApplyContext {
             protection: &protection,
             whitelist_patterns: &[],
+            task_whitelist: &[],
             options: OptimizeApplyOptions { permanent: true },
             trash: &trash,
             deletion_log: &deletion_log,
@@ -505,6 +519,7 @@ mod tests {
         let mut ctx = OptimizeApplyContext {
             protection: &protection,
             whitelist_patterns: &[],
+            task_whitelist: &[],
             options: OptimizeApplyOptions { permanent: true },
             trash: &trash,
             deletion_log: &deletion_log,
@@ -540,6 +555,7 @@ mod tests {
         let mut ctx = OptimizeApplyContext {
             protection: &protection,
             whitelist_patterns: &[],
+            task_whitelist: &[],
             options: OptimizeApplyOptions { permanent: true },
             trash: &trash,
             deletion_log: &deletion_log,
@@ -600,6 +616,7 @@ mod tests {
         let mut ctx = OptimizeApplyContext {
             protection: &protection,
             whitelist_patterns: &[],
+            task_whitelist: &[],
             options: OptimizeApplyOptions { permanent: true },
             trash: &trash,
             deletion_log: &deletion_log,
@@ -645,6 +662,7 @@ mod tests {
         let mut ctx = OptimizeApplyContext {
             protection: &protection,
             whitelist_patterns: &[],
+            task_whitelist: &[],
             options: OptimizeApplyOptions { permanent: true },
             trash: &trash,
             deletion_log: &deletion_log,
@@ -692,6 +710,7 @@ mod tests {
         let mut ctx = OptimizeApplyContext {
             protection: &protection,
             whitelist_patterns: &[],
+            task_whitelist: &[],
             options: OptimizeApplyOptions { permanent: true },
             trash: &trash,
             deletion_log: &deletion_log,
@@ -752,6 +771,7 @@ mod tests {
         let mut ctx = OptimizeApplyContext {
             protection: &protection,
             whitelist_patterns: &[],
+            task_whitelist: &[],
             options: OptimizeApplyOptions { permanent: true },
             trash: &trash,
             deletion_log: &deletion_log,

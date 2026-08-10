@@ -69,10 +69,12 @@ fn run_interactive(opts: &OptimizeOptions) -> io::Result<()> {
         .ok_or_else(|| io::Error::other("HOME not set"))?;
     let catalog = ProtectionCatalog::embedded();
     let protection = AppProtection::new();
+    let task_whitelist = vole_core::whitelist::load_optimize()?;
     let plan_opts = OptimizePlanOptions {
         home: &home,
         ttl_secs: 900,
         only_task: opts.task.as_deref(),
+        task_whitelist: &task_whitelist,
     };
 
     let cancel = vole_core::cancel::CancelToken::new();
@@ -100,8 +102,8 @@ fn run_interactive(opts: &OptimizeOptions) -> io::Result<()> {
     let apply_opts = OptimizeApplyOptions {
         permanent: opts.permanent,
     };
-    let report =
-        apply_optimize_plan(&plan, &protection, apply_opts, None).map_err(map_apply_error)?;
+    let report = apply_optimize_plan(&plan, &protection, apply_opts, &task_whitelist, None)
+        .map_err(map_apply_error)?;
     print_human_report(&report);
     Ok(())
 }
@@ -112,10 +114,12 @@ fn run_plan(opts: OptimizeOptions) -> io::Result<()> {
         .ok_or_else(|| io::Error::other("HOME not set"))?;
     let catalog = ProtectionCatalog::embedded();
     let protection = AppProtection::new();
+    let task_whitelist = vole_core::whitelist::load_optimize()?;
     let plan_opts = OptimizePlanOptions {
         home: &home,
         ttl_secs: 900,
         only_task: opts.task.as_deref(),
+        task_whitelist: &task_whitelist,
     };
 
     let cancel = vole_core::cancel::CancelToken::new();
@@ -167,6 +171,7 @@ fn run_apply(opts: &OptimizeOptions, plan_path: &Path) -> io::Result<()> {
     let apply_opts = OptimizeApplyOptions {
         permanent: opts.permanent,
     };
+    let task_whitelist = vole_core::whitelist::load_optimize()?;
 
     let mut report = if opts.json_stream {
         let (event_tx, event_rx) = unbounded();
@@ -174,15 +179,17 @@ fn run_apply(opts: &OptimizeOptions, plan_path: &Path) -> io::Result<()> {
         let on_event = |event: StreamEvent| {
             let _ = event_tx.send(event);
         };
-        let report = apply_optimize_plan(&plan, &protection, apply_opts, Some(&on_event))
-            .map_err(map_apply_error)?;
+        let report =
+            apply_optimize_plan(&plan, &protection, apply_opts, &task_whitelist, Some(&on_event))
+                .map_err(map_apply_error)?;
         drop(event_tx);
         writer
             .join()
             .map_err(|_| io::Error::other("stream writer panicked"))??;
         report
     } else {
-        apply_optimize_plan(&plan, &protection, apply_opts, None).map_err(map_apply_error)?
+        apply_optimize_plan(&plan, &protection, apply_opts, &task_whitelist, None)
+            .map_err(map_apply_error)?
     };
 
     if should_use_json(opts.json) {

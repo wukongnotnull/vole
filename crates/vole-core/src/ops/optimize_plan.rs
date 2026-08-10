@@ -20,6 +20,7 @@ use crate::optimize::{
 use crate::protection::{AppProtection, ProtectionCatalog};
 use crate::safety::capture_plan_entry_identity;
 use crate::vole_proto::{Plan as ProtoPlan, PlanEntry as ProtoPlanEntry, SCHEMA_VERSION};
+use crate::whitelist;
 
 use super::plan::DEFAULT_PLAN_TTL;
 
@@ -33,6 +34,8 @@ pub struct OptimizePlanOptions<'a> {
     pub home: &'a Path,
     pub ttl_secs: u64,
     pub only_task: Option<&'a str>,
+    /// Optimize task ids skipped by user whitelist (`whitelist_optimize`).
+    pub task_whitelist: &'a [String],
 }
 
 pub fn build_optimize_plan(
@@ -48,6 +51,9 @@ pub fn build_optimize_plan(
 
     let mut candidates: Vec<OptimizeCandidate> = Vec::new();
     let allow = |task_id: &str| -> bool {
+        if whitelist::is_task_whitelisted(task_id, opts.task_whitelist) {
+            return false;
+        }
         match opts.only_task {
             Some(only) => only == task_id,
             None => optimize_catalog()
@@ -235,6 +241,7 @@ mod tests {
                 home,
                 ttl_secs: 900,
                 only_task: None,
+                task_whitelist: &[],
             },
         )
         .unwrap();
@@ -263,6 +270,7 @@ mod tests {
                 home,
                 ttl_secs: 900,
                 only_task: None,
+                task_whitelist: &[],
             },
         )
         .unwrap();
@@ -295,5 +303,33 @@ mod tests {
             .entries
             .iter()
             .any(|e| e.rule_id == "optimize:action:spotlight_index_optimize"));
+    }
+
+    #[test]
+    fn build_plan_skips_whitelisted_task_ids() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path();
+        let catalog = ProtectionCatalog::embedded();
+        let protection = AppProtection::new();
+        let wl = vec!["dock_refresh".to_string()];
+        let plan = build_optimize_plan(
+            &catalog,
+            &protection,
+            &OptimizePlanOptions {
+                home,
+                ttl_secs: 900,
+                only_task: None,
+                task_whitelist: &wl,
+            },
+        )
+        .unwrap();
+        assert!(!plan
+            .entries
+            .iter()
+            .any(|e| e.rule_id.contains("dock_refresh")));
+        assert!(plan
+            .entries
+            .iter()
+            .any(|e| e.rule_id == "optimize:action:system_maintenance"));
     }
 }

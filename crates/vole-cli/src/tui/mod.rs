@@ -7,6 +7,8 @@ mod home_menu;
 mod home_menu_state;
 mod menu_state;
 mod paginated_select;
+mod status_cat;
+mod status_prefs;
 mod status_view;
 mod theme;
 mod widgets;
@@ -34,5 +36,8 @@ pub use menu_state::{
 };
 #[allow(unused_imports)]
 pub use paginated_select::{drain_pending_input, run_paginated_select};
-pub use status_view::render_status;
+#[allow(unused_imports)]
+pub use status_cat::render_mole_frame;
+pub use status_prefs::{load_status_prefs, next_cpu_cores, save_cat_hidden, save_cpu_cores};
+pub use status_view::{render_status, StatusRenderOpts};
 pub use theme::Theme;

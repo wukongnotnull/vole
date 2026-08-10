@@ -11,6 +11,7 @@ use vole_core::vole_proto::status::{
     ProxyStatus, StatusSnapshot, ThermalStatus,
 };
 
+use super::status_cat::render_mole_frame;
 use super::theme::{color_bucket, Theme};
 use super::widgets::{
     fit_status_header, format_bytes_bin, format_rate_mbs, line_pair, metric_bar_line, mini_bar,
@@ -25,7 +26,30 @@ const ICON_BATTERY: &str = "◪";
 const ICON_PROCS: &str = "❊";
 const STATUS_NARROW: u16 = 80;
 
-pub fn render_status(frame: &mut Frame, snap: &StatusSnapshot, theme: &Theme) {
+#[derive(Debug, Clone, Copy)]
+pub struct StatusRenderOpts {
+    pub cat_hidden: bool,
+    pub anim_frame: u64,
+    /// 0 = all cores.
+    pub cpu_cores: i32,
+}
+
+impl Default for StatusRenderOpts {
+    fn default() -> Self {
+        Self {
+            cat_hidden: false,
+            anim_frame: 0,
+            cpu_cores: 2,
+        }
+    }
+}
+
+pub fn render_status(
+    frame: &mut Frame,
+    snap: &StatusSnapshot,
+    theme: &Theme,
+    opts: StatusRenderOpts,
+) {
     let area = frame.area();
     let width = area.width;
     let tip = snap
@@ -33,6 +57,7 @@ pub fn render_status(frame: &mut Frame, snap: &StatusSnapshot, theme: &Theme) {
         .as_ref()
         .map(|info| info.message.as_str());
     let alert = format_process_alert(snap.process_alerts.as_slice());
+    let show_cat = !opts.cat_hidden && width >= 20;
 
     let mut constraints = vec![Constraint::Length(1)];
     if alert.is_some() {
@@ -40,6 +65,9 @@ pub fn render_status(frame: &mut Frame, snap: &StatusSnapshot, theme: &Theme) {
     }
     if tip.is_some() {
         constraints.push(Constraint::Length(1));
+    }
+    if show_cat {
+        constraints.push(Constraint::Length(4));
     }
     constraints.push(Constraint::Min(4));
     constraints.push(Constraint::Length(1));
@@ -75,7 +103,13 @@ pub fn render_status(frame: &mut Frame, snap: &StatusSnapshot, theme: &Theme) {
         idx += 1;
     }
 
-    render_cards(frame, chunks[idx], snap, theme, width);
+    if show_cat {
+        let mole = render_mole_frame(opts.anim_frame, width as usize);
+        frame.render_widget(Paragraph::new(mole).style(theme.ok), chunks[idx]);
+        idx += 1;
+    }
+
+    render_cards(frame, chunks[idx], snap, theme, width, opts.cpu_cores);
     idx += 1;
 
     frame.render_widget(
@@ -84,8 +118,15 @@ pub fn render_status(frame: &mut Frame, snap: &StatusSnapshot, theme: &Theme) {
     );
 }
 
-fn render_cards(frame: &mut Frame, area: Rect, snap: &StatusSnapshot, theme: &Theme, width: u16) {
-    let cards = build_card_blocks(snap, theme, width);
+fn render_cards(
+    frame: &mut Frame,
+    area: Rect,
+    snap: &StatusSnapshot,
+    theme: &Theme,
+    width: u16,
+    cpu_cores: i32,
+) {
+    let cards = build_card_blocks(snap, theme, width, cpu_cores);
     match status_layout_mode(width) {
         StatusLayoutMode::Single => {
             let n = cards.len().max(1) as u16;
@@ -217,14 +258,19 @@ pub fn format_process_alert(alerts: &[ProcessAlert]) -> Option<String> {
     Some(text)
 }
 
-fn build_card_blocks(snap: &StatusSnapshot, theme: &Theme, width: u16) -> Vec<Vec<Line<'static>>> {
+fn build_card_blocks(
+    snap: &StatusSnapshot,
+    theme: &Theme,
+    width: u16,
+    cpu_cores: i32,
+) -> Vec<Vec<Line<'static>>> {
     let card_w = if matches!(status_layout_mode(width), StatusLayoutMode::TwoColumn) {
         width / 2
     } else {
         width
     };
     vec![
-        render_cpu_card(&snap.cpu, &snap.thermal, theme),
+        render_cpu_card(&snap.cpu, &snap.thermal, theme, cpu_cores),
         render_memory_card(&snap.memory, theme),
         render_disk_card(
             &snap.disks,
@@ -245,7 +291,12 @@ fn card_header(icon: &str, title: &str, theme: &Theme) -> Line<'static> {
     ])
 }
 
-fn render_cpu_card(cpu: &CpuStatus, thermal: &ThermalStatus, theme: &Theme) -> Vec<Line<'static>> {
+fn render_cpu_card(
+    cpu: &CpuStatus,
+    thermal: &ThermalStatus,
+    theme: &Theme,
+    cpu_cores: i32,
+) -> Vec<Line<'static>> {
     let mut lines = vec![card_header(ICON_CPU, "CPU", theme)];
     let mut usage = format!("{:.1}%", cpu.usage);
     if thermal.cpu_temp > 0.0 {
@@ -272,7 +323,12 @@ fn render_cpu_card(cpu: &CpuStatus, thermal: &ThermalStatus, theme: &Theme) -> V
             .map(|(i, v)| (i, *v))
             .collect();
         cores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-        for (idx, val) in cores.into_iter().take(2) {
+        let limit = if cpu_cores <= 0 {
+            usize::MAX
+        } else {
+            cpu_cores as usize
+        };
+        for (idx, val) in cores.into_iter().take(limit) {
             lines.push(Line::from(format!(
                 "Core{:<2} {}  {:5.1}%",
                 idx + 1,
@@ -648,7 +704,7 @@ mod tests {
             logical_cpu: 8,
             ..Default::default()
         };
-        let lines = render_cpu_card(&cpu, &ThermalStatus::default(), &theme);
+        let lines = render_cpu_card(&cpu, &ThermalStatus::default(), &theme, 2);
         let joined: String = lines
             .iter()
             .flat_map(|l| l.spans.iter().map(|s| s.content.as_ref()))

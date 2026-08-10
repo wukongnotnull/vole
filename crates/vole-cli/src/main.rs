@@ -157,6 +157,32 @@ enum Command {
         /// 可选：只跑单个 Mole task id（实验性）。
         #[arg(long, value_name = "TASK_ID")]
         task: Option<String>,
+        /// TTY 分页多选管理优化任务白名单（对齐 mole `optimize --whitelist`）；脚本用 --whitelist-add/remove/list。
+        #[arg(
+            long,
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "plan", "dry_run", "task"]
+        )]
+        whitelist: bool,
+        /// 向优化白名单添加任务 id（非交互）。
+        #[arg(
+            long = "whitelist-add",
+            value_name = "TASK_ID",
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist", "plan", "dry_run", "task"]
+        )]
+        whitelist_add: Option<String>,
+        /// 从优化白名单移除任务 id（非交互）。
+        #[arg(
+            long = "whitelist-remove",
+            value_name = "TASK_ID",
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist", "plan", "dry_run", "task"]
+        )]
+        whitelist_remove: Option<String>,
+        /// 列出当前优化任务白名单（非交互）。
+        #[arg(
+            long = "whitelist-list",
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist", "plan", "dry_run", "task"]
+        )]
+        whitelist_list: bool,
     },
     /// 实时系统监控。
     Status {
@@ -377,6 +403,10 @@ fn main() {
             json_stream,
             plan_out,
             task,
+            whitelist,
+            whitelist_add,
+            whitelist_remove,
+            whitelist_list,
         }) => {
             let code = optimize::run_optimize(optimize::OptimizeOptions {
                 explicit_plan: plan || dry_run,
@@ -386,6 +416,10 @@ fn main() {
                 apply_plan: apply,
                 permanent,
                 task,
+                whitelist,
+                whitelist_add,
+                whitelist_remove,
+                whitelist_list,
             });
             std::process::exit(code);
         }
@@ -760,6 +794,10 @@ fn cmd_status_tui() -> io::Result<()> {
 
     let mut collector = StatusCollector::new();
     let mut snap = collector.collect_full().map_err(io::Error::other)?;
+    let prefs = tui::load_status_prefs();
+    let mut cat_hidden = prefs.cat_hidden;
+    let mut cpu_cores = prefs.cpu_cores;
+    let mut anim_frame: u64 = 0;
 
     let poll = Duration::from_millis(33);
     let mut last_collect = std::time::Instant::now();
@@ -771,6 +809,14 @@ fn cmd_status_tui() -> io::Result<()> {
                         cancel.cancel();
                     }
                     KeyCode::Char('q') | KeyCode::Esc => cancel.cancel(),
+                    KeyCode::Char('k') | KeyCode::Char('K') => {
+                        cat_hidden = !cat_hidden;
+                        tui::save_cat_hidden(cat_hidden);
+                    }
+                    KeyCode::Char('c') | KeyCode::Char('C') => {
+                        cpu_cores = tui::next_cpu_cores(cpu_cores);
+                        tui::save_cpu_cores(cpu_cores);
+                    }
                     _ => {}
                 }
             }
@@ -783,7 +829,15 @@ fn cmd_status_tui() -> io::Result<()> {
             last_collect = std::time::Instant::now();
         }
 
-        term.draw(|f| tui::render_status(f, &snap, &theme))?;
+        let step = 1u64 + (snap.cpu.usage / 25.0).floor().max(0.0) as u64;
+        anim_frame = anim_frame.wrapping_add(step);
+
+        let opts = tui::StatusRenderOpts {
+            cat_hidden,
+            anim_frame,
+            cpu_cores,
+        };
+        term.draw(|f| tui::render_status(f, &snap, &theme, opts))?;
 
         if cancel.is_cancelled() {
             break;

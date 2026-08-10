@@ -1,4 +1,4 @@
-//! Mole 兼容的 clean whitelist 配置与管理菜单纯逻辑。
+//! Mole 兼容的 clean / optimize whitelist 配置与管理菜单纯逻辑。
 
 mod catalog;
 
@@ -8,7 +8,12 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use crate::optimize::optimize_catalog;
+
 const HEADER: &str = "# Mole Whitelist - Protected paths won't be deleted\n# Default protections: Playwright browsers, HuggingFace models, Maven repo, Ollama models, Surge Mac, R renv, Finder metadata\n# Add one pattern per line to keep items safe.";
+
+const OPTIMIZE_HEADER: &str =
+    "# Mole Optimize Whitelist - Listed tasks are skipped\n# One task id per line\n";
 
 const FINDER_METADATA_SENTINEL: &str = "FINDER_METADATA";
 
@@ -260,6 +265,133 @@ pub fn is_match(path: &Path, patterns: &[String]) -> bool {
     false
 }
 
+fn optimize_config_path() -> PathBuf {
+    std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .map(|h| h.join(".config/mole/whitelist_optimize"))
+        .unwrap_or_else(|| PathBuf::from(".config/mole/whitelist_optimize"))
+}
+
+pub fn optimize_config_display_path() -> String {
+    let path = optimize_config_path();
+    let home = home_path();
+    to_portable_pattern(&path.to_string_lossy(), &home)
+}
+
+pub fn load_optimize() -> io::Result<Vec<String>> {
+    let path = optimize_config_path();
+    if !path.exists() {
+        return Ok(vec![]);
+    }
+    let text = fs::read_to_string(&path)?;
+    Ok(parse_lines(&text))
+}
+
+pub fn save_optimize(ids: &[String]) -> io::Result<()> {
+    let path = optimize_config_path();
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let mut unique: Vec<String> = Vec::new();
+    for id in ids {
+        let id = id.trim();
+        if id.is_empty() || id.starts_with('#') {
+            continue;
+        }
+        if !unique.iter().any(|u| u == id) {
+            unique.push(id.to_string());
+        }
+    }
+    let mut out = String::from(OPTIMIZE_HEADER);
+    if !unique.is_empty() {
+        out.push('\n');
+    }
+    for id in &unique {
+        out.push_str(id);
+        out.push('\n');
+    }
+    fs::write(path, out)?;
+    Ok(())
+}
+
+fn known_optimize_task(id: &str) -> bool {
+    optimize_catalog().iter().any(|t| t.id == id)
+}
+
+pub fn add_optimize(task_id: &str) -> io::Result<()> {
+    let id = task_id.trim();
+    if id.is_empty() || id.starts_with('#') {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "无效的 optimize 任务 id",
+        ));
+    }
+    if !known_optimize_task(id) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("未知 optimize 任务 id: {id}"),
+        ));
+    }
+    let mut ids = load_optimize()?;
+    if ids.iter().any(|p| p == id) {
+        return Ok(());
+    }
+    ids.push(id.to_string());
+    save_optimize(&ids)
+}
+
+pub fn remove_optimize(task_id: &str) -> io::Result<bool> {
+    let id = task_id.trim();
+    let mut ids = load_optimize()?;
+    let before = ids.len();
+    ids.retain(|p| p != id);
+    if ids.len() == before {
+        return Ok(false);
+    }
+    save_optimize(&ids)?;
+    Ok(true)
+}
+
+pub fn is_task_whitelisted(task_id: &str, ids: &[String]) -> bool {
+    ids.iter().any(|id| id == task_id)
+}
+
+/// Build mole-style optimize whitelist menu: selected first, then remaining.
+pub fn build_optimize_whitelist_menu(current: &[String]) -> WhitelistMenuBuild {
+    let mut selected = Vec::new();
+    let mut remaining = Vec::new();
+
+    for task in optimize_catalog() {
+        let entry = WhitelistMenuEntry {
+            label: task.title.to_string(),
+            pattern: task.id.to_string(),
+        };
+        if current.iter().any(|c| c == task.id) {
+            selected.push(entry);
+        } else {
+            remaining.push(entry);
+        }
+    }
+
+    let mut custom_patterns = Vec::new();
+    for cur in current {
+        let known = optimize_catalog().iter().any(|t| t.id == cur.as_str());
+        if !known && !custom_patterns.iter().any(|c: &String| c == cur) {
+            custom_patterns.push(cur.clone());
+        }
+    }
+
+    let preselected: Vec<usize> = (0..selected.len()).collect();
+    let mut entries = selected;
+    entries.extend(remaining);
+
+    WhitelistMenuBuild {
+        entries,
+        preselected,
+        custom_patterns,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -383,5 +515,34 @@ mod tests {
     #[test]
     fn catalog_is_non_empty() {
         assert!(CLEAN_WHITELIST_CATALOG.len() >= 70);
+    }
+
+    #[test]
+    fn optimize_whitelist_roundtrip_and_menu() {
+        let _guard = test_env::lock();
+        let home = std::env::temp_dir().join(format!("vole-owl-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&home);
+        std::fs::create_dir_all(home.join("h")).unwrap();
+        std::env::set_var("HOME", home.join("h"));
+
+        assert!(load_optimize().unwrap().is_empty());
+        add_optimize("dock_refresh").unwrap();
+        let err = add_optimize("not_a_real_task").unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidInput);
+        let loaded = load_optimize().unwrap();
+        assert_eq!(loaded, vec!["dock_refresh".to_string()]);
+        assert!(is_task_whitelisted("dock_refresh", &loaded));
+        assert!(!is_task_whitelisted("cache_refresh", &loaded));
+
+        let menu = build_optimize_whitelist_menu(&loaded);
+        assert_eq!(menu.entries[0].pattern, "dock_refresh");
+        assert_eq!(menu.preselected, vec![0]);
+        assert!(menu.entries.iter().any(|e| e.pattern == "cache_refresh"));
+
+        assert!(remove_optimize("dock_refresh").unwrap());
+        assert!(load_optimize().unwrap().is_empty());
+
+        std::env::remove_var("HOME");
+        let _ = std::fs::remove_dir_all(&home);
     }
 }

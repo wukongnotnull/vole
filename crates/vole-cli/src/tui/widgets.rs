@@ -212,21 +212,15 @@ pub enum AnalyzeFooterMode {
 
 pub fn analyze_footer(mode: AnalyzeFooterMode) -> String {
     match mode {
-        AnalyzeFooterMode::Filtering => {
-            "Filter: type… Enter apply | Esc clear".to_string()
-        }
-        AnalyzeFooterMode::DeleteConfirm => {
-            "Enter confirm | Esc cancel".to_string()
-        }
+        AnalyzeFooterMode::Filtering => "Filter: type… Enter apply | Esc clear".to_string(),
+        AnalyzeFooterMode::DeleteConfirm => "Enter confirm | Esc cancel".to_string(),
         AnalyzeFooterMode::Top { selected_count } => {
             let del = if selected_count > 0 {
                 format!("⌫ Del {selected_count}")
             } else {
                 "⌫ Del".to_string()
             };
-            format!(
-                "↑↓ | Space | / Filter | O Open | P Preview | {del} | Esc Back | Q/Ctrl+C Quit"
-            )
+            format!("↑↓ | Space | / Filter | O Open | P Preview | {del} | Esc Back | Q/Ctrl+C Quit")
         }
         AnalyzeFooterMode::Directory {
             can_go_back,
@@ -248,9 +242,7 @@ pub fn analyze_footer(mode: AnalyzeFooterMode) -> String {
             } else {
                 "Esc/Q Quit"
             };
-            format!(
-                "↑↓ | Space | Enter | / Filter | O Open | P Preview | {del}{top} | {esc}"
-            )
+            format!("↑↓ | Space | Enter | / Filter | O Open | P Preview | {del}{top} | {esc}")
         }
     }
 }

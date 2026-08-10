@@ -63,7 +63,8 @@ pub fn trash_analyze_paths(paths: &[String]) -> TrashAnalyzeReport {
 pub fn apply_removals(out: &mut AnalyzeOutput, removed: &[String]) {
     let removed_set: std::collections::BTreeSet<&str> =
         removed.iter().map(String::as_str).collect();
-    out.entries.retain(|e| !removed_set.contains(e.path.as_str()));
+    out.entries
+        .retain(|e| !removed_set.contains(e.path.as_str()));
     out.large_files
         .retain(|e| !removed_set.contains(e.path.as_str()));
     out.total_size = out.entries.iter().map(|e| e.size.max(0)).sum();

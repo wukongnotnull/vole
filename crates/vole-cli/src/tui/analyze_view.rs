@@ -175,9 +175,7 @@ fn render_entry_items(
         .max()
         .unwrap_or(1)
         .max(1);
-    let offset = opts
-        .selected
-        .saturating_sub(viewport.saturating_sub(1) / 2);
+    let offset = opts.selected.saturating_sub(viewport.saturating_sub(1) / 2);
     let end = (offset + viewport).min(entries.len());
     let start = offset.min(end);
     let show_marks = !opts.multi_selected.is_empty();
@@ -236,9 +234,7 @@ fn render_large_items(
         .max()
         .unwrap_or(1)
         .max(1);
-    let offset = opts
-        .selected
-        .saturating_sub(viewport.saturating_sub(1) / 2);
+    let offset = opts.selected.saturating_sub(viewport.saturating_sub(1) / 2);
     let end = (offset + viewport).min(files.len());
     let start = offset.min(end);
     let show_marks = !opts.large_multi_selected.is_empty();

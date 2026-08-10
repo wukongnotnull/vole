@@ -18,8 +18,6 @@ pub use analyze_actions::{
 pub use analyze_state::{map_analyze_key, AnalyzeEffect, AnalyzeKey, AnalyzeState};
 pub use analyze_view::{render_analyze, AnalyzeRenderOpts};
 #[allow(unused_imports)]
-pub use widgets::AnalyzeFooterMode;
-#[allow(unused_imports)]
 pub use home_menu::{
     brand_ascii_lines, map_key, run_home_menu, HomeMenuRunOpts, VOLE_REPO_URL, VOLE_TAGLINE,
 };
@@ -27,6 +25,8 @@ pub use home_menu::{
 pub use home_menu_state::{
     HomeAction, HomeCommand, HomeItem, HomeKey, HomeMenuConfig, HomeMenuState, HOME_ITEMS,
 };
+#[allow(unused_imports)]
+pub use widgets::AnalyzeFooterMode;
 // Re-exported for uninstall / whitelist TTY wiring and external unit tests.
 #[allow(unused_imports)]
 pub use menu_state::{

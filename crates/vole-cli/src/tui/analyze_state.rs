@@ -201,20 +201,17 @@ impl AnalyzeState {
                         return AnalyzeEffect::None;
                     }
                     self.large_filtering = true;
-                    self.status =
-                        "Filter: type to match, Enter to apply, Esc to clear".to_string();
+                    self.status = "Filter: type to match, Enter to apply, Esc to clear".to_string();
                 } else if !out.entries.is_empty() {
                     self.entry_filtering = true;
-                    self.status =
-                        "Filter: type to match, Enter to apply, Esc to clear".to_string();
+                    self.status = "Filter: type to match, Enter to apply, Esc to clear".to_string();
                 }
                 AnalyzeEffect::None
             }
             AnalyzeKey::Top => {
                 if scanning || out.overview {
                     if scanning {
-                        self.status =
-                            "Top files are available after the scan finishes".to_string();
+                        self.status = "Top files are available after the scan finishes".to_string();
                     }
                     return AnalyzeEffect::None;
                 }

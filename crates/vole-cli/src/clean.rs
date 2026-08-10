@@ -1,6 +1,6 @@
 //! `vole clean` plan / apply / whitelist 接线。
 
-use std::io::{self, IsTerminal, Write};
+use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::PathBuf;
 use std::thread;
 
@@ -25,6 +25,8 @@ use crate::signals;
 use crate::tui::{run_paginated_select, MenuItem, MenuState, SelectOutcome, SortMode};
 
 pub struct CleanOptions {
+    /// `--plan` / `--dry-run` / `-n`：强制走自动化 plan 路径。
+    pub explicit_plan: bool,
     pub json: bool,
     pub json_stream: bool,
     pub plan_out: Option<PathBuf>,
@@ -66,8 +68,83 @@ fn run_clean_inner(opts: CleanOptions) -> io::Result<()> {
     if let Some(ref plan_path) = opts.apply_plan {
         return run_apply(&opts, plan_path);
     }
-
+    if gate_interactive(io::stdin().is_terminal(), io::stdout().is_terminal(), &opts) {
+        return run_interactive(&opts);
+    }
     run_plan(opts)
+}
+
+/// TTY 裸调用进入确认轨的门控（可单测，不依赖真实 TTY）。
+pub(crate) fn gate_interactive(stdin_tty: bool, stdout_tty: bool, opts: &CleanOptions) -> bool {
+    stdin_tty
+        && stdout_tty
+        && !opts.explicit_plan
+        && !opts.json
+        && !opts.json_stream
+        && opts.plan_out.is_none()
+        && opts.apply_plan.is_none()
+        && !opts.is_whitelist_command()
+}
+
+fn run_interactive(opts: &CleanOptions) -> io::Result<()> {
+    let rules = load_rules_from_dir(default_rules_dir()).map_err(map_load_error)?;
+    let enabled = enabled_rule_count(&rules);
+    let whitelist_patterns = whitelist::load_clean()?;
+    let protection = AppProtection::new();
+
+    let cancel = CancelToken::new();
+    signals::spawn_signal_cancel(cancel.clone());
+    let orch = Orchestrator::new(cancel, None);
+
+    let plan = match orch.build_plan(&rules, &protection, &whitelist_patterns) {
+        Ok(plan) => plan,
+        Err(OpsError::Cancelled) => {
+            return Err(io::Error::new(io::ErrorKind::Interrupted, "cancelled"));
+        }
+        Err(OpsError::Strategy(e)) => {
+            return Err(io::Error::other(format!("strategy: {e}")));
+        }
+    };
+    drop(orch);
+
+    if plan.entries.is_empty() {
+        eprintln!("Nothing to clean.");
+        return Ok(());
+    }
+
+    let base_note = coverage_note(enabled);
+    let note = coverage_with_orphan_notices(&base_note, &plan.notices);
+    let mut proto = plan_to_proto(&plan).map_err(map_proto_error)?;
+    proto.coverage_note = Some(note);
+    let hints = collect_plan_hints();
+    print_human_plan(&plan, &base_note);
+    print_human_hints(&hints);
+
+    eprint!("Proceed with clean? [y/N] ");
+    let _ = io::stderr().flush();
+    let mut line = String::new();
+    io::stdin().lock().read_line(&mut line)?;
+    if !line.trim().eq_ignore_ascii_case("y") {
+        eprintln!("Aborted.");
+        return Ok(());
+    }
+
+    let apply_opts = ApplyPlanOptions {
+        permanent: opts.permanent,
+    };
+    let process_probe = PgrepProcessProbe;
+    let report = apply_proto_plan(
+        &proto,
+        &protection,
+        &whitelist_patterns,
+        apply_opts,
+        &rules,
+        &process_probe,
+        None,
+    )
+    .map_err(map_apply_error)?;
+    print_human_report(&report);
+    Ok(())
 }
 
 fn run_plan(opts: CleanOptions) -> io::Result<()> {
@@ -523,4 +600,71 @@ fn map_proto_error(err: ProtoPlanError) -> io::Error {
 
 fn map_apply_error(err: ApplyPlanError) -> io::Error {
     io::Error::other(err.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn bare_opts() -> CleanOptions {
+        CleanOptions {
+            explicit_plan: false,
+            json: false,
+            json_stream: false,
+            plan_out: None,
+            apply_plan: None,
+            permanent: false,
+            whitelist: false,
+            whitelist_add: None,
+            whitelist_remove: None,
+            whitelist_list: false,
+        }
+    }
+
+    #[test]
+    fn interactive_gate_requires_bare_tty_flags() {
+        let bare = bare_opts();
+        assert!(!gate_interactive(false, false, &bare));
+        assert!(gate_interactive(true, true, &bare));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &CleanOptions {
+                explicit_plan: true,
+                ..bare_opts()
+            }
+        ));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &CleanOptions {
+                json: true,
+                ..bare_opts()
+            }
+        ));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &CleanOptions {
+                apply_plan: Some(PathBuf::from("p.json")),
+                ..bare_opts()
+            }
+        ));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &CleanOptions {
+                whitelist: true,
+                ..bare_opts()
+            }
+        ));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &CleanOptions {
+                whitelist_list: true,
+                ..bare_opts()
+            }
+        ));
+    }
 }

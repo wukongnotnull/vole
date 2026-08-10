@@ -317,8 +317,8 @@ fn main() {
     match cli.command {
         None => std::process::exit(interactive::run()),
         Some(Command::Clean {
-            plan: _,
-            dry_run: _,
+            plan,
+            dry_run,
             apply,
             permanent,
             json,
@@ -330,6 +330,7 @@ fn main() {
             whitelist_list,
         }) => {
             let code = clean::run_clean(clean::CleanOptions {
+                explicit_plan: plan || dry_run,
                 json,
                 json_stream,
                 plan_out,

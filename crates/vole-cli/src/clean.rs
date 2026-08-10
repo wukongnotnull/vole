@@ -25,6 +25,8 @@ use crate::signals;
 use crate::tui::{run_paginated_select, MenuItem, MenuState, SelectOutcome, SortMode};
 
 pub struct CleanOptions {
+    /// `--plan` / `--dry-run` / `-n`：强制走自动化 plan 路径。
+    pub explicit_plan: bool,
     pub json: bool,
     pub json_stream: bool,
     pub plan_out: Option<PathBuf>,
@@ -68,6 +70,18 @@ fn run_clean_inner(opts: CleanOptions) -> io::Result<()> {
     }
 
     run_plan(opts)
+}
+
+/// TTY 裸调用进入确认轨的门控（可单测，不依赖真实 TTY）。
+pub(crate) fn gate_interactive(stdin_tty: bool, stdout_tty: bool, opts: &CleanOptions) -> bool {
+    stdin_tty
+        && stdout_tty
+        && !opts.explicit_plan
+        && !opts.json
+        && !opts.json_stream
+        && opts.plan_out.is_none()
+        && opts.apply_plan.is_none()
+        && !opts.is_whitelist_command()
 }
 
 fn run_plan(opts: CleanOptions) -> io::Result<()> {
@@ -523,4 +537,71 @@ fn map_proto_error(err: ProtoPlanError) -> io::Error {
 
 fn map_apply_error(err: ApplyPlanError) -> io::Error {
     io::Error::other(err.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn bare_opts() -> CleanOptions {
+        CleanOptions {
+            explicit_plan: false,
+            json: false,
+            json_stream: false,
+            plan_out: None,
+            apply_plan: None,
+            permanent: false,
+            whitelist: false,
+            whitelist_add: None,
+            whitelist_remove: None,
+            whitelist_list: false,
+        }
+    }
+
+    #[test]
+    fn interactive_gate_requires_bare_tty_flags() {
+        let bare = bare_opts();
+        assert!(!gate_interactive(false, false, &bare));
+        assert!(gate_interactive(true, true, &bare));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &CleanOptions {
+                explicit_plan: true,
+                ..bare_opts()
+            }
+        ));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &CleanOptions {
+                json: true,
+                ..bare_opts()
+            }
+        ));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &CleanOptions {
+                apply_plan: Some(PathBuf::from("p.json")),
+                ..bare_opts()
+            }
+        ));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &CleanOptions {
+                whitelist: true,
+                ..bare_opts()
+            }
+        ));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &CleanOptions {
+                whitelist_list: true,
+                ..bare_opts()
+            }
+        ));
+    }
 }

@@ -198,9 +198,14 @@ fn run_apply(opts: &OptimizeOptions, plan_path: &Path) -> io::Result<()> {
         let on_event = |event: StreamEvent| {
             let _ = event_tx.send(event);
         };
-        let report =
-            apply_optimize_plan(&plan, &protection, apply_opts, &task_whitelist, Some(&on_event))
-                .map_err(map_apply_error)?;
+        let report = apply_optimize_plan(
+            &plan,
+            &protection,
+            apply_opts,
+            &task_whitelist,
+            Some(&on_event),
+        )
+        .map_err(map_apply_error)?;
         drop(event_tx);
         writer
             .join()

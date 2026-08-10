@@ -101,6 +101,9 @@ pub fn next_cpu_cores(current: i32) -> i32 {
     CPU_CORES_CYCLE[0]
 }
 
+/// Reverse of [`next_cpu_cores`] (no wrap at the floor). T8 only wires `c` forward;
+/// kept for mole-compatible prefs helpers / future Shift+C.
+#[allow(dead_code)]
 pub fn smaller_cpu_cores(current: i32) -> i32 {
     for (i, &v) in CPU_CORES_CYCLE.iter().enumerate() {
         if v == current {

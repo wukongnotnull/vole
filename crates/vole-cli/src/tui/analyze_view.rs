@@ -308,6 +308,7 @@ pub fn build_analyze_header(
     vec![Line::from(spans), Line::from("")]
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn format_analyze_row(
     entry: &AnalyzeEntry,
     idx: usize,

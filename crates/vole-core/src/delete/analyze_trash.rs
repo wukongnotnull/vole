@@ -58,10 +58,37 @@ mod tests {
     use super::*;
     use crate::test_env;
     use std::fs;
+    use std::sync::Mutex;
+
+    // Serialize env mutations within this module even if callers forget test_env.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    struct EnvGuard {
+        key: &'static str,
+        prev: Option<std::ffi::OsString>,
+    }
+
+    impl EnvGuard {
+        fn set(key: &'static str, value: impl AsRef<std::ffi::OsStr>) -> Self {
+            let prev = std::env::var_os(key);
+            std::env::set_var(key, value);
+            Self { key, prev }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            match &self.prev {
+                Some(v) => std::env::set_var(self.key, v),
+                None => std::env::remove_var(self.key),
+            }
+        }
+    }
 
     #[test]
     fn trash_analyze_paths_uses_test_trash_dir() {
-        let _guard = test_env::lock();
+        let _suite = test_env::lock();
+        let _local = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         let root = std::env::temp_dir().join(format!(
             "vole-core-analyze-del-{}-{}",
             std::process::id(),
@@ -76,24 +103,23 @@ mod tests {
         fs::create_dir_all(&root).unwrap();
         fs::write(&victim, b"x").unwrap();
         fs::create_dir_all(&trash).unwrap();
-        std::env::set_var("VOLE_TEST_NO_AUTH", "1");
-        std::env::set_var("MOLE_TEST_TRASH_DIR", &trash);
-        std::env::set_var("MOLE_DELETE_LOG", &log_path);
+
+        let _trash_env = EnvGuard::set("MOLE_TEST_TRASH_DIR", &trash);
+        let _log_env = EnvGuard::set("MOLE_DELETE_LOG", &log_path);
 
         let report = trash_analyze_paths(&[victim.to_string_lossy().into_owned()]);
         assert!(report.errors.is_empty(), "{:?}", report.errors);
         assert!(!victim.exists());
         assert_eq!(report.removed.len(), 1);
 
-        std::env::remove_var("MOLE_TEST_TRASH_DIR");
-        std::env::remove_var("MOLE_DELETE_LOG");
         let _ = fs::remove_dir_all(&root);
     }
 
     #[test]
     fn trash_analyze_paths_rejects_protected() {
-        let _guard = test_env::lock();
-        std::env::set_var("VOLE_TEST_NO_AUTH", "1");
+        let _suite = test_env::lock();
+        let _local = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        // Do not set VOLE_TEST_NO_AUTH — that env poisons sudo-path mole_delete tests.
         let report = trash_analyze_paths(&["/System/Library".into()]);
         assert!(report.removed.is_empty());
         assert!(!report.errors.is_empty());

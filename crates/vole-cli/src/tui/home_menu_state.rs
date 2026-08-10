@@ -204,7 +204,10 @@ mod tests {
             show_update: false,
         });
         assert_eq!(st.handle_key(HomeKey::More), Some(HomeAction::ShowHelp));
-        assert_eq!(st.handle_key(HomeKey::Version), Some(HomeAction::ShowVersion));
+        assert_eq!(
+            st.handle_key(HomeKey::Version),
+            Some(HomeAction::ShowVersion)
+        );
         assert_eq!(st.handle_key(HomeKey::Quit), Some(HomeAction::Quit));
         assert!(st.handle_key(HomeKey::Update).is_none()); // 无更新条
 

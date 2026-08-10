@@ -54,9 +54,7 @@ pub fn write_update_message_cache_at(path: &Path, msg: Option<&str>) -> io::Resu
 pub fn sync_cache_from_check(current: &str, latest: Option<&str>) -> io::Result<()> {
     match latest {
         Some(latest) if !latest.is_empty() && latest != current => {
-            write_update_message_cache(Some(&format!(
-                "Update {latest} available, run vole update"
-            )))
+            write_update_message_cache(Some(&format!("Update {latest} available, run vole update")))
         }
         _ => write_update_message_cache(None),
     }

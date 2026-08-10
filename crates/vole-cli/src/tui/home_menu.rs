@@ -14,9 +14,7 @@ use ratatui::{Frame, Terminal};
 
 use crate::terminal::TerminalGuard;
 
-use super::home_menu_state::{
-    HomeAction, HomeKey, HomeMenuConfig, HomeMenuState, HOME_ITEMS,
-};
+use super::home_menu_state::{HomeAction, HomeKey, HomeMenuConfig, HomeMenuState, HOME_ITEMS};
 use super::paginated_select::drain_pending_input;
 use super::theme::Theme;
 
@@ -161,7 +159,10 @@ fn render_home(
     frame.render_widget(Paragraph::new(item_lines), chunks[3]);
 
     frame.render_widget(
-        Paragraph::new(Line::from(Span::styled(state.controls_line(), theme.subtle))),
+        Paragraph::new(Line::from(Span::styled(
+            state.controls_line(),
+            theme.subtle,
+        ))),
         chunks[5],
     );
 }

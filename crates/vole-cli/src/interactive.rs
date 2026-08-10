@@ -16,7 +16,9 @@ pub fn run() -> i32 {
 
     let touchid_configured = is_touchid_configured(&resolve_touchid_paths());
     let update_message = read_update_message_cache();
-    let show_update = update_message.as_ref().is_some_and(|s| !s.trim().is_empty());
+    let show_update = update_message
+        .as_ref()
+        .is_some_and(|s| !s.trim().is_empty());
 
     let action = match run_home_menu(HomeMenuRunOpts {
         cfg: HomeMenuConfig {

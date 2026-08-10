@@ -35,7 +35,7 @@ use vole_core::vole_proto::AnalyzeOutput;
     name = "vole",
     version,
     about = "macOS cleanup and monitoring",
-    after_help = "Run `vole` with no subcommand in a terminal to open the home menu (mole-style). Clean/Optimize still plan-only until the confirm track ships."
+    after_help = "Run `vole` with no subcommand in a terminal to open the home menu (mole-style). Bare TTY `clean` / `optimize` scan a plan, prompt Proceed? [y/N], then apply."
 )]
 struct Cli {
     #[command(subcommand)]
@@ -49,8 +49,10 @@ pub(crate) fn clap_command() -> clap::Command {
 #[derive(Subcommand)]
 enum Command {
     /// 清理缓存与残留文件。
+    ///
+    /// TTY 裸调用：扫 plan → 确认 → apply；`--plan` / `--json` / 非 TTY 只产出计划。
     Clean {
-        /// 只产出候选集，不改动任何文件（默认行为；对齐 mole --dry-run）。
+        /// 只产出候选集，不改动任何文件（非 TTY 默认；TTY 显式指定时跳过确认）。
         #[arg(long, conflicts_with = "apply")]
         plan: bool,
         /// 同 `--plan`。
@@ -59,8 +61,8 @@ enum Command {
         /// 执行 plan 文件中的条目（须通过 TTL 与 TOCTOU 重验）。
         #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
         apply: Option<PathBuf>,
-        /// 永久删除而非移入废纸篓（仅与 `--apply` 联用）。
-        #[arg(long, requires = "apply")]
+        /// 永久删除而非移入废纸篓（`--apply` 或交互确认后 apply）。
+        #[arg(long)]
         permanent: bool,
         /// 输出 JSON 而非人类可读文本。
         #[arg(long)]

@@ -30,11 +30,33 @@ fn top_level_help_mentions_home_menu_not_numbered_plan_list() {
         "help={stdout}"
     );
     assert!(
-        stdout.contains("plan-only") || stdout.to_lowercase().contains("clean/optimize"),
-        "expected Clean/Optimize caveat in help: {stdout}"
+        stdout.to_lowercase().contains("confirm")
+            || stdout.contains("Proceed")
+            || stdout.to_lowercase().contains("tty"),
+        "expected T6 confirm-track mention in help: {stdout}"
+    );
+    assert!(
+        !stdout.contains("plan-only until"),
+        "stale T5 caveat still in help: {stdout}"
     );
     assert!(
         !stdout.contains("Select [1-11]"),
         "stale numbered menu leaked into help: {stdout}"
+    );
+}
+
+#[test]
+fn clean_help_mentions_tty_confirm() {
+    let output = Command::new(env!("CARGO_BIN_EXE_vole"))
+        .args(["clean", "--help"])
+        .output()
+        .expect("help");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("确认")
+            || stdout.to_lowercase().contains("confirm")
+            || stdout.contains("Proceed"),
+        "clean help={stdout}"
     );
 }

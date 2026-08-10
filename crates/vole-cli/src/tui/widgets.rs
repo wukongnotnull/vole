@@ -196,11 +196,62 @@ pub fn status_footer() -> String {
     "Q/Esc/Ctrl+C Quit".to_string()
 }
 
-pub fn analyze_footer(can_go_back: bool) -> String {
-    if can_go_back {
-        "↑↓ | Enter | Esc Back | Q/Ctrl+C Quit".to_string()
-    } else {
-        "↑↓ | Enter | Esc/Q Quit".to_string()
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AnalyzeFooterMode {
+    Directory {
+        can_go_back: bool,
+        selected_count: usize,
+        large_count: usize,
+    },
+    Top {
+        selected_count: usize,
+    },
+    Filtering,
+    DeleteConfirm,
+}
+
+pub fn analyze_footer(mode: AnalyzeFooterMode) -> String {
+    match mode {
+        AnalyzeFooterMode::Filtering => {
+            "Filter: type… Enter apply | Esc clear".to_string()
+        }
+        AnalyzeFooterMode::DeleteConfirm => {
+            "Enter confirm | Esc cancel".to_string()
+        }
+        AnalyzeFooterMode::Top { selected_count } => {
+            let del = if selected_count > 0 {
+                format!("⌫ Del {selected_count}")
+            } else {
+                "⌫ Del".to_string()
+            };
+            format!(
+                "↑↓ | Space | / Filter | O Open | P Preview | {del} | Esc Back | Q/Ctrl+C Quit"
+            )
+        }
+        AnalyzeFooterMode::Directory {
+            can_go_back,
+            selected_count,
+            large_count,
+        } => {
+            let del = if selected_count > 0 {
+                format!("⌫ Del {selected_count}")
+            } else {
+                "⌫ Del".to_string()
+            };
+            let top = if large_count > 0 {
+                format!(" | T Top {large_count}")
+            } else {
+                String::new()
+            };
+            let esc = if can_go_back {
+                "Esc Back | Q/Ctrl+C Quit"
+            } else {
+                "Esc/Q Quit"
+            };
+            format!(
+                "↑↓ | Space | Enter | / Filter | O Open | P Preview | {del}{top} | {esc}"
+            )
+        }
     }
 }
 
@@ -279,10 +330,26 @@ mod tests {
     }
 
     #[test]
-    fn analyze_footer_modes() {
-        assert!(analyze_footer(false).contains("Esc/Q Quit"));
-        assert!(analyze_footer(true).contains("Esc Back"));
-        assert!(!analyze_footer(true).contains("Space Select"));
+    fn analyze_footer_declares_wired_keys_only() {
+        let f = analyze_footer(AnalyzeFooterMode::Directory {
+            can_go_back: true,
+            selected_count: 0,
+            large_count: 3,
+        });
+        assert!(f.contains("Space"));
+        assert!(f.contains("⌫") || f.contains("Del"));
+        assert!(f.contains("O Open"));
+        assert!(f.contains("P Preview"));
+        assert!(f.contains("/ Filter"));
+        assert!(f.contains("T Top"));
+        assert!(!f.contains("F File"));
+        assert!(!f.contains("R Refresh"));
+        let root = analyze_footer(AnalyzeFooterMode::Directory {
+            can_go_back: false,
+            selected_count: 0,
+            large_count: 0,
+        });
+        assert!(root.contains("Esc/Q Quit"));
     }
 
     #[test]

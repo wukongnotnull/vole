@@ -10,7 +10,8 @@ mod status_view;
 mod theme;
 mod widgets;
 
-pub use analyze_view::render_analyze;
+pub use analyze_view::{render_analyze, AnalyzeRenderOpts};
+pub use widgets::AnalyzeFooterMode;
 #[allow(unused_imports)]
 pub use home_menu::{
     brand_ascii_lines, map_key, run_home_menu, HomeMenuRunOpts, VOLE_REPO_URL, VOLE_TAGLINE,

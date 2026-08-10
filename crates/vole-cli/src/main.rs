@@ -601,14 +601,28 @@ fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
         }
 
         term.draw(|f| {
+            let empty = std::collections::BTreeSet::new();
             tui::render_analyze(
                 f,
                 &out,
-                selected,
-                scanning,
                 &theme,
-                local_snapshots_tip.as_deref(),
-                stack.len() > 1,
+                &tui::AnalyzeRenderOpts {
+                    selected,
+                    scanning,
+                    local_snapshots_tip: local_snapshots_tip.as_deref(),
+                    can_go_back: stack.len() > 1,
+                    show_large_files: false,
+                    multi_selected: &empty,
+                    large_multi_selected: &empty,
+                    footer_mode: tui::AnalyzeFooterMode::Directory {
+                        can_go_back: stack.len() > 1,
+                        selected_count: 0,
+                        large_count: out.large_files.len(),
+                    },
+                    status: "",
+                    entry_filter: "",
+                    large_filter: "",
+                },
             )
         })?;
 

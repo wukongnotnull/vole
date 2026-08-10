@@ -2,7 +2,7 @@
 
 use vole_core::vole_proto::AnalyzeOutput;
 
-pub use vole_core::delete::{trash_analyze_paths, TrashAnalyzeReport};
+pub use vole_core::delete::trash_analyze_paths;
 
 pub fn apply_removals(out: &mut AnalyzeOutput, removed: &[String]) {
     let removed_set: std::collections::BTreeSet<&str> =

@@ -157,6 +157,32 @@ enum Command {
         /// 可选：只跑单个 Mole task id（实验性）。
         #[arg(long, value_name = "TASK_ID")]
         task: Option<String>,
+        /// TTY 分页多选管理优化任务白名单（对齐 mole `optimize --whitelist`）；脚本用 --whitelist-add/remove/list。
+        #[arg(
+            long,
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "plan", "dry_run", "task"]
+        )]
+        whitelist: bool,
+        /// 向优化白名单添加任务 id（非交互）。
+        #[arg(
+            long = "whitelist-add",
+            value_name = "TASK_ID",
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist", "plan", "dry_run", "task"]
+        )]
+        whitelist_add: Option<String>,
+        /// 从优化白名单移除任务 id（非交互）。
+        #[arg(
+            long = "whitelist-remove",
+            value_name = "TASK_ID",
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist", "plan", "dry_run", "task"]
+        )]
+        whitelist_remove: Option<String>,
+        /// 列出当前优化任务白名单（非交互）。
+        #[arg(
+            long = "whitelist-list",
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist", "plan", "dry_run", "task"]
+        )]
+        whitelist_list: bool,
     },
     /// 实时系统监控。
     Status {
@@ -377,6 +403,10 @@ fn main() {
             json_stream,
             plan_out,
             task,
+            whitelist,
+            whitelist_add,
+            whitelist_remove,
+            whitelist_list,
         }) => {
             let code = optimize::run_optimize(optimize::OptimizeOptions {
                 explicit_plan: plan || dry_run,
@@ -386,6 +416,10 @@ fn main() {
                 apply_plan: apply,
                 permanent,
                 task,
+                whitelist,
+                whitelist_add,
+                whitelist_remove,
+                whitelist_list,
             });
             std::process::exit(code);
         }

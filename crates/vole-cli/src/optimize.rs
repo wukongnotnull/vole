@@ -1,4 +1,4 @@
-//! `vole optimize` plan / apply 接线。
+//! `vole optimize` plan / apply / whitelist 接线。
 
 use std::env;
 use std::io::{self, BufRead, IsTerminal, Write};
@@ -15,8 +15,10 @@ use vole_core::ops::{
 use vole_core::protection::{AppProtection, ProtectionCatalog};
 use vole_core::units;
 use vole_core::vole_proto::{Plan as ProtoPlan, Report, StreamEvent, SCHEMA_VERSION};
+use vole_core::whitelist;
 
 use crate::signals;
+use crate::tui::{run_paginated_select, MenuItem, MenuState, SelectOutcome, SortMode};
 
 pub struct OptimizeOptions {
     /// `--plan` / `--dry-run` / `-n`：强制走自动化 plan 路径。
@@ -27,6 +29,19 @@ pub struct OptimizeOptions {
     pub apply_plan: Option<PathBuf>,
     pub permanent: bool,
     pub task: Option<String>,
+    pub whitelist: bool,
+    pub whitelist_add: Option<String>,
+    pub whitelist_remove: Option<String>,
+    pub whitelist_list: bool,
+}
+
+impl OptimizeOptions {
+    fn is_whitelist_command(&self) -> bool {
+        self.whitelist
+            || self.whitelist_list
+            || self.whitelist_add.is_some()
+            || self.whitelist_remove.is_some()
+    }
 }
 
 pub fn run_optimize(opts: OptimizeOptions) -> i32 {
@@ -43,6 +58,9 @@ pub fn run_optimize(opts: OptimizeOptions) -> i32 {
 fn run_optimize_inner(opts: OptimizeOptions) -> io::Result<()> {
     let _lock = try_lock_optimize().map_err(map_mutex_error)?;
 
+    if opts.is_whitelist_command() {
+        return run_whitelist(&opts);
+    }
     if let Some(ref plan_path) = opts.apply_plan {
         return run_apply(&opts, plan_path);
     }
@@ -61,6 +79,7 @@ pub(crate) fn gate_interactive(stdin_tty: bool, stdout_tty: bool, opts: &Optimiz
         && !opts.json_stream
         && opts.plan_out.is_none()
         && opts.apply_plan.is_none()
+        && !opts.is_whitelist_command()
 }
 
 fn run_interactive(opts: &OptimizeOptions) -> io::Result<()> {
@@ -289,6 +308,104 @@ fn map_apply_error(e: OptimizeApplyError) -> io::Error {
     io::Error::other(e.to_string())
 }
 
+fn run_whitelist(opts: &OptimizeOptions) -> io::Result<()> {
+    if let Some(id) = &opts.whitelist_add {
+        whitelist::add_optimize(id)?;
+        println!("已添加优化白名单: {id}");
+        return Ok(());
+    }
+    if let Some(id) = &opts.whitelist_remove {
+        if whitelist::remove_optimize(id)? {
+            println!("已移除优化白名单: {id}");
+        } else {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                format!("优化白名单中未找到: {id}"),
+            ));
+        }
+        return Ok(());
+    }
+    if opts.whitelist_list {
+        let ids = whitelist::load_optimize()?;
+        if should_use_json(opts.json) {
+            let json = serde_json::to_string(&ids).map_err(io::Error::other)?;
+            println!("{json}");
+        } else {
+            print_whitelist_list(&ids);
+        }
+        return Ok(());
+    }
+    if opts.whitelist {
+        if io::stdin().is_terminal() {
+            return run_whitelist_interactive();
+        }
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "非交互环境请使用 --whitelist-add、--whitelist-remove 或 --whitelist-list",
+        ));
+    }
+    Ok(())
+}
+
+fn print_whitelist_list(ids: &[String]) {
+    if ids.is_empty() {
+        println!("白名单为空");
+        return;
+    }
+    println!("优化任务白名单（跳过执行）:");
+    for (idx, id) in ids.iter().enumerate() {
+        println!("  {}. {id}", idx + 1);
+    }
+}
+
+fn run_whitelist_interactive() -> io::Result<()> {
+    let current = whitelist::load_optimize()?;
+    let build = whitelist::build_optimize_whitelist_menu(&current);
+    if build.entries.is_empty() {
+        return Err(io::Error::other("No items provided"));
+    }
+
+    let items: Vec<MenuItem> = build
+        .entries
+        .iter()
+        .map(|e| MenuItem {
+            label: format!("{} ({})", e.label, e.pattern),
+            filter_name: Some(e.label.clone()),
+            epoch: None,
+            size_kb: None,
+        })
+        .collect();
+
+    let mut cfg = MenuState::config_from_env();
+    cfg.sort_mode = SortMode::Name;
+    cfg.ignore_initial_enter = true;
+    cfg.preselected = build.preselected.clone();
+    if let Ok((_, rows)) = crossterm::terminal::size() {
+        cfg.term_height = rows;
+    }
+
+    let title = format!(
+        "Optimize Whitelist, Select tasks to skip\nEdit: {}",
+        whitelist::optimize_config_display_path()
+    );
+
+    match run_paginated_select(&title, items, cfg)? {
+        SelectOutcome::Cancelled => {
+            println!("Cancelled, no changes saved");
+            Ok(())
+        }
+        SelectOutcome::Confirmed(idxs) => {
+            let merged =
+                whitelist::merge_whitelist_selection(&build.entries, &idxs, &build.custom_patterns);
+            whitelist::save_optimize(&merged)?;
+            println!("Whitelist Updated");
+            println!("Skipped {} tasks", idxs.len());
+            println!("Config: {}", whitelist::optimize_config_display_path());
+            Ok(())
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -302,6 +419,10 @@ mod tests {
             apply_plan: None,
             permanent: false,
             task: None,
+            whitelist: false,
+            whitelist_add: None,
+            whitelist_remove: None,
+            whitelist_list: false,
         }
     }
 
@@ -331,6 +452,14 @@ mod tests {
             true,
             &OptimizeOptions {
                 task: Some("dns_flush".into()),
+                ..bare_opts()
+            }
+        ));
+        assert!(!gate_interactive(
+            true,
+            true,
+            &OptimizeOptions {
+                whitelist: true,
                 ..bare_opts()
             }
         ));

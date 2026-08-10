@@ -7,6 +7,7 @@ mod home_menu;
 mod home_menu_state;
 mod menu_state;
 mod paginated_select;
+mod status_prefs;
 mod status_view;
 mod theme;
 mod widgets;

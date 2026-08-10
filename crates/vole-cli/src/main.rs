@@ -794,6 +794,10 @@ fn cmd_status_tui() -> io::Result<()> {
 
     let mut collector = StatusCollector::new();
     let mut snap = collector.collect_full().map_err(io::Error::other)?;
+    let prefs = tui::load_status_prefs();
+    let mut cat_hidden = prefs.cat_hidden;
+    let mut cpu_cores = prefs.cpu_cores;
+    let mut anim_frame: u64 = 0;
 
     let poll = Duration::from_millis(33);
     let mut last_collect = std::time::Instant::now();
@@ -805,6 +809,14 @@ fn cmd_status_tui() -> io::Result<()> {
                         cancel.cancel();
                     }
                     KeyCode::Char('q') | KeyCode::Esc => cancel.cancel(),
+                    KeyCode::Char('k') | KeyCode::Char('K') => {
+                        cat_hidden = !cat_hidden;
+                        tui::save_cat_hidden(cat_hidden);
+                    }
+                    KeyCode::Char('c') | KeyCode::Char('C') => {
+                        cpu_cores = tui::next_cpu_cores(cpu_cores);
+                        tui::save_cpu_cores(cpu_cores);
+                    }
                     _ => {}
                 }
             }
@@ -817,7 +829,15 @@ fn cmd_status_tui() -> io::Result<()> {
             last_collect = std::time::Instant::now();
         }
 
-        term.draw(|f| tui::render_status(f, &snap, &theme))?;
+        let step = 1u64 + (snap.cpu.usage / 25.0).floor().max(0.0) as u64;
+        anim_frame = anim_frame.wrapping_add(step);
+
+        let opts = tui::StatusRenderOpts {
+            cat_hidden,
+            anim_frame,
+            cpu_cores,
+        };
+        term.draw(|f| tui::render_status(f, &snap, &theme, opts))?;
 
         if cancel.is_cancelled() {
             break;

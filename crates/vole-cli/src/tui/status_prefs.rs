@@ -69,7 +69,10 @@ fn save_pref(key: &str, value: &str) {
 
 pub fn load_status_prefs() -> StatusPrefs {
     let prefs = load_prefs_map();
-    let cat_hidden = prefs.get("cat_hidden").map(|v| v == "true").unwrap_or(false);
+    let cat_hidden = prefs
+        .get("cat_hidden")
+        .map(|v| v == "true")
+        .unwrap_or(false);
     let cpu_cores = prefs
         .get("cpu_cores")
         .and_then(|v| v.parse::<i32>().ok())

@@ -2314,7 +2314,6 @@ dependencies = [
  "signal-hook",
  "tempfile",
  "vole-core",
- "vole-sys",
 ]
 
 [[package]]

@@ -1,64 +1,8 @@
-//! analyze 删除 / Open / Preview 副作用（保护 + 废纸篓漏斗）。
+//! analyze Open / Preview 副作用与列表更新（删除漏斗在 `vole_core::delete`）。
 
-use std::path::{Component, Path};
-
-use vole_core::delete::{
-    mole_delete, DeleteMode, DeletionLogger, MoleDeleteError, MoleDeleteOptions,
-};
-use vole_core::oplog::OperationLogger;
-use vole_core::protection::AppProtection;
 use vole_core::vole_proto::AnalyzeOutput;
-use vole_sys::macos::MacTrash;
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct TrashAnalyzeReport {
-    pub removed: Vec<String>,
-    pub errors: Vec<String>,
-}
-
-/// Move analyze-selected paths to Trash via `mole_delete` only (no parallel `rm`).
-pub fn trash_analyze_paths(paths: &[String]) -> TrashAnalyzeReport {
-    let mut ordered = paths.to_vec();
-    ordered.sort_by(|a, b| {
-        let da = Path::new(a).components().count();
-        let db = Path::new(b).components().count();
-        db.cmp(&da).then_with(|| a.cmp(b))
-    });
-
-    let protection = AppProtection::new();
-    let deletion_log = DeletionLogger::from_env();
-    let mut oplog = OperationLogger::new("analyze");
-    let trash = MacTrash;
-    let options = MoleDeleteOptions {
-        mode: DeleteMode::Trash,
-        dry_run: false,
-        needs_sudo: false,
-        privilege: None,
-    };
-
-    let mut report = TrashAnalyzeReport::default();
-    for path in ordered {
-        match mole_delete(
-            &path,
-            &protection,
-            &[],
-            MoleDeleteOptions {
-                mode: options.mode,
-                dry_run: options.dry_run,
-                needs_sudo: options.needs_sudo,
-                privilege: None,
-            },
-            &trash,
-            &deletion_log,
-            &mut oplog,
-        ) {
-            Ok(()) => report.removed.push(path),
-            Err(MoleDeleteError::Vanished) => report.removed.push(path),
-            Err(err) => report.errors.push(format!("{path}: {err}")),
-        }
-    }
-    report
-}
+pub use vole_core::delete::{trash_analyze_paths, TrashAnalyzeReport};
 
 pub fn apply_removals(out: &mut AnalyzeOutput, removed: &[String]) {
     let removed_set: std::collections::BTreeSet<&str> =
@@ -99,57 +43,10 @@ pub fn spawn_detached(argv: &[String]) -> Result<(), String> {
     cmd.spawn().map(|_| ()).map_err(|e| e.to_string())
 }
 
-#[allow(dead_code)]
-fn path_depth(path: &str) -> usize {
-    Path::new(path)
-        .components()
-        .filter(|c| !matches!(c, Component::RootDir))
-        .count()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
     use vole_core::vole_proto::{AnalyzeEntry, AnalyzeFileEntry, AnalyzeOutput};
-
-    #[test]
-    fn trash_analyze_paths_uses_test_trash_dir() {
-        let root = std::env::temp_dir().join(format!(
-            "vole-analyze-del-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        let victim = root.join("victim.txt");
-        let trash = root.join("Trash");
-        let log_path = root.join("deletions.log");
-        fs::create_dir_all(&root).unwrap();
-        fs::write(&victim, b"x").unwrap();
-        fs::create_dir_all(&trash).unwrap();
-        std::env::set_var("VOLE_TEST_NO_AUTH", "1");
-        std::env::set_var("MOLE_TEST_TRASH_DIR", &trash);
-        std::env::set_var("MOLE_DELETE_LOG", &log_path);
-
-        let report = trash_analyze_paths(&[victim.to_string_lossy().into_owned()]);
-        assert!(report.errors.is_empty(), "{:?}", report.errors);
-        assert!(!victim.exists());
-        assert!(report.removed.len() == 1);
-
-        std::env::remove_var("MOLE_TEST_TRASH_DIR");
-        std::env::remove_var("MOLE_DELETE_LOG");
-        let _ = fs::remove_dir_all(&root);
-    }
-
-    #[test]
-    fn trash_analyze_paths_rejects_protected() {
-        std::env::set_var("VOLE_TEST_NO_AUTH", "1");
-        let report = trash_analyze_paths(&["/System/Library".into()]);
-        assert!(report.removed.is_empty());
-        assert!(!report.errors.is_empty());
-    }
 
     #[test]
     fn apply_removals_updates_entries_and_total() {

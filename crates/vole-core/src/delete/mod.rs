@@ -1,5 +1,6 @@
 //! 删除管线（对齐 mole `file_ops.sh` 的 `safe_remove` / `mole_delete`）。
 
+mod analyze_trash;
 mod config;
 mod deletion_log;
 mod mole_delete;
@@ -7,6 +8,7 @@ mod safe_remove;
 mod size;
 mod trash;
 
+pub use analyze_trash::{trash_analyze_paths, TrashAnalyzeReport};
 pub use config::{
     delete_mode_from_env, deletion_log_path, dry_run_enabled, test_no_auth, test_trash_dir,
     DeleteMode, DeleteModeParseError,

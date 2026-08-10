@@ -100,19 +100,16 @@ fn render_home(
     let update_h = if show_update { 2u16 } else { 0 };
     let items_h = 5u16;
     let footer_h = 1u16;
-    let used = brand_h + 1 + update_h + items_h + 1 + footer_h;
-    let constraints = [
-        Constraint::Length(brand_h),
-        Constraint::Length(1),
-        Constraint::Length(update_h),
-        Constraint::Length(items_h),
-        Constraint::Min(0),
-        Constraint::Length(footer_h),
-    ];
-    let _ = used;
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(constraints)
+        .constraints([
+            Constraint::Length(brand_h),
+            Constraint::Length(1),
+            Constraint::Length(update_h),
+            Constraint::Length(items_h),
+            Constraint::Min(0),
+            Constraint::Length(footer_h),
+        ])
         .split(area);
 
     let ascii = brand_ascii_lines();

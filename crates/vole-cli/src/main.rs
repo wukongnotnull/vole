@@ -42,6 +42,10 @@ struct Cli {
     command: Option<Command>,
 }
 
+pub(crate) fn clap_command() -> clap::Command {
+    Cli::command()
+}
+
 #[derive(Subcommand)]
 enum Command {
     /// 清理缓存与残留文件。

@@ -15,3 +15,22 @@ fn bare_vole_non_tty_exits_without_hanging() {
         "stderr={stderr}"
     );
 }
+
+#[test]
+fn top_level_help_mentions_home_menu_not_numbered_plan_list() {
+    let output = Command::new(env!("CARGO_BIN_EXE_vole"))
+        .args(["--help"])
+        .output()
+        .expect("help");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // after_help 或 about：指向终端首页，而非暗示 11 项数字菜单
+    assert!(
+        stdout.to_lowercase().contains("menu") || stdout.contains("terminal"),
+        "help={stdout}"
+    );
+    assert!(
+        !stdout.contains("Select [1-11]"),
+        "stale numbered menu leaked into help: {stdout}"
+    );
+}

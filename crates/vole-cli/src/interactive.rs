@@ -1,7 +1,12 @@
-//! Minimal interactive menu when `vole` is run with no subcommand.
+//! Bare `vole` home menu — mole-aligned ratatui navigation shell.
 
-use std::io::{self, BufRead, IsTerminal, Write};
+use std::io::{self, IsTerminal, Write};
 use std::process::Command;
+
+use vole_core::ops::{is_touchid_configured, resolve_touchid_paths};
+
+use crate::tui::{run_home_menu, HomeAction, HomeMenuConfig, HomeMenuRunOpts};
+use crate::update_banner::read_update_message_cache;
 
 pub fn run() -> i32 {
     if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
@@ -9,104 +14,62 @@ pub fn run() -> i32 {
         return 2;
     }
 
-    let stdin = io::stdin();
-    let mut stdout = io::stdout();
-    loop {
-        if writeln!(
-            stdout,
-            "\nVole\n  1) status (--json snapshot)\n  2) clean --plan\n  3) uninstall --plan\n  4) optimize --plan\n  5) purge --plan\n  6) installer --plan\n  7) touchid status\n  8) update --check\n  9) remove --dry-run\n  10) history\n  11) quit"
-        )
-        .is_err()
-        {
-            return 1;
-        }
-        if write!(stdout, "Select [1-11]: ").is_err() || stdout.flush().is_err() {
-            return 1;
-        }
+    let touchid_configured = is_touchid_configured(&resolve_touchid_paths());
+    let update_message = read_update_message_cache();
+    let show_update = update_message.as_ref().is_some_and(|s| !s.trim().is_empty());
 
-        let mut line = String::new();
-        match stdin.lock().read_line(&mut line) {
-            Ok(0) => return 0,
-            Ok(_) => {}
+    let action = match run_home_menu(HomeMenuRunOpts {
+        cfg: HomeMenuConfig {
+            touchid_configured,
+            show_update,
+        },
+        update_message,
+    }) {
+        Ok(a) => a,
+        Err(e) => {
+            eprintln!("vole: {e}");
+            return 1;
+        }
+    };
+
+    match action {
+        HomeAction::Launch(cmd) => match exec_self(cmd.argv()) {
+            Ok(code) => code,
             Err(e) => {
                 eprintln!("vole: {e}");
-                return 1;
+                1
             }
-        }
-        match line.trim() {
-            "1" => {
-                if let Err(msg) = run_child(&["status", "--json"]) {
-                    let _ = writeln!(stdout, "{msg}");
-                }
-            }
-            "2" => {
-                if let Err(msg) = run_child(&["clean", "--plan"]) {
-                    let _ = writeln!(stdout, "{msg}");
-                }
-            }
-            "3" => {
-                if let Err(msg) = run_child(&["uninstall", "--plan"]) {
-                    let _ = writeln!(stdout, "{msg}");
-                }
-            }
-            "4" => {
-                if let Err(msg) = run_child(&["optimize", "--plan"]) {
-                    let _ = writeln!(stdout, "{msg}");
-                }
-            }
-            "5" => {
-                if let Err(msg) = run_child(&["purge", "--plan"]) {
-                    let _ = writeln!(stdout, "{msg}");
-                }
-            }
-            "6" => {
-                if let Err(msg) = run_child(&["installer", "--plan"]) {
-                    let _ = writeln!(stdout, "{msg}");
-                }
-            }
-            "7" => {
-                if let Err(msg) = run_child(&["touchid", "status"]) {
-                    let _ = writeln!(stdout, "{msg}");
-                }
-            }
-            "8" => {
-                if let Err(msg) = run_child(&["update", "--check"]) {
-                    let _ = writeln!(stdout, "{msg}");
-                }
-            }
-            "9" => {
-                if let Err(msg) = run_child(&["remove", "--dry-run"]) {
-                    let _ = writeln!(stdout, "{msg}");
-                }
-            }
-            "10" => {
-                if let Err(msg) = run_child(&["history"]) {
-                    let _ = writeln!(stdout, "{msg}");
-                }
-            }
-            "11" | "q" | "quit" | "exit" => return 0,
-            other => {
-                let _ = writeln!(stdout, "Unknown choice: {other}");
-            }
-        }
+        },
+        HomeAction::ShowHelp => print_help_and_exit(),
+        HomeAction::ShowVersion => print_version_and_exit(),
+        HomeAction::Quit => 0,
     }
 }
 
-/// Spawn a fresh `vole` process so submenu failures / signals don't tear down the menu,
-/// and so clean doesn't accumulate in-process signal threads.
-fn run_child(args: &[&str]) -> Result<(), String> {
-    let exe = std::env::current_exe().map_err(|e| format!("vole: resolve executable: {e}"))?;
-    let status = Command::new(exe)
-        .args(args)
-        .status()
-        .map_err(|e| format!("vole: spawn {}: {e}", args.join(" ")))?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(format!(
-            "vole {}: exited {}",
-            args.join(" "),
-            status.code().unwrap_or(-1)
-        ))
-    }
+fn print_help_and_exit() -> i32 {
+    let _ = io::stdout().write_all(b"\x1b[2J\x1b[H");
+    let mut cmd = crate::clap_command();
+    let _ = cmd.print_long_help();
+    0
+}
+
+fn print_version_and_exit() -> i32 {
+    let _ = io::stdout().write_all(b"\x1b[2J\x1b[H");
+    println!("vole {}", env!("CARGO_PKG_VERSION"));
+    0
+}
+
+#[cfg(unix)]
+fn exec_self(args: &[&str]) -> io::Result<i32> {
+    use std::os::unix::process::CommandExt;
+    let exe = std::env::current_exe()?;
+    let err = Command::new(&exe).args(args).exec();
+    Err(io::Error::other(format!("exec {}: {err}", args.join(" "))))
+}
+
+#[cfg(not(unix))]
+fn exec_self(args: &[&str]) -> io::Result<i32> {
+    let exe = std::env::current_exe()?;
+    let status = Command::new(&exe).args(args).status()?;
+    Ok(status.code().unwrap_or(1))
 }

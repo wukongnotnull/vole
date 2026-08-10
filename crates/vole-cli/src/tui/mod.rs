@@ -11,6 +11,10 @@ mod status_view;
 mod theme;
 mod widgets;
 
+pub use analyze_actions::{
+    apply_removals, open_argv, preview_target, spawn_detached, trash_analyze_paths,
+};
+pub use analyze_state::{map_analyze_key, AnalyzeEffect, AnalyzeKey, AnalyzeState};
 pub use analyze_view::{render_analyze, AnalyzeRenderOpts};
 pub use widgets::AnalyzeFooterMode;
 #[allow(unused_imports)]

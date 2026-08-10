@@ -2,7 +2,47 @@
 
 use std::collections::BTreeSet;
 
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use vole_core::vole_proto::{AnalyzeEntry, AnalyzeFileEntry, AnalyzeOutput};
+
+use super::analyze_actions::MAX_BATCH_OPEN;
+use super::widgets::AnalyzeFooterMode;
+
+pub fn map_analyze_key(key: KeyEvent, filtering: bool) -> Option<AnalyzeKey> {
+    if filtering {
+        return match key.code {
+            KeyCode::Esc => Some(AnalyzeKey::Esc),
+            KeyCode::Enter => Some(AnalyzeKey::Enter),
+            KeyCode::Backspace | KeyCode::Delete => Some(AnalyzeKey::FilterBackspace),
+            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                Some(AnalyzeKey::Quit)
+            }
+            KeyCode::Char(' ') => Some(AnalyzeKey::Space),
+            KeyCode::Char(c) => Some(AnalyzeKey::FilterChar(c)),
+            _ => None,
+        };
+    }
+    match key.code {
+        KeyCode::Up => Some(AnalyzeKey::Up),
+        KeyCode::Down => Some(AnalyzeKey::Down),
+        KeyCode::Enter => Some(AnalyzeKey::Enter),
+        KeyCode::Esc => Some(AnalyzeKey::Esc),
+        KeyCode::Backspace | KeyCode::Delete => Some(AnalyzeKey::Delete),
+        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            Some(AnalyzeKey::Quit)
+        }
+        KeyCode::Char(' ') => Some(AnalyzeKey::Space),
+        KeyCode::Char('/') => Some(AnalyzeKey::Filter),
+        KeyCode::Char(c) => match c {
+            'q' | 'Q' => Some(AnalyzeKey::Quit),
+            'o' | 'O' => Some(AnalyzeKey::Open),
+            'p' | 'P' => Some(AnalyzeKey::Preview),
+            't' | 'T' => Some(AnalyzeKey::Top),
+            _ => None,
+        },
+        _ => None,
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AnalyzeKey {
@@ -404,6 +444,25 @@ impl AnalyzeState {
         AnalyzeEffect::None
     }
 
+    pub fn footer_mode(&self, out: &AnalyzeOutput, can_go_back: bool) -> AnalyzeFooterMode {
+        if self.delete_confirm {
+            return AnalyzeFooterMode::DeleteConfirm;
+        }
+        if self.entry_filtering || self.large_filtering {
+            return AnalyzeFooterMode::Filtering;
+        }
+        if self.show_large_files {
+            return AnalyzeFooterMode::Top {
+                selected_count: self.large_multi_selected.len(),
+            };
+        }
+        AnalyzeFooterMode::Directory {
+            can_go_back,
+            selected_count: self.multi_selected.len(),
+            large_count: out.large_files.len(),
+        }
+    }
+
     pub fn paths_for_action(&self, out: &AnalyzeOutput) -> Vec<String> {
         if self.show_large_files {
             if !self.large_multi_selected.is_empty() {
@@ -541,6 +600,26 @@ mod tests {
         assert!(st.delete_confirm);
         st.handle_key(AnalyzeKey::Esc, &out, false, false);
         assert!(!st.delete_confirm);
+    }
+
+    #[test]
+    fn map_analyze_key_core_bindings() {
+        assert_eq!(
+            map_analyze_key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE), false),
+            Some(AnalyzeKey::Space)
+        );
+        assert_eq!(
+            map_analyze_key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE), false),
+            Some(AnalyzeKey::Delete)
+        );
+        assert_eq!(
+            map_analyze_key(KeyEvent::new(KeyCode::Char('/'), KeyModifiers::NONE), false),
+            Some(AnalyzeKey::Filter)
+        );
+        assert_eq!(
+            map_analyze_key(KeyEvent::new(KeyCode::Char('n'), KeyModifiers::NONE), true),
+            Some(AnalyzeKey::FilterChar('n'))
+        );
     }
 
     #[test]

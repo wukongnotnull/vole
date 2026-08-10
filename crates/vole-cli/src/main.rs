@@ -581,10 +581,11 @@ fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
         .map(|info| info.message);
 
     let mut stack: Vec<PathBuf> = vec![initial.to_path_buf()];
-    let mut selected = 0usize;
+    let mut state = tui::AnalyzeState::default();
     let mut out = AnalyzeOutput::default();
     let mut scanning = true;
     let mut scan_rx: Option<std::sync::mpsc::Receiver<io::Result<AnalyzeOutput>>> = None;
+    let mut pending_delete: Vec<String> = Vec::new();
 
     let poll = Duration::from_millis(33);
 
@@ -600,28 +601,24 @@ fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
             scan_rx = Some(rx);
         }
 
+        let can_go_back = stack.len() > 1;
         term.draw(|f| {
-            let empty = std::collections::BTreeSet::new();
             tui::render_analyze(
                 f,
                 &out,
                 &theme,
                 &tui::AnalyzeRenderOpts {
-                    selected,
+                    selected: state.selected,
                     scanning,
                     local_snapshots_tip: local_snapshots_tip.as_deref(),
-                    can_go_back: stack.len() > 1,
-                    show_large_files: false,
-                    multi_selected: &empty,
-                    large_multi_selected: &empty,
-                    footer_mode: tui::AnalyzeFooterMode::Directory {
-                        can_go_back: stack.len() > 1,
-                        selected_count: 0,
-                        large_count: out.large_files.len(),
-                    },
-                    status: "",
-                    entry_filter: "",
-                    large_filter: "",
+                    can_go_back,
+                    show_large_files: state.show_large_files,
+                    multi_selected: &state.multi_selected,
+                    large_multi_selected: &state.large_multi_selected,
+                    footer_mode: state.footer_mode(&out, can_go_back),
+                    status: &state.status,
+                    entry_filter: &state.entry_filter,
+                    large_filter: &state.large_filter,
                 },
             )
         })?;
@@ -632,7 +629,7 @@ fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
                 match result {
                     Ok(snapshot) => {
                         out = snapshot;
-                        selected = 0;
+                        state = tui::AnalyzeState::default();
                         scanning = false;
                     }
                     Err(e) if e.kind() == io::ErrorKind::Interrupted => {
@@ -645,34 +642,92 @@ fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
 
         if event::poll(poll)? {
             if let Event::Key(key) = event::read()? {
-                match key.code {
-                    KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                        cancel.cancel();
-                    }
-                    KeyCode::Char('q') | KeyCode::Esc if stack.len() <= 1 => cancel.cancel(),
-                    KeyCode::Esc if stack.len() > 1 => {
+                let filtering = state.entry_filtering || state.large_filtering;
+                let Some(ak) = tui::map_analyze_key(key, filtering) else {
+                    continue;
+                };
+                let effect = state.handle_key(ak, &out, scanning, can_go_back);
+                match effect {
+                    tui::AnalyzeEffect::Quit => cancel.cancel(),
+                    tui::AnalyzeEffect::GoBack => {
                         stack.pop();
                         scanning = true;
                         scan_rx = None;
+                        state = tui::AnalyzeState::default();
                     }
-                    KeyCode::Up => {
-                        selected = selected.saturating_sub(1);
+                    tui::AnalyzeEffect::EnterDir(path) => {
+                        stack.push(PathBuf::from(path));
+                        scanning = true;
+                        scan_rx = None;
+                        state = tui::AnalyzeState::default();
                     }
-                    KeyCode::Down => {
-                        if selected + 1 < out.entries.len() {
-                            selected += 1;
+                    tui::AnalyzeEffect::RequestDelete(paths) => {
+                        pending_delete = paths;
+                        let n = pending_delete.len();
+                        let label = if n == 1 {
+                            PathBuf::from(&pending_delete[0])
+                                .file_name()
+                                .map(|s| s.to_string_lossy().into_owned())
+                                .unwrap_or_else(|| pending_delete[0].clone())
+                        } else {
+                            format!("{n} items")
+                        };
+                        state.status = format!(
+                            "Delete: {label}  Press Enter to confirm  |  ESC cancel"
+                        );
+                    }
+                    tui::AnalyzeEffect::ConfirmDelete => {
+                        let report = tui::trash_analyze_paths(&pending_delete);
+                        tui::apply_removals(&mut out, &report.removed);
+                        state.multi_selected.clear();
+                        state.large_multi_selected.clear();
+                        state.clamp_selection(&out);
+                        pending_delete.clear();
+                        if report.errors.is_empty() {
+                            state.status = format!("Deleted {}", report.removed.len());
+                        } else {
+                            state.status = format!(
+                                "Deleted {}; errors: {}",
+                                report.removed.len(),
+                                report.errors.join("; ")
+                            );
                         }
                     }
-                    KeyCode::Enter => {
-                        if let Some(entry) = out.entries.get(selected) {
-                            if entry.is_dir {
-                                stack.push(PathBuf::from(&entry.path));
-                                scanning = true;
-                                scan_rx = None;
+                    tui::AnalyzeEffect::CancelDelete => {
+                        pending_delete.clear();
+                    }
+                    tui::AnalyzeEffect::Open(paths) => {
+                        let n = paths.len();
+                        for p in paths {
+                            let argv = tui::open_argv(&p);
+                            if let Err(e) = tui::spawn_detached(&argv) {
+                                state.status = format!("Open failed: {e}");
+                            }
+                        }
+                        if state.status.is_empty() {
+                            state.status = if n == 1 {
+                                "Opening…".into()
+                            } else {
+                                format!("Opening {n} items…")
+                            };
+                        }
+                    }
+                    tui::AnalyzeEffect::Preview(path) => {
+                        let is_dir = out
+                            .entries
+                            .iter()
+                            .find(|e| e.path == path)
+                            .map(|e| e.is_dir)
+                            .unwrap_or(false);
+                        if let Some(argv) = tui::preview_target(&path, is_dir) {
+                            if let Err(e) = tui::spawn_detached(&argv) {
+                                state.status = format!("Preview failed: {e}");
+                            } else {
+                                state.status = "Previewing…".into();
                             }
                         }
                     }
-                    _ => {}
+                    tui::AnalyzeEffect::None => {}
                 }
             }
         }

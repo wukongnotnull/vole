@@ -61,7 +61,9 @@ echo "    $MATCH_LINE"
 
 if [[ -n "${VOLE_NOTARY_PROFILE:-}" ]]; then
   NOTARY_OK=0
-  if xcrun notarytool history --keychain-profile "$VOLE_NOTARY_PROFILE" --limit 1 >/dev/null 2>&1; then
+  # Do not pass --limit: older notarytool builds reject it and false-negative
+  # a valid keychain profile as "missing credentials".
+  if xcrun notarytool history --keychain-profile "$VOLE_NOTARY_PROFILE" >/dev/null 2>&1; then
     NOTARY_OK=1
   elif security find-generic-password -a "$VOLE_NOTARY_PROFILE" 2>/dev/null | grep -q 'class: "genp"'; then
     # API-key profiles may not respond to history; keychain entry is enough.

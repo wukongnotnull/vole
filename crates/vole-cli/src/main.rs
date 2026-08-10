@@ -14,6 +14,7 @@ mod touchid;
 mod tui;
 mod uninstall;
 mod update;
+mod update_banner;
 
 use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
@@ -34,11 +35,15 @@ use vole_core::vole_proto::AnalyzeOutput;
     name = "vole",
     version,
     about = "macOS cleanup and monitoring",
-    after_help = "Run `vole` with no subcommand in a terminal to open a simple menu."
+    after_help = "Run `vole` with no subcommand in a terminal to open the home menu (mole-style). Clean/Optimize still plan-only until the confirm track ships."
 )]
 struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
+}
+
+pub(crate) fn clap_command() -> clap::Command {
+    Cli::command()
 }
 
 #[derive(Subcommand)]

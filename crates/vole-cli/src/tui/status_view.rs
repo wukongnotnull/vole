@@ -720,6 +720,8 @@ fn render_network_card(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ratatui::backend::TestBackend;
+    use ratatui::Terminal;
     use vole_core::vole_proto::status::HardwareInfo;
 
     fn sample_snap() -> StatusSnapshot {
@@ -737,6 +739,43 @@ mod tests {
             },
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn vole_renders_above_status_health_header() {
+        let backend = TestBackend::new(80, 40);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let theme = Theme::new();
+        let snap = sample_snap();
+        let opts = StatusRenderOpts {
+            cat_hidden: false,
+            anim_frame: 0,
+            cpu_cores: 2,
+        };
+        terminal
+            .draw(|f| render_status(f, &snap, &theme, opts))
+            .unwrap();
+        let buf = terminal.backend().buffer();
+        let mut vole_row = None;
+        let mut header_row = None;
+        for y in 0..buf.area.height {
+            let mut row = String::new();
+            for x in 0..buf.area.width {
+                row.push_str(buf[(x, y)].symbol());
+            }
+            if vole_row.is_none() && row.contains(r"(\__/)") {
+                vole_row = Some(y);
+            }
+            if header_row.is_none() && row.contains("Status") && row.contains("Health") {
+                header_row = Some(y);
+            }
+        }
+        let vole_row = vole_row.expect("vole sprite missing");
+        let header_row = header_row.expect("Status Health header missing");
+        assert!(
+            vole_row < header_row,
+            "expected vole above header, got vole_row={vole_row} header_row={header_row}"
+        );
     }
 
     #[test]

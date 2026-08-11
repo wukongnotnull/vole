@@ -193,7 +193,7 @@ fn truncate_to_width(s: &str, width: usize) -> String {
 }
 
 pub fn status_footer() -> String {
-    "K Vole | C Cores | Q/Esc/Ctrl+C Quit".to_string()
+    "K Vole | C Cores | B Back | Q/Esc/Ctrl+C Quit".to_string()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -331,6 +331,7 @@ mod tests {
         let f = status_footer();
         assert!(f.contains('K') || f.contains("Vole"), "{f}");
         assert!(f.contains('C') || f.contains("Cores"), "{f}");
+        assert!(f.contains('B') || f.contains("Back"), "{f}");
         assert!(f.contains('Q'), "{f}");
     }
 

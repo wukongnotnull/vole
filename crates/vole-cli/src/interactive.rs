@@ -61,8 +61,10 @@ fn print_version_and_exit() -> i32 {
     0
 }
 
+/// Replace this process with another `vole` invocation (`args` are argv after the binary).
+/// On Unix this does not return on success. Empty `args` opens the home menu.
 #[cfg(unix)]
-fn exec_self(args: &[&str]) -> io::Result<i32> {
+pub(crate) fn exec_self(args: &[&str]) -> io::Result<i32> {
     use std::os::unix::process::CommandExt;
     let exe = std::env::current_exe()?;
     let err = Command::new(&exe).args(args).exec();
@@ -70,7 +72,7 @@ fn exec_self(args: &[&str]) -> io::Result<i32> {
 }
 
 #[cfg(not(unix))]
-fn exec_self(args: &[&str]) -> io::Result<i32> {
+pub(crate) fn exec_self(args: &[&str]) -> io::Result<i32> {
     let exe = std::env::current_exe()?;
     let status = Command::new(&exe).args(args).status()?;
     Ok(status.code().unwrap_or(1))

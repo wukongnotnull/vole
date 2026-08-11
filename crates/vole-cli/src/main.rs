@@ -889,10 +889,11 @@ fn cmd_status_tui() -> io::Result<()> {
     let mut cat_hidden = prefs.cat_hidden;
     let mut cpu_cores = prefs.cpu_cores;
     let mut anim_frame: u64 = 0;
+    let mut back_home = false;
 
     let poll = Duration::from_millis(33);
     let mut last_collect = std::time::Instant::now();
-    while !cancel.is_cancelled() {
+    while !cancel.is_cancelled() && !back_home {
         if event::poll(poll)? {
             if let Event::Key(key) = event::read()? {
                 match key.code {
@@ -900,6 +901,9 @@ fn cmd_status_tui() -> io::Result<()> {
                         cancel.cancel();
                     }
                     KeyCode::Char('q') | KeyCode::Esc => cancel.cancel(),
+                    KeyCode::Char('b') | KeyCode::Char('B') => {
+                        back_home = true;
+                    }
                     KeyCode::Char('k') | KeyCode::Char('K') => {
                         cat_hidden = !cat_hidden;
                         tui::save_cat_hidden(cat_hidden);
@@ -931,13 +935,20 @@ fn cmd_status_tui() -> io::Result<()> {
         };
         term.draw(|f| tui::render_status(f, &snap, &theme, opts))?;
 
-        if cancel.is_cancelled() {
+        if cancel.is_cancelled() || back_home {
             break;
         }
     }
 
     term.show_cursor()?;
     guard.restore();
+    if back_home {
+        // Home menu is bare `vole`; process is replaced on Unix.
+        match interactive::exec_self(&[]) {
+            Ok(code) => std::process::exit(code),
+            Err(e) => return Err(e),
+        }
+    }
     if cancel.is_cancelled() {
         std::process::exit(130);
     }

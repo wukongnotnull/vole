@@ -69,15 +69,16 @@ pub fn render_status(
     if TOP_PAD > 0 {
         constraints.push(Constraint::Length(TOP_PAD));
     }
+    // Vole above the Status/Health header (swapped from mole-style header-first).
+    if show_cat {
+        constraints.push(Constraint::Length(4));
+    }
     constraints.push(Constraint::Length(1));
     if alert.is_some() {
         constraints.push(Constraint::Length(1));
     }
     if tip.is_some() {
         constraints.push(Constraint::Length(1));
-    }
-    if show_cat {
-        constraints.push(Constraint::Length(4));
     }
     // Content-sized cards + gap + footer; leftover space sinks below the key hints.
     constraints.push(Constraint::Length(cards_h.max(1)));
@@ -96,6 +97,13 @@ pub fn render_status(
     if TOP_PAD > 0 {
         idx += 1; // blank top inset
     }
+
+    if show_cat {
+        let mole = render_mole_frame(opts.anim_frame, width as usize);
+        frame.render_widget(Paragraph::new(mole).style(theme.ok), chunks[idx]);
+        idx += 1;
+    }
+
     frame.render_widget(
         Paragraph::new(build_status_header(snap, width as usize, theme)),
         chunks[idx],
@@ -118,12 +126,6 @@ pub fn render_status(
             Paragraph::new(Line::from(Span::styled(msg.to_string(), theme.subtle))),
             chunks[idx],
         );
-        idx += 1;
-    }
-
-    if show_cat {
-        let mole = render_mole_frame(opts.anim_frame, width as usize);
-        frame.render_widget(Paragraph::new(mole).style(theme.ok), chunks[idx]);
         idx += 1;
     }
 

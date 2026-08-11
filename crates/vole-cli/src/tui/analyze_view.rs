@@ -491,7 +491,8 @@ mod tests {
         });
         assert!(f.contains("Space"));
         assert!(f.contains("Enter"));
-        assert!(!f.contains("F File"));
+        assert!(f.contains("F File"));
+        assert!(f.contains("R Refresh"));
     }
 
     #[test]

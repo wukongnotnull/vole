@@ -220,7 +220,7 @@ pub fn analyze_footer(mode: AnalyzeFooterMode) -> String {
             } else {
                 "⌫ Del".to_string()
             };
-            format!("↑↓ | Space | / Filter | O Open | P Preview | {del} | Esc Back | Q/Ctrl+C Quit")
+            format!("↑↓ | Space | / Filter | O Open | P Preview | F File | R Refresh | {del} | Esc Back | Q/Ctrl+C Quit")
         }
         AnalyzeFooterMode::Directory {
             can_go_back,
@@ -242,7 +242,7 @@ pub fn analyze_footer(mode: AnalyzeFooterMode) -> String {
             } else {
                 "Esc/Q Quit"
             };
-            format!("↑↓ | Space | Enter | / Filter | O Open | P Preview | {del}{top} | {esc}")
+            format!("↑↓ | Space | Enter | / Filter | O Open | P Preview | F File | R Refresh | {del}{top} | {esc}")
         }
     }
 }
@@ -342,8 +342,9 @@ mod tests {
         assert!(f.contains("P Preview"));
         assert!(f.contains("/ Filter"));
         assert!(f.contains("T Top"));
-        assert!(!f.contains("F File"));
-        assert!(!f.contains("R Refresh"));
+        assert!(f.contains("F File"));
+        assert!(f.contains("R Refresh"));
+        assert!(!f.contains("S Live"));
         let root = analyze_footer(AnalyzeFooterMode::Directory {
             can_go_back: false,
             selected_count: 0,

@@ -38,6 +38,8 @@ pub fn map_analyze_key(key: KeyEvent, filtering: bool) -> Option<AnalyzeKey> {
             'o' | 'O' => Some(AnalyzeKey::Open),
             'p' | 'P' => Some(AnalyzeKey::Preview),
             't' | 'T' => Some(AnalyzeKey::Top),
+            'f' | 'F' => Some(AnalyzeKey::Reveal),
+            'r' | 'R' => Some(AnalyzeKey::Refresh),
             _ => None,
         },
         _ => None,
@@ -55,6 +57,8 @@ pub enum AnalyzeKey {
     Delete,
     Open,
     Preview,
+    Reveal,
+    Refresh,
     Filter,
     Top,
     FilterChar(char),
@@ -69,6 +73,8 @@ pub enum AnalyzeEffect {
     Quit,
     Open(Vec<String>),
     Preview(String),
+    Reveal(Vec<String>),
+    Refresh,
     RequestDelete(Vec<String>),
     ConfirmDelete,
     CancelDelete,
@@ -232,6 +238,13 @@ impl AnalyzeState {
             AnalyzeKey::Delete => self.begin_delete(out, scanning),
             AnalyzeKey::Open => self.begin_open(out),
             AnalyzeKey::Preview => self.begin_preview(out),
+            AnalyzeKey::Reveal => self.begin_reveal(out),
+            AnalyzeKey::Refresh => {
+                self.multi_selected.clear();
+                self.large_multi_selected.clear();
+                self.status = "Refreshing...".to_string();
+                AnalyzeEffect::Refresh
+            }
             AnalyzeKey::FilterChar(_) | AnalyzeKey::FilterBackspace => AnalyzeEffect::None,
         }
     }
@@ -420,6 +433,21 @@ impl AnalyzeState {
             return AnalyzeEffect::None;
         }
         AnalyzeEffect::Open(paths)
+    }
+
+    fn begin_reveal(&mut self, out: &AnalyzeOutput) -> AnalyzeEffect {
+        let paths = self.paths_for_action(out);
+        if paths.is_empty() {
+            return AnalyzeEffect::None;
+        }
+        if paths.len() > MAX_BATCH_OPEN {
+            self.status = format!(
+                "Too many items to reveal, max {MAX_BATCH_OPEN}, selected {}",
+                paths.len()
+            );
+            return AnalyzeEffect::None;
+        }
+        AnalyzeEffect::Reveal(paths)
     }
 
     fn begin_preview(&mut self, out: &AnalyzeOutput) -> AnalyzeEffect {
@@ -638,5 +666,54 @@ mod tests {
         let eff = st.handle_key(AnalyzeKey::Open, &out, false, false);
         assert_eq!(eff, AnalyzeEffect::None);
         assert!(st.status.contains("max 20"));
+    }
+
+    #[test]
+    fn map_key_reveal_and_refresh() {
+        assert_eq!(
+            map_analyze_key(KeyEvent::new(KeyCode::Char('f'), KeyModifiers::NONE), false),
+            Some(AnalyzeKey::Reveal)
+        );
+        assert_eq!(
+            map_analyze_key(KeyEvent::new(KeyCode::Char('R'), KeyModifiers::NONE), false),
+            Some(AnalyzeKey::Refresh)
+        );
+        assert_eq!(
+            map_analyze_key(KeyEvent::new(KeyCode::Char('f'), KeyModifiers::NONE), true),
+            Some(AnalyzeKey::FilterChar('f'))
+        );
+    }
+
+    #[test]
+    fn reveal_respects_batch_limit_and_refresh_effect() {
+        let out = sample_out();
+        let mut st = AnalyzeState::default();
+        for i in 0..21 {
+            st.multi_selected.insert(format!("/tmp/a/item{i}"));
+        }
+        assert_eq!(
+            st.handle_key(AnalyzeKey::Reveal, &out, false, false),
+            AnalyzeEffect::None
+        );
+        assert!(st.status.contains("Too many items to reveal"));
+
+        st.multi_selected.clear();
+        st.multi_selected.insert("/tmp/a/Caches".into());
+        assert_eq!(
+            st.handle_key(AnalyzeKey::Reveal, &out, false, false),
+            AnalyzeEffect::Reveal(vec!["/tmp/a/Caches".into()])
+        );
+
+        st.delete_confirm = true;
+        assert_eq!(
+            st.handle_key(AnalyzeKey::Refresh, &out, false, false),
+            AnalyzeEffect::None
+        );
+
+        st.delete_confirm = false;
+        assert_eq!(
+            st.handle_key(AnalyzeKey::Refresh, &out, false, false),
+            AnalyzeEffect::Refresh
+        );
     }
 }

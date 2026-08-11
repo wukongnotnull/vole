@@ -20,6 +20,10 @@ pub fn open_argv(path: &str) -> Vec<String> {
     vec!["/usr/bin/open".into(), path.to_string()]
 }
 
+pub fn reveal_argv(path: &str) -> Vec<String> {
+    vec!["/usr/bin/open".into(), "-R".into(), path.to_string()]
+}
+
 pub fn preview_target(path: &str, is_dir: bool) -> Option<Vec<String>> {
     if is_dir {
         return None;
@@ -97,5 +101,17 @@ mod tests {
             ])
         );
         assert!(preview_target("/tmp/dir", true).is_none());
+    }
+
+    #[test]
+    fn reveal_argv_uses_open_r() {
+        assert_eq!(
+            reveal_argv("/tmp/a"),
+            vec![
+                "/usr/bin/open".to_string(),
+                "-R".to_string(),
+                "/tmp/a".to_string()
+            ]
+        );
     }
 }

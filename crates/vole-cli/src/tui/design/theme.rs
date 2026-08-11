@@ -1,8 +1,8 @@
-//! Single mid-contrast theme readable on both dark and light terminal backgrounds.
+//! Single theme using Mole status lipgloss colors (dark-terminal palette).
 
 use ratatui::style::{Color, Modifier, Style};
 
-/// Semantic styles tuned for dual-background readability (no pure white / near-black ink).
+/// Mole-parity semantic styles (`cmd/status/view.go`).
 #[derive(Debug, Clone)]
 pub struct Theme {
     pub title: Style,
@@ -28,31 +28,26 @@ impl Default for Theme {
 }
 
 impl Theme {
-    /// Mid-contrast palette: aims for readable contrast on both black and white terminal BGs.
-    ///
-    /// Body ink sits near `#767676` (classic dual-BG gray). Accents use saturated mid-tones
-    /// rather than neon-on-dark or ink-on-light rails.
+    /// Mole-aligned palette (assumes a dark terminal background, same as Mole).
     pub fn universal() -> Self {
         Self {
             title: Style::default()
-                .fg(Color::Rgb(0x6B, 0x4F, 0x9A))
+                .fg(Color::Rgb(0xC7, 0x9F, 0xD7))
                 .add_modifier(Modifier::BOLD),
-            primary: Style::default()
-                .fg(Color::Rgb(0x5B, 0x45, 0x8C))
-                .add_modifier(Modifier::BOLD),
-            subtle: Style::default().fg(Color::Rgb(0x76, 0x76, 0x76)),
-            ok: Style::default().fg(Color::Rgb(0x2E, 0x7D, 0x4F)),
-            warn: Style::default().fg(Color::Rgb(0xA6, 0x7C, 0x00)),
+            primary: Style::default().fg(Color::Rgb(0xBD, 0x93, 0xF9)),
+            subtle: Style::default().fg(Color::Rgb(0x73, 0x73, 0x73)),
+            ok: Style::default().fg(Color::Rgb(0xA5, 0xD6, 0xA7)),
+            warn: Style::default().fg(Color::Rgb(0xFF, 0xD7, 0x5F)),
             danger: Style::default()
-                .fg(Color::Rgb(0xB3, 0x3A, 0x3A))
+                .fg(Color::Rgb(0xFF, 0x5F, 0x5F))
                 .add_modifier(Modifier::BOLD),
-            rule: Style::default().fg(Color::Rgb(0x8A, 0x8A, 0x8A)),
-            bar_track: Style::default().fg(Color::Rgb(0x8A, 0x8A, 0x8A)),
-            label: Style::default().fg(Color::Rgb(0x5A, 0x5A, 0x5A)),
-            value: Style::default().fg(Color::Rgb(0x4A, 0x4A, 0x4A)),
-            normal: Style::default().fg(Color::Rgb(0x4A, 0x4A, 0x4A)),
+            rule: Style::default().fg(Color::Rgb(0x40, 0x40, 0x40)),
+            bar_track: Style::default().fg(Color::Rgb(0x40, 0x40, 0x40)),
+            label: Style::default().fg(Color::Rgb(0x73, 0x73, 0x73)),
+            value: Style::default().fg(Color::White),
+            normal: Style::default().fg(Color::White),
             selected: Style::default()
-                .fg(Color::Rgb(0x00, 0x6D, 0x8F))
+                .fg(Color::Rgb(0x00, 0xD7, 0xFF))
                 .add_modifier(Modifier::BOLD),
         }
     }
@@ -70,27 +65,28 @@ impl Theme {
         match tone {
             SizeTone::High => self.danger,
             SizeTone::Mid => self.warn,
-            SizeTone::Low => Style::default().fg(Color::Rgb(0x00, 0x6D, 0x8F)),
+            SizeTone::Low => Style::default().fg(Color::Rgb(0x5F, 0xAF, 0xFF)),
             SizeTone::Quiet => self.subtle,
         }
     }
 
+    /// mole `getScoreStyle` thresholds / colors.
     pub fn style_for_health(&self, score: i32) -> Style {
         if score >= 90 {
             Style::default()
-                .fg(Color::Rgb(0x2E, 0x7D, 0x4F))
+                .fg(Color::Rgb(0x87, 0xFF, 0x87))
                 .add_modifier(Modifier::BOLD)
         } else if score >= 75 {
             Style::default()
-                .fg(Color::Rgb(0x3D, 0x8B, 0x5F))
+                .fg(Color::Rgb(0x87, 0xD7, 0x87))
                 .add_modifier(Modifier::BOLD)
         } else if score >= 50 {
             Style::default()
-                .fg(Color::Rgb(0xA6, 0x7C, 0x00))
+                .fg(Color::Rgb(0xFF, 0xD7, 0x5F))
                 .add_modifier(Modifier::BOLD)
         } else {
             Style::default()
-                .fg(Color::Rgb(0xB3, 0x3A, 0x3A))
+                .fg(Color::Rgb(0xFF, 0x6B, 0x6B))
                 .add_modifier(Modifier::BOLD)
         }
     }
@@ -142,25 +138,30 @@ mod tests {
     use super::*;
 
     #[test]
-    fn universal_avoids_white_and_near_black_ink() {
+    fn universal_matches_mole_status_palette() {
         let theme = Theme::universal();
-        assert_ne!(theme.value.fg, Some(Color::White));
-        assert_ne!(theme.normal.fg, Some(Color::Black));
-        assert_eq!(theme.value.fg, Some(Color::Rgb(0x4A, 0x4A, 0x4A)));
-        assert_eq!(theme.subtle.fg, Some(Color::Rgb(0x76, 0x76, 0x76)));
-        assert_eq!(theme.bar_track.fg, Some(Color::Rgb(0x8A, 0x8A, 0x8A)));
+        assert_eq!(theme.title.fg, Some(Color::Rgb(0xC7, 0x9F, 0xD7)));
+        assert_eq!(theme.primary.fg, Some(Color::Rgb(0xBD, 0x93, 0xF9)));
+        assert_eq!(theme.subtle.fg, Some(Color::Rgb(0x73, 0x73, 0x73)));
+        assert_eq!(theme.ok.fg, Some(Color::Rgb(0xA5, 0xD6, 0xA7)));
+        assert_eq!(theme.warn.fg, Some(Color::Rgb(0xFF, 0xD7, 0x5F)));
+        assert_eq!(theme.danger.fg, Some(Color::Rgb(0xFF, 0x5F, 0x5F)));
+        assert_eq!(theme.rule.fg, Some(Color::Rgb(0x40, 0x40, 0x40)));
+        assert_eq!(theme.bar_track.fg, Some(Color::Rgb(0x40, 0x40, 0x40)));
+        assert_eq!(theme.value.fg, Some(Color::White));
+        assert_eq!(theme.normal.fg, Some(Color::White));
     }
 
     #[test]
-    fn health_styles_use_mid_contrast_greens() {
+    fn health_styles_match_mole_get_score_style() {
         let theme = Theme::universal();
         assert_eq!(
             theme.style_for_health(95).fg,
-            Some(Color::Rgb(0x2E, 0x7D, 0x4F))
+            Some(Color::Rgb(0x87, 0xFF, 0x87))
         );
         assert_eq!(
             theme.style_for_health(40).fg,
-            Some(Color::Rgb(0xB3, 0x3A, 0x3A))
+            Some(Color::Rgb(0xFF, 0x6B, 0x6B))
         );
     }
 }

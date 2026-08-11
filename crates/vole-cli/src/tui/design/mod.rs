@@ -22,7 +22,7 @@ pub struct DesignSystem {
 }
 
 impl DesignSystem {
-    /// Always the universal mid-contrast palette.
+    /// Always the Mole-aligned palette.
     ///
     /// `VOLE_THEME` / `COLORFGBG` are ignored (kept as a documented no-op via [`ENV_THEME`]).
     pub fn resolve() -> Self {
@@ -37,11 +37,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn resolve_returns_universal_theme() {
+    fn resolve_returns_mole_palette() {
         let ds = DesignSystem::resolve();
+        assert_eq!(ds.theme.value.fg, Some(ratatui::style::Color::White));
         assert_eq!(
-            ds.theme.value.fg,
-            Some(ratatui::style::Color::Rgb(0x4A, 0x4A, 0x4A))
+            ds.theme.primary.fg,
+            Some(ratatui::style::Color::Rgb(0xBD, 0x93, 0xF9))
         );
     }
 }

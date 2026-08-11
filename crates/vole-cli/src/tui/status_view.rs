@@ -12,7 +12,7 @@ use vole_core::vole_proto::status::{
 };
 
 use super::design::{
-    card_title, status_footer_line, Theme, CARD_ROW_GAP, COL_GUTTER, FOOTER_GAP, OUTER_PAD,
+    card_title, inset_content, status_footer_line, Theme, CARD_ROW_GAP, COL_GUTTER, FOOTER_GAP,
     TOP_PAD,
 };
 use super::status_cat::render_mole_frame;
@@ -29,20 +29,6 @@ const ICON_NETWORK: &str = "⇅";
 const ICON_BATTERY: &str = "◪";
 const ICON_PROCS: &str = "❊";
 const STATUS_NARROW: u16 = 80;
-
-/// Inset the draw area horizontally; shrinks/zeros the pad on very narrow terminals.
-fn inset_horizontal(area: Rect, pad: u16) -> Rect {
-    let pad = pad.min(area.width / 4);
-    if pad == 0 || area.width <= pad * 2 {
-        return area;
-    }
-    Rect {
-        x: area.x.saturating_add(pad),
-        y: area.y,
-        width: area.width.saturating_sub(pad * 2),
-        height: area.height,
-    }
-}
 
 #[derive(Debug, Clone, Copy)]
 pub struct StatusRenderOpts {
@@ -68,7 +54,7 @@ pub fn render_status(
     theme: &Theme,
     opts: StatusRenderOpts,
 ) {
-    let area = inset_horizontal(frame.area(), OUTER_PAD);
+    let area = inset_content(frame.area());
     let width = area.width;
     let tip = snap
         .local_snapshots
@@ -79,7 +65,11 @@ pub fn render_status(
     let cards = build_card_blocks(snap, theme, width, opts.cpu_cores);
     let cards_h = cards_block_height(&cards, width);
 
-    let mut constraints = vec![Constraint::Length(1)];
+    let mut constraints = Vec::new();
+    if TOP_PAD > 0 {
+        constraints.push(Constraint::Length(TOP_PAD));
+    }
+    constraints.push(Constraint::Length(1));
     if alert.is_some() {
         constraints.push(Constraint::Length(1));
     }
@@ -103,6 +93,9 @@ pub fn render_status(
         .split(area);
 
     let mut idx = 0usize;
+    if TOP_PAD > 0 {
+        idx += 1; // blank top inset
+    }
     frame.render_widget(
         Paragraph::new(build_status_header(snap, width as usize, theme)),
         chunks[idx],
@@ -857,26 +850,4 @@ mod tests {
         assert!(!text.contains('╌'), "{text}");
     }
 
-    #[test]
-    fn inset_horizontal_pads_both_sides() {
-        let area = Rect {
-            x: 0,
-            y: 0,
-            width: 80,
-            height: 24,
-        };
-        let inset = inset_horizontal(area, 1);
-        assert_eq!(inset.x, 1);
-        assert_eq!(inset.width, 78);
-        assert_eq!(inset.y, 0);
-        assert_eq!(inset.height, 24);
-
-        let tiny = Rect {
-            x: 0,
-            y: 0,
-            width: 2,
-            height: 10,
-        };
-        assert_eq!(inset_horizontal(tiny, 1), tiny);
-    }
 }

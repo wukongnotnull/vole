@@ -1,10 +1,15 @@
 //! Vole TUI design system — tokens, dual-rail themes, shared components.
 
 mod components;
+mod layout;
 mod theme;
 mod tokens;
 
-pub use components::{card_title, status_footer, status_footer_line};
+pub use components::{
+    card_title, home_controls_line, menu_footer_line, status_footer, status_footer_line,
+};
+#[allow(unused_imports)] // public design-system surface
+pub use layout::{inset_content, inset_horizontal};
 #[allow(unused_imports)] // public design-system surface
 pub use theme::{
     color_bucket, resolve_color_mode, size_tone, ColorBucket, ColorMode, SizeTone, Theme,

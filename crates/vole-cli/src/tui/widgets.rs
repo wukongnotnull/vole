@@ -1,5 +1,6 @@
 //! 基础 TUI 组件与可单测布局 helper。
 
+use ratatui::style::Modifier;
 use ratatui::text::{Line, Span};
 
 use super::design::{color_bucket, Theme};
@@ -276,6 +277,117 @@ pub fn analyze_footer(mode: AnalyzeFooterMode) -> String {
                 "Esc/Q Quit"
             };
             format!("{arrows} | Space | Enter | / Filter | O Open | P Preview | F File | R Refresh | {del}{top} | {esc}")
+        }
+    }
+}
+
+fn analyze_key(theme: &Theme, key: &str, label: &str) -> Vec<Span<'static>> {
+    let mut spans = vec![Span::styled(
+        key.to_string(),
+        theme.primary.add_modifier(Modifier::BOLD),
+    )];
+    if !label.is_empty() {
+        spans.push(Span::styled(format!(" {label}"), theme.value));
+    }
+    spans
+}
+
+fn analyze_sep(theme: &Theme) -> Span<'static> {
+    Span::styled(" | ", theme.subtle)
+}
+
+/// Styled analyze footer — same copy as `analyze_footer`, keys in primary bold.
+pub fn analyze_footer_line(theme: &Theme, mode: AnalyzeFooterMode) -> Line<'static> {
+    match mode {
+        AnalyzeFooterMode::Filtering => {
+            let mut spans = vec![Span::styled("Filter: type… ", theme.value)];
+            spans.extend(analyze_key(theme, "Enter", "apply"));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "Esc", "clear"));
+            Line::from(spans)
+        }
+        AnalyzeFooterMode::DeleteConfirm => {
+            let mut spans = analyze_key(theme, "Enter", "confirm");
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "Esc", "cancel"));
+            Line::from(spans)
+        }
+        AnalyzeFooterMode::Top { selected_count } => {
+            let del_label = if selected_count > 0 {
+                format!("Del {selected_count}")
+            } else {
+                "Del".to_string()
+            };
+            let mut spans = Vec::new();
+            spans.extend(analyze_key(theme, "↑↓←", ""));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "Space", ""));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "/", "Filter"));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "O", "Open"));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "P", "Preview"));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "F", "File"));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "R", "Refresh"));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "⌫", &del_label));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "Esc", "Back"));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "Q", ""));
+            spans.push(Span::styled("/", theme.subtle));
+            spans.extend(analyze_key(theme, "Ctrl+C", "Quit"));
+            Line::from(spans)
+        }
+        AnalyzeFooterMode::Directory {
+            can_go_back,
+            selected_count,
+            large_count,
+        } => {
+            let del_label = if selected_count > 0 {
+                format!("Del {selected_count}")
+            } else {
+                "Del".to_string()
+            };
+            let arrows = if can_go_back { "↑↓←→" } else { "↑↓→" };
+            let mut spans = Vec::new();
+            spans.extend(analyze_key(theme, arrows, ""));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "Space", ""));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "Enter", ""));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "/", "Filter"));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "O", "Open"));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "P", "Preview"));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "F", "File"));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "R", "Refresh"));
+            spans.push(analyze_sep(theme));
+            spans.extend(analyze_key(theme, "⌫", &del_label));
+            if large_count > 0 {
+                spans.push(analyze_sep(theme));
+                spans.extend(analyze_key(theme, "T", &format!("Top {large_count}")));
+            }
+            spans.push(analyze_sep(theme));
+            if can_go_back {
+                spans.extend(analyze_key(theme, "Esc", "Back"));
+                spans.push(analyze_sep(theme));
+                spans.extend(analyze_key(theme, "Q", ""));
+                spans.push(Span::styled("/", theme.subtle));
+                spans.extend(analyze_key(theme, "Ctrl+C", "Quit"));
+            } else {
+                spans.extend(analyze_key(theme, "Esc", ""));
+                spans.push(Span::styled("/", theme.subtle));
+                spans.extend(analyze_key(theme, "Q", "Quit"));
+            }
+            Line::from(spans)
         }
     }
 }

@@ -7,9 +7,9 @@ use ratatui::Frame;
 
 use vole_core::vole_proto::{AnalyzeEntry, AnalyzeOutput};
 
-use super::design::Theme;
+use super::design::{inset_content, Theme, FOOTER_GAP, TOP_PAD};
 use super::widgets::{
-    analyze_footer, analyze_progress_bar, calculate_name_width, calculate_viewport,
+    analyze_footer_line, analyze_progress_bar, calculate_name_width, calculate_viewport,
     format_bytes_si, format_percent_label, pad_name, shorten, AnalyzeFooterMode,
 };
 
@@ -34,7 +34,7 @@ pub fn render_analyze(
     theme: &Theme,
     opts: &AnalyzeRenderOpts<'_>,
 ) {
-    let area = frame.area();
+    let area = inset_content(frame.area());
     let tip_h = if opts.local_snapshots_tip.is_some() {
         1u16
     } else {
@@ -54,31 +54,54 @@ pub fn render_analyze(
     } else {
         0
     };
+
+    let mut constraints = Vec::new();
+    if TOP_PAD > 0 {
+        constraints.push(Constraint::Length(TOP_PAD));
+    }
+    constraints.push(Constraint::Length(2));
+    if tip_h > 0 {
+        constraints.push(Constraint::Length(tip_h));
+    }
+    if filter_h > 0 {
+        constraints.push(Constraint::Length(filter_h));
+    }
+    if status_h > 0 {
+        constraints.push(Constraint::Length(status_h));
+    }
+    constraints.push(Constraint::Min(4));
+    if large_h > 0 {
+        constraints.push(Constraint::Length(large_h));
+    }
+    if FOOTER_GAP > 0 {
+        constraints.push(Constraint::Length(FOOTER_GAP));
+    }
+    constraints.push(Constraint::Length(1));
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(2),
-            Constraint::Length(tip_h),
-            Constraint::Length(filter_h),
-            Constraint::Length(status_h),
-            Constraint::Min(4),
-            Constraint::Length(large_h),
-            Constraint::Length(1),
-        ])
+        .constraints(constraints)
         .split(area);
+
+    let mut idx = 0usize;
+    if TOP_PAD > 0 {
+        idx += 1;
+    }
 
     frame.render_widget(
         Paragraph::new(build_analyze_header(out, opts.scanning, theme)),
-        chunks[0],
+        chunks[idx],
     );
+    idx += 1;
 
-    let mut body_idx = 1usize;
-    if let Some(tip) = opts.local_snapshots_tip {
-        frame.render_widget(
-            Paragraph::new(Line::from(Span::styled(tip.to_string(), theme.subtle))),
-            chunks[body_idx],
-        );
-        body_idx += 1;
+    if tip_h > 0 {
+        if let Some(tip) = opts.local_snapshots_tip {
+            frame.render_widget(
+                Paragraph::new(Line::from(Span::styled(tip.to_string(), theme.subtle))),
+                chunks[idx],
+            );
+        }
+        idx += 1;
     }
 
     if filter_h > 0 {
@@ -97,9 +120,9 @@ pub fn render_analyze(
                 format!("  {label}: {q}{cursor}"),
                 theme.primary,
             ))),
-            chunks[body_idx],
+            chunks[idx],
         );
-        body_idx += 1;
+        idx += 1;
     }
 
     if status_h > 0 {
@@ -108,13 +131,13 @@ pub fn render_analyze(
                 opts.status.to_string(),
                 theme.warn,
             ))),
-            chunks[body_idx],
+            chunks[idx],
         );
-        body_idx += 1;
+        idx += 1;
     }
 
-    let list_area = chunks[body_idx];
-    body_idx += 1;
+    let list_area = chunks[idx];
+    idx += 1;
 
     let name_width = calculate_name_width(area.width);
     let viewport = calculate_viewport(area.height, 6);
@@ -128,16 +151,17 @@ pub fn render_analyze(
 
     if large_h > 0 {
         let large_lines = build_large_files_block(out, theme);
-        frame.render_widget(Paragraph::new(large_lines), chunks[body_idx]);
-        body_idx += 1;
+        frame.render_widget(Paragraph::new(large_lines), chunks[idx]);
+        idx += 1;
+    }
+
+    if FOOTER_GAP > 0 {
+        idx += 1;
     }
 
     frame.render_widget(
-        Paragraph::new(Line::from(Span::styled(
-            analyze_footer(opts.footer_mode),
-            theme.subtle,
-        ))),
-        chunks[body_idx],
+        Paragraph::new(analyze_footer_line(theme, opts.footer_mode)),
+        chunks[idx],
     );
 }
 

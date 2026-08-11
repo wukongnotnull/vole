@@ -8,15 +8,16 @@ use std::time::{Duration, Instant};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Constraint, Direction, Layout};
-use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
 use ratatui::{Frame, Terminal};
 
 use crate::terminal::TerminalGuard;
 
+use super::design::{
+    inset_content, menu_footer_line, DesignSystem, Theme, FOOTER_GAP, TOP_PAD,
+};
 use super::menu_state::{MenuConfig, MenuItem, MenuKey, MenuState, SelectOutcome};
-use super::design::{DesignSystem, Theme};
 
 /// Drain pending keyboard input until `timeout` elapses (mole #726).
 pub fn drain_pending_input(timeout: Duration) {
@@ -81,15 +82,27 @@ fn map_key(key: KeyEvent) -> Option<MenuKey> {
 }
 
 fn render_menu(frame: &mut Frame, title: &str, state: &MenuState, theme: &Theme) {
-    let area = frame.area();
+    let area = inset_content(frame.area());
+    let mut constraints = Vec::new();
+    if TOP_PAD > 0 {
+        constraints.push(Constraint::Length(TOP_PAD));
+    }
+    constraints.push(Constraint::Length(2));
+    constraints.push(Constraint::Min(1));
+    if FOOTER_GAP > 0 {
+        constraints.push(Constraint::Length(FOOTER_GAP));
+    }
+    constraints.push(Constraint::Length(1));
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(2),
-            Constraint::Min(1),
-            Constraint::Length(2),
-        ])
+        .constraints(constraints)
         .split(area);
+
+    let mut idx = 0usize;
+    if TOP_PAD > 0 {
+        idx += 1;
+    }
 
     let header = if state.filter_text().is_empty() {
         format!(
@@ -107,8 +120,9 @@ fn render_menu(frame: &mut Frame, title: &str, state: &MenuState, theme: &Theme)
     };
     frame.render_widget(
         Paragraph::new(Line::from(header)).style(theme.title),
-        chunks[0],
+        chunks[idx],
     );
+    idx += 1;
 
     let page = state.visible_page();
     let cursor_row = state.cursor_in_page();
@@ -138,18 +152,15 @@ fn render_menu(frame: &mut Frame, title: &str, state: &MenuState, theme: &Theme)
 
     frame.render_widget(
         List::new(items).block(Block::default().borders(Borders::NONE)),
-        chunks[1],
+        chunks[idx],
     );
+    idx += 1;
 
-    let footer = Line::from(vec![
-        Span::styled("Space", Style::default().add_modifier(Modifier::BOLD)),
-        Span::raw(" Select | "),
-        Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
-        Span::raw(" Confirm | "),
-        Span::styled("Q", Style::default().add_modifier(Modifier::BOLD)),
-        Span::raw(" Cancel"),
-    ]);
-    frame.render_widget(Paragraph::new(footer).style(theme.label), chunks[2]);
+    if FOOTER_GAP > 0 {
+        idx += 1;
+    }
+
+    frame.render_widget(Paragraph::new(menu_footer_line(theme)), chunks[idx]);
 }
 
 #[cfg(test)]

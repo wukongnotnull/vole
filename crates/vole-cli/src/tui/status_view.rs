@@ -29,6 +29,22 @@ const STATUS_NARROW: u16 = 80;
 const CARD_ROW_GAP: u16 = 1;
 /// Horizontal gutter between the two status columns.
 const COL_GUTTER: u16 = 2;
+/// Outer left/right inset so content is not flush against the terminal edge.
+const OUTER_PAD: u16 = 1;
+
+/// Inset the draw area horizontally; shrinks/zeros the pad on very narrow terminals.
+fn inset_horizontal(area: Rect, pad: u16) -> Rect {
+    let pad = pad.min(area.width / 4);
+    if pad == 0 || area.width <= pad * 2 {
+        return area;
+    }
+    Rect {
+        x: area.x.saturating_add(pad),
+        y: area.y,
+        width: area.width.saturating_sub(pad * 2),
+        height: area.height,
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct StatusRenderOpts {
@@ -54,7 +70,7 @@ pub fn render_status(
     theme: &Theme,
     opts: StatusRenderOpts,
 ) {
-    let area = frame.area();
+    let area = inset_horizontal(frame.area(), OUTER_PAD);
     let width = area.width;
     let tip = snap
         .local_snapshots
@@ -820,5 +836,28 @@ mod tests {
         let text: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
         assert!(text.contains("CPU"), "{text}");
         assert!(!text.contains('╌'), "{text}");
+    }
+
+    #[test]
+    fn inset_horizontal_pads_both_sides() {
+        let area = Rect {
+            x: 0,
+            y: 0,
+            width: 80,
+            height: 24,
+        };
+        let inset = inset_horizontal(area, 1);
+        assert_eq!(inset.x, 1);
+        assert_eq!(inset.width, 78);
+        assert_eq!(inset.y, 0);
+        assert_eq!(inset.height, 24);
+
+        let tiny = Rect {
+            x: 0,
+            y: 0,
+            width: 2,
+            height: 10,
+        };
+        assert_eq!(inset_horizontal(tiny, 1), tiny);
     }
 }

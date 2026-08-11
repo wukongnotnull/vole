@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::backend::CrosstermBackend;
-use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 use ratatui::{Frame, Terminal};
@@ -22,9 +22,13 @@ use super::status_cat::render_mole_frame;
 pub const VOLE_TAGLINE: &str = "Deep clean and optimize your Mac.";
 pub const VOLE_REPO_URL: &str = "https://github.com/wukongnotnull/vole";
 
-/// Match status: hide the sliding vole when the terminal is too narrow.
-const VOLE_MIN_WIDTH: u16 = 20;
-const VOLE_HEIGHT: u16 = 4;
+/// Widest `brand_ascii_lines` glyph width (+ gutter before the vole column).
+const BRAND_ASCII_COLS: u16 = 22;
+const BRAND_GUTTER: u16 = 2;
+/// Sprite width from `status_cat` (must fit in the right column to show).
+const VOLE_SPRITE_COLS: u16 = 12;
+const BRAND_ROW_H: u16 = 5;
+const META_H: u16 = 2; // repo URL + tagline
 
 pub struct HomeMenuRunOpts {
     pub cfg: HomeMenuConfig,
@@ -88,6 +92,10 @@ pub fn run_home_menu(opts: HomeMenuRunOpts) -> io::Result<HomeAction> {
     }
 }
 
+fn right_column_width(total: u16) -> u16 {
+    total.saturating_sub(BRAND_ASCII_COLS.saturating_add(BRAND_GUTTER))
+}
+
 fn render_home(
     frame: &mut Frame,
     state: &HomeMenuState,
@@ -97,11 +105,10 @@ fn render_home(
 ) {
     let area = inset_content(frame.area());
     let show_update = update_message.is_some_and(|s| !s.trim().is_empty());
-    let show_vole = area.width >= VOLE_MIN_WIDTH;
-    // top + brand(5) + blank + [vole(4)] + [update] + items(5) + footer_gap + footer(1) + sink
-    let brand_h = 5u16;
+    let right_w = right_column_width(area.width);
+    let show_vole = right_w >= VOLE_SPRITE_COLS;
+    // top + brand(5) + meta(2) + blank + [update] + items(5) + footer_gap + footer(1) + sink
     let update_h = if show_update { 2u16 } else { 0 };
-    let vole_h = if show_vole { VOLE_HEIGHT } else { 0 };
     let items_h = 5u16;
     let footer_h = 1u16;
 
@@ -109,11 +116,9 @@ fn render_home(
     if TOP_PAD > 0 {
         constraints.push(Constraint::Length(TOP_PAD));
     }
-    constraints.push(Constraint::Length(brand_h));
+    constraints.push(Constraint::Length(BRAND_ROW_H));
+    constraints.push(Constraint::Length(META_H));
     constraints.push(Constraint::Length(1));
-    if vole_h > 0 {
-        constraints.push(Constraint::Length(vole_h));
-    }
     if update_h > 0 {
         constraints.push(Constraint::Length(update_h));
     }
@@ -134,33 +139,16 @@ fn render_home(
         idx += 1;
     }
 
-    let ascii = brand_ascii_lines();
-    let brand_lines: Vec<Line> = ascii
-        .iter()
-        .enumerate()
-        .map(|(i, line)| match i {
-            3 => Line::from(vec![
-                Span::styled(*line, theme.ok),
-                Span::raw("  "),
-                Span::styled(VOLE_REPO_URL, theme.primary),
-            ]),
-            4 => Line::from(vec![
-                Span::styled(*line, theme.ok),
-                Span::raw("  "),
-                Span::styled(VOLE_TAGLINE, theme.ok),
-            ]),
-            _ => Line::from(Span::styled(*line, theme.ok)),
-        })
-        .collect();
-    frame.render_widget(Paragraph::new(brand_lines), chunks[idx]);
+    render_brand_row(frame, chunks[idx], theme, anim_frame, show_vole);
     idx += 1;
-    idx += 1; // blank under brand
 
-    if show_vole {
-        let vole = render_mole_frame(anim_frame, area.width as usize);
-        frame.render_widget(Paragraph::new(vole).style(theme.ok), chunks[idx]);
-        idx += 1;
-    }
+    let meta_lines = vec![
+        Line::from(Span::styled(VOLE_REPO_URL, theme.primary)),
+        Line::from(Span::styled(VOLE_TAGLINE, theme.ok)),
+    ];
+    frame.render_widget(Paragraph::new(meta_lines), chunks[idx]);
+    idx += 1;
+    idx += 1; // blank under meta
 
     if update_h > 0 {
         let msg = update_message.unwrap_or("Update available");
@@ -206,6 +194,39 @@ fn render_home(
     );
 }
 
+fn render_brand_row(
+    frame: &mut Frame,
+    area: Rect,
+    theme: &Theme,
+    anim_frame: u64,
+    show_vole: bool,
+) {
+    let ascii = brand_ascii_lines();
+    let brand_lines: Vec<Line> = ascii
+        .iter()
+        .map(|line| Line::from(Span::styled(*line, theme.ok)))
+        .collect();
+
+    if !show_vole {
+        frame.render_widget(Paragraph::new(brand_lines), area);
+        return;
+    }
+
+    let cols = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Length(BRAND_ASCII_COLS),
+            Constraint::Length(BRAND_GUTTER),
+            Constraint::Min(VOLE_SPRITE_COLS),
+        ])
+        .split(area);
+
+    frame.render_widget(Paragraph::new(brand_lines), cols[0]);
+    // cols[1] = gutter
+    let vole = render_mole_frame(anim_frame, cols[2].width as usize);
+    frame.render_widget(Paragraph::new(vole).style(theme.ok), cols[2]);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -217,6 +238,11 @@ mod tests {
         assert_eq!(VOLE_TAGLINE, "Deep clean and optimize your Mac.");
         let lines = brand_ascii_lines();
         assert!(lines[0].contains("__"));
+        let max_w = lines.iter().map(|l| l.chars().count()).max().unwrap();
+        assert!(
+            max_w <= BRAND_ASCII_COLS as usize,
+            "ascii width {max_w} exceeds BRAND_ASCII_COLS"
+        );
     }
 
     #[test]
@@ -232,8 +258,11 @@ mod tests {
     }
 
     #[test]
-    fn vole_min_width_matches_status() {
-        assert_eq!(VOLE_MIN_WIDTH, 20);
-        assert_eq!(VOLE_HEIGHT, 4);
+    fn right_column_hides_vole_when_too_narrow() {
+        assert_eq!(right_column_width(BRAND_ASCII_COLS + BRAND_GUTTER), 0);
+        assert!(
+            right_column_width(BRAND_ASCII_COLS + BRAND_GUTTER + VOLE_SPRITE_COLS)
+                >= VOLE_SPRITE_COLS
+        );
     }
 }

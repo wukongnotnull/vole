@@ -17,7 +17,9 @@ pub use analyze_actions::{
     apply_removals, open_argv, preview_target, reveal_argv, spawn_detached, trash_analyze_paths,
 };
 #[allow(unused_imports)]
-pub use analyze_state::{map_analyze_key, AnalyzeEffect, AnalyzeKey, AnalyzeState};
+pub use analyze_state::{
+    map_analyze_key, upsert_live_child, AnalyzeEffect, AnalyzeKey, AnalyzeState, LiveSortMode,
+};
 pub use analyze_view::{render_analyze, AnalyzeRenderOpts};
 #[allow(unused_imports)]
 pub use home_menu::{

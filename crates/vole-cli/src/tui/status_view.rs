@@ -688,11 +688,17 @@ fn render_network_card(
     let tx_pct = (tx * 10.0).min(100.0);
     let mut down = vec![Span::styled(format!("{:<6}", "Down"), theme.label)];
     down.extend(progress_bar_spans(theme, rx_pct));
-    down.push(Span::styled(format!("  {}", format_rate_mbs(rx)), theme.value));
+    down.push(Span::styled(
+        format!("  {}", format_rate_mbs(rx)),
+        theme.value,
+    ));
     lines.push(Line::from(down));
     let mut up = vec![Span::styled(format!("{:<6}", "Up"), theme.label)];
     up.extend(progress_bar_spans(theme, tx_pct));
-    up.push(Span::styled(format!("  {}", format_rate_mbs(tx)), theme.value));
+    up.push(Span::styled(
+        format!("  {}", format_rate_mbs(tx)),
+        theme.value,
+    ));
     lines.push(Line::from(up));
     let mut info = Vec::new();
     if proxy.enabled {
@@ -821,10 +827,7 @@ mod tests {
 
     #[test]
     fn card_row_heights_follow_content_not_equal_stretch() {
-        assert_eq!(
-            card_row_heights(&[5, 8, 10, 2, 4, 3], true),
-            vec![8, 10, 4]
-        );
+        assert_eq!(card_row_heights(&[5, 8, 10, 2, 4, 3], true), vec![8, 10, 4]);
         assert_eq!(card_row_heights(&[5, 8, 3], false), vec![5, 8, 3]);
         assert_eq!(card_row_heights(&[2], true), vec![2]);
     }
@@ -849,5 +852,4 @@ mod tests {
         assert!(text.contains("CPU"), "{text}");
         assert!(!text.contains('╌'), "{text}");
     }
-
 }

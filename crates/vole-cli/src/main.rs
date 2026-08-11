@@ -944,10 +944,8 @@ fn cmd_status_tui() -> io::Result<()> {
     guard.restore();
     if back_home {
         // Home menu is bare `vole`; process is replaced on Unix.
-        match interactive::exec_self(&[]) {
-            Ok(code) => std::process::exit(code),
-            Err(e) => return Err(e),
-        }
+        let code = interactive::exec_self(&[])?;
+        std::process::exit(code);
     }
     if cancel.is_cancelled() {
         std::process::exit(130);

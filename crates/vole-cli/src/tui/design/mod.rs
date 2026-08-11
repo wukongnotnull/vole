@@ -57,7 +57,10 @@ mod tests {
     fn resolve_returns_matching_theme_rail() {
         let light = DesignSystem::light();
         assert_eq!(light.mode, ColorMode::Light);
-        assert_eq!(light.theme.value.fg, Some(ratatui::style::Color::Rgb(0x12, 0x12, 0x12)));
+        assert_eq!(
+            light.theme.value.fg,
+            Some(ratatui::style::Color::Rgb(0x12, 0x12, 0x12))
+        );
         let dark = DesignSystem::dark();
         assert_eq!(dark.mode, ColorMode::Dark);
         assert_eq!(dark.theme.value.fg, Some(ratatui::style::Color::White));

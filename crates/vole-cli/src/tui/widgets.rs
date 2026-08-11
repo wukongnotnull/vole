@@ -353,7 +353,11 @@ pub fn analyze_footer_line(theme: &Theme, mode: AnalyzeFooterMode) -> Line<'stat
             } else {
                 "Del".to_string()
             };
-            let arrows = if can_go_back { "↑↓←→" } else { "↑↓→" };
+            let arrows = if can_go_back {
+                "↑↓←→"
+            } else {
+                "↑↓→"
+            };
             let mut spans = Vec::new();
             spans.extend(analyze_key(theme, arrows, ""));
             spans.push(analyze_sep(theme));
@@ -432,7 +436,9 @@ mod tests {
         let spans = progress_bar_spans(&theme, 50.0);
         let fill = theme.style_for_bucket(color_bucket(50.0));
         assert!(
-            spans.iter().any(|s| s.content.contains('█') && s.style == fill),
+            spans
+                .iter()
+                .any(|s| s.content.contains('█') && s.style == fill),
             "{spans:?}"
         );
         assert!(
@@ -499,11 +505,15 @@ mod tests {
         assert_eq!(joined, status_footer());
         let key_style = theme.primary.add_modifier(Modifier::BOLD);
         assert!(
-            line.spans.iter().any(|s| s.content == "K" && s.style == key_style),
+            line.spans
+                .iter()
+                .any(|s| s.content == "K" && s.style == key_style),
             "{line:?}"
         );
         assert!(
-            line.spans.iter().any(|s| s.content == "B" && s.style == key_style),
+            line.spans
+                .iter()
+                .any(|s| s.content == "B" && s.style == key_style),
             "{line:?}"
         );
     }

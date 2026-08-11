@@ -59,9 +59,15 @@ pub(crate) fn write_full_help<W: Write>(w: &mut W) -> io::Result<()> {
     for mut sub in subs {
         let name = sub.get_name().to_string();
         writeln!(&mut *w)?;
-        writeln!(&mut *w, "────────────────────────────────────────────────────────")?;
+        writeln!(
+            &mut *w,
+            "────────────────────────────────────────────────────────"
+        )?;
         writeln!(&mut *w, "  vole {name}")?;
-        writeln!(&mut *w, "────────────────────────────────────────────────────────")?;
+        writeln!(
+            &mut *w,
+            "────────────────────────────────────────────────────────"
+        )?;
         sub = sub.bin_name(format!("vole {name}"));
         sub.write_long_help(&mut *w)?;
     }

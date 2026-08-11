@@ -25,10 +25,7 @@ fn top_level_help_mentions_home_menu_not_numbered_plan_list() {
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     // after_help 或 about：指向终端首页，而非暗示 11 项数字菜单
-    assert!(
-        stdout.to_lowercase().contains("home menu"),
-        "help={stdout}"
-    );
+    assert!(stdout.to_lowercase().contains("home menu"), "help={stdout}");
     assert!(
         stdout.to_lowercase().contains("confirm")
             || stdout.contains("Proceed")
@@ -69,7 +66,9 @@ fn top_level_help_is_english_with_section_headers() {
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        !stdout.chars().any(|c| ('\u{4e00}'..='\u{9fff}').contains(&c)),
+        !stdout
+            .chars()
+            .any(|c| ('\u{4e00}'..='\u{9fff}').contains(&c)),
         "top-level --help must not contain Chinese characters:\n{stdout}"
     );
     assert!(

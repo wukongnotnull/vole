@@ -433,6 +433,7 @@ fn display_path(path: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tui::widgets::analyze_footer;
     use vole_core::vole_proto::AnalyzeFileEntry;
 
     #[test]

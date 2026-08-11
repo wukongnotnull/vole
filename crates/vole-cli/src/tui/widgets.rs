@@ -239,6 +239,7 @@ pub enum AnalyzeFooterMode {
     DeleteConfirm,
 }
 
+#[allow(dead_code)] // kept for honesty/unit tests; UI uses analyze_footer_line
 pub fn analyze_footer(mode: AnalyzeFooterMode) -> String {
     match mode {
         AnalyzeFooterMode::Filtering => "Filter: type… Enter apply | Esc clear".to_string(),

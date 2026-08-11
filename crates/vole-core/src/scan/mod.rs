@@ -50,6 +50,18 @@ pub struct ScanResult {
 
 /// 扫描单层目录：子项按体积降序，大文件榜跨整棵树。
 pub fn scan_directory(root: &Path, cancel: &CancelToken) -> io::Result<ScanResult> {
+    scan_directory_with_progress(root, cancel, |_| {})
+}
+
+/// 同 [`scan_directory`]，每完成一个根子项调用 `on_child`（用于 TUI live 进度）。
+pub fn scan_directory_with_progress<F>(
+    root: &Path,
+    cancel: &CancelToken,
+    mut on_child: F,
+) -> io::Result<ScanResult>
+where
+    F: FnMut(&DirEntry),
+{
     if !root.is_dir() {
         return Err(io::Error::new(
             io::ErrorKind::NotFound,
@@ -86,16 +98,15 @@ pub fn scan_directory(root: &Path, cancel: &CancelToken) -> io::Result<ScanResul
             total_size += size;
             let is_dir = fs::metadata(&path).map(|m| m.is_dir()).unwrap_or(false);
             let display_name = format!("{name} →");
-            child_entries.push((
-                DirEntry {
-                    name: display_name,
-                    path,
-                    size,
-                    is_dir,
-                    last_access: last_access_time(&meta),
-                },
+            let dir_entry = DirEntry {
+                name: display_name,
+                path,
                 size,
-            ));
+                is_dir,
+                last_access: last_access_time(&meta),
+            };
+            on_child(&dir_entry);
+            child_entries.push((dir_entry, size));
             continue;
         }
 
@@ -107,34 +118,33 @@ pub fn scan_directory(root: &Path, cancel: &CancelToken) -> io::Result<ScanResul
             };
             files_scanned.fetch_add(files, Ordering::Relaxed);
             let last_access = fs::metadata(&path).ok().and_then(|m| last_access_time(&m));
-            child_entries.push((
-                DirEntry {
-                    name,
-                    path,
-                    size,
-                    is_dir: true,
-                    last_access,
-                },
+            let dir_entry = DirEntry {
+                name,
+                path,
                 size,
-            ));
+                is_dir: true,
+                last_access,
+            };
+            on_child(&dir_entry);
+            child_entries.push((dir_entry, size));
             total_size += size;
         } else {
             let mut local_seen = seen.lock().unwrap();
             let size = countable_file_size(&meta, &mut local_seen);
+            drop(local_seen);
             files_scanned.fetch_add(1, Ordering::Relaxed);
             total_size += size;
             maybe_push_large(&large_heap, &path, size);
             let last_access = last_access_time(&meta);
-            child_entries.push((
-                DirEntry {
-                    name,
-                    path,
-                    size,
-                    is_dir: false,
-                    last_access,
-                },
+            let dir_entry = DirEntry {
+                name,
+                path,
                 size,
-            ));
+                is_dir: false,
+                last_access,
+            };
+            on_child(&dir_entry);
+            child_entries.push((dir_entry, size));
         }
     }
 
@@ -323,6 +333,33 @@ mod tests {
     use std::os::unix::fs::symlink;
 
     use crate::cancel::CancelToken;
+
+    #[test]
+    fn progress_emits_each_root_child_before_done() {
+        let dir = std::env::temp_dir().join(format!("vole-scan-prog-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let mut a = File::create(dir.join("a.txt")).unwrap();
+        a.write_all(b"aa").unwrap();
+        let mut b = File::create(dir.join("b.txt")).unwrap();
+        b.write_all(&vec![0u8; 64]).unwrap();
+
+        let cancel = CancelToken::new();
+        let mut seen = Vec::new();
+        let result = scan_directory_with_progress(&dir, &cancel, |e| {
+            seen.push(e.name.clone());
+        })
+        .unwrap();
+        assert_eq!(seen.len(), 2, "expected one progress event per root child");
+        assert_eq!(result.entries.len(), 2);
+        assert!(result.entries.iter().any(|e| e.name == "a.txt"));
+        assert!(result.entries.iter().any(|e| e.name == "b.txt"));
+        assert_eq!(result.entries[0].name, "b.txt");
+        let plain = scan_directory(&dir, &cancel).unwrap();
+        assert_eq!(plain.total_size, result.total_size);
+        assert_eq!(plain.total_files, result.total_files);
+        let _ = fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn scan_small_tree() {

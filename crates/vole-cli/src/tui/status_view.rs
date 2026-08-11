@@ -13,6 +13,7 @@ use vole_core::vole_proto::status::{
 
 use super::design::{
     card_title, status_footer_line, Theme, CARD_ROW_GAP, COL_GUTTER, FOOTER_GAP, OUTER_PAD,
+    TOP_PAD,
 };
 use super::status_cat::render_mole_frame;
 use super::widgets::{
@@ -758,6 +759,32 @@ mod tests {
             .collect::<String>();
         assert!(narrow_s.contains("Health"));
         assert!(!narrow_s.contains("macOS 15.0"));
+    }
+
+    #[test]
+    fn light_header_keeps_msg_and_identity_in_value_ink() {
+        let theme = Theme::light();
+        let snap = sample_snap();
+        let line = build_status_header(&snap, 120, &theme);
+        assert!(
+            line.spans
+                .iter()
+                .any(|s| s.content.contains("Good") && s.style == theme.value),
+            "{line:?}"
+        );
+        assert!(
+            line.spans
+                .iter()
+                .any(|s| s.content.contains("MacBook") && s.style == theme.value),
+            "{line:?}"
+        );
+        assert!(
+            !line
+                .spans
+                .iter()
+                .any(|s| s.content.contains("Good") && s.style == theme.subtle),
+            "{line:?}"
+        );
     }
 
     #[test]

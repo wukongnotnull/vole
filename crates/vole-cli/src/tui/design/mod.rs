@@ -10,7 +10,7 @@ pub use theme::{
     color_bucket, resolve_color_mode, size_tone, ColorBucket, ColorMode, SizeTone, Theme,
 };
 #[allow(unused_imports)] // public design-system surface
-pub use tokens::{CARD_ROW_GAP, COL_GUTTER, ENV_THEME, FOOTER_GAP, OUTER_PAD};
+pub use tokens::{CARD_ROW_GAP, COL_GUTTER, ENV_THEME, FOOTER_GAP, OUTER_PAD, TOP_PAD};
 
 /// Resolved design system for a TUI session (theme + mode + layout tokens).
 #[derive(Debug, Clone)]

@@ -222,9 +222,17 @@ fn render_brand_row(
         .split(area);
 
     frame.render_widget(Paragraph::new(brand_lines), cols[0]);
-    // cols[1] = gutter
-    let vole = render_mole_frame(anim_frame, cols[2].width as usize);
-    frame.render_widget(Paragraph::new(vole).style(theme.ok), cols[2]);
+    // cols[1] = gutter — vertically center the 4-line vole in the 5-line brand row.
+    let vole_rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1), // top pad → share midline with VOLE ascii
+            Constraint::Length(4),
+            Constraint::Min(0),
+        ])
+        .split(cols[2]);
+    let vole = render_mole_frame(anim_frame, vole_rows[1].width as usize);
+    frame.render_widget(Paragraph::new(vole).style(theme.ok), vole_rows[1]);
 }
 
 #[cfg(test)]

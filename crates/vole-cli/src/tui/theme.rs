@@ -13,6 +13,7 @@ pub struct Theme {
     pub ok: Style,
     pub warn: Style,
     pub danger: Style,
+    #[allow(dead_code)] // kept for mole-parity accents; status cards use clean titles
     pub rule: Style,
     pub label: Style,
     pub value: Style,

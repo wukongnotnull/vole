@@ -292,18 +292,29 @@ pub fn build_status_header(snap: &StatusSnapshot, width: usize, theme: &Theme) -
 
     let text = fit_status_header(&head, &candidates, width);
     let score_style = theme.style_for_health(snap.health_score);
-    // "Status  Health ● N msg …" — color the score token when present.
+    // "Status  Health ● N msg  identity…" — keep msg + identity in value ink on light bg.
     let score_token = format!("● {}", snap.health_score);
     if let Some((before, after)) = text.split_once(&score_token) {
-        Line::from(vec![
+        let msg = snap.health_score_msg.as_str();
+        let mut spans = vec![
             Span::styled(before.to_string(), theme.title),
             Span::styled(score_token, score_style),
-            Span::styled(after.to_string(), theme.subtle),
-        ])
+        ];
+        let after = after.strip_prefix(' ').unwrap_or(after);
+        if !msg.is_empty() && (after == msg || after.starts_with(&format!("{msg} "))) {
+            spans.push(Span::styled(format!(" {msg}"), theme.value));
+            let rest = after[msg.len()..].to_string();
+            if !rest.is_empty() {
+                spans.push(Span::styled(rest, theme.value));
+            }
+        } else if !after.is_empty() {
+            spans.push(Span::styled(format!(" {after}"), theme.value));
+        }
+        Line::from(spans)
     } else if let Some(rest) = text.strip_prefix("Status") {
         Line::from(vec![
             Span::styled("Status".to_string(), theme.title),
-            Span::styled(rest.to_string(), theme.subtle),
+            Span::styled(rest.to_string(), theme.value),
         ])
     } else {
         Line::from(Span::styled(text, theme.title))

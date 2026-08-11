@@ -72,17 +72,17 @@ impl Theme {
             primary: Style::default()
                 .fg(Color::Rgb(0x5B, 0x2C, 0xB0))
                 .add_modifier(Modifier::BOLD),
-            subtle: Style::default().fg(Color::Rgb(0x3D, 0x3D, 0x3D)),
+            subtle: Style::default().fg(Color::Rgb(0x2A, 0x2A, 0x2A)),
             ok: Style::default().fg(Color::Rgb(0x1B, 0x7A, 0x3C)),
             warn: Style::default().fg(Color::Rgb(0xA0, 0x6E, 0x00)),
             danger: Style::default()
                 .fg(Color::Rgb(0xC4, 0x28, 0x28))
                 .add_modifier(Modifier::BOLD),
-            rule: Style::default().fg(Color::Rgb(0x8A, 0x8A, 0x8A)),
-            bar_track: Style::default().fg(Color::Rgb(0x8A, 0x8A, 0x8A)),
-            label: Style::default().fg(Color::Rgb(0x4A, 0x4A, 0x4A)),
-            value: Style::default().fg(Color::Rgb(0x1A, 0x1A, 0x1A)),
-            normal: Style::default().fg(Color::Rgb(0x1A, 0x1A, 0x1A)),
+            rule: Style::default().fg(Color::Rgb(0x6B, 0x6B, 0x6B)),
+            bar_track: Style::default().fg(Color::Rgb(0x6B, 0x6B, 0x6B)),
+            label: Style::default().fg(Color::Rgb(0x3A, 0x3A, 0x3A)),
+            value: Style::default().fg(Color::Rgb(0x12, 0x12, 0x12)),
+            normal: Style::default().fg(Color::Rgb(0x12, 0x12, 0x12)),
             selected: Style::default()
                 .fg(Color::Rgb(0x00, 0x6D, 0xAE))
                 .add_modifier(Modifier::BOLD),
@@ -236,9 +236,9 @@ mod tests {
         let light = Theme::light();
         assert_ne!(light.value.fg, Some(Color::White));
         assert_ne!(light.normal.fg, Some(Color::White));
-        assert_eq!(light.value.fg, Some(Color::Rgb(0x1A, 0x1A, 0x1A)));
-        assert_eq!(light.subtle.fg, Some(Color::Rgb(0x3D, 0x3D, 0x3D)));
-        assert_eq!(light.bar_track.fg, Some(Color::Rgb(0x8A, 0x8A, 0x8A)));
+        assert_eq!(light.value.fg, Some(Color::Rgb(0x12, 0x12, 0x12)));
+        assert_eq!(light.subtle.fg, Some(Color::Rgb(0x2A, 0x2A, 0x2A)));
+        assert_eq!(light.bar_track.fg, Some(Color::Rgb(0x6B, 0x6B, 0x6B)));
     }
 
     #[test]

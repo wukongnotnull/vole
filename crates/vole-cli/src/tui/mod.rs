@@ -3,6 +3,7 @@
 mod analyze_actions;
 mod analyze_state;
 mod analyze_view;
+mod design;
 mod home_menu;
 mod home_menu_state;
 mod menu_state;
@@ -10,7 +11,6 @@ mod paginated_select;
 mod status_cat;
 mod status_prefs;
 mod status_view;
-mod theme;
 mod widgets;
 
 pub use analyze_actions::{
@@ -21,6 +21,8 @@ pub use analyze_state::{
     map_analyze_key, upsert_live_child, AnalyzeEffect, AnalyzeKey, AnalyzeState, LiveSortMode,
 };
 pub use analyze_view::{render_analyze, AnalyzeRenderOpts};
+#[allow(unused_imports)] // public TUI design-system surface
+pub use design::{ColorMode, DesignSystem, Theme};
 #[allow(unused_imports)]
 pub use home_menu::{
     brand_ascii_lines, map_key, run_home_menu, HomeMenuRunOpts, VOLE_REPO_URL, VOLE_TAGLINE,
@@ -42,4 +44,3 @@ pub use paginated_select::{drain_pending_input, run_paginated_select};
 pub use status_cat::render_mole_frame;
 pub use status_prefs::{load_status_prefs, next_cpu_cores, save_cat_hidden, save_cpu_cores};
 pub use status_view::{render_status, StatusRenderOpts};
-pub use theme::Theme;

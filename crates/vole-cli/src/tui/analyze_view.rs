@@ -7,7 +7,7 @@ use ratatui::Frame;
 
 use vole_core::vole_proto::{AnalyzeEntry, AnalyzeOutput};
 
-use super::theme::Theme;
+use super::design::Theme;
 use super::widgets::{
     analyze_footer, analyze_progress_bar, calculate_name_width, calculate_viewport,
     format_bytes_si, format_percent_label, pad_name, shorten, AnalyzeFooterMode,
@@ -518,7 +518,7 @@ mod tests {
 
     #[test]
     fn size_tone_buckets() {
-        use super::super::theme::{size_tone, SizeTone};
+        use super::super::design::{size_tone, SizeTone};
         assert_eq!(size_tone(50.0), SizeTone::High);
         assert_eq!(size_tone(20.0), SizeTone::Mid);
         assert_eq!(size_tone(5.0), SizeTone::Low);

@@ -611,7 +611,7 @@ fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
 
     let backend = CrosstermBackend::new(io::stdout());
     let mut term = Terminal::new(backend)?;
-    let theme = tui::Theme::default();
+    let theme = tui::DesignSystem::resolve().theme;
 
     let local_snapshots_tip =
         vole_core::localsnapshots::to_info(vole_core::localsnapshots::probe_local_snapshots(
@@ -881,7 +881,7 @@ fn cmd_status_tui() -> io::Result<()> {
 
     let backend = CrosstermBackend::new(io::stdout());
     let mut term = Terminal::new(backend)?;
-    let theme = tui::Theme::default();
+    let theme = tui::DesignSystem::resolve().theme;
 
     let mut collector = StatusCollector::new();
     let mut snap = collector.collect_full().map_err(io::Error::other)?;

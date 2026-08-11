@@ -1,9 +1,9 @@
 //! 基础 TUI 组件与可单测布局 helper。
 
-use ratatui::style::Modifier;
 use ratatui::text::{Line, Span};
 
-use super::theme::{color_bucket, Theme};
+use super::design::{color_bucket, ColorBucket, Theme};
+pub use super::design::{status_footer, status_footer_line};
 
 pub const PROGRESS_BAR_WIDTH: usize = 16;
 pub const STATUS_NARROW_MAX: u16 = 80;
@@ -193,34 +193,6 @@ fn truncate_to_width(s: &str, width: usize) -> String {
     s.chars().take(width).collect()
 }
 
-pub fn status_footer() -> String {
-    "K Vole | C Cores | B Back | Q/Esc/Ctrl+C Quit".to_string()
-}
-
-/// Key letters in primary+bold; action labels in white — easier to scan than subtle gray.
-pub fn status_footer_line(theme: &Theme) -> Line<'static> {
-    let key = theme.primary.add_modifier(Modifier::BOLD);
-    let sep = theme.subtle;
-    let text = theme.value;
-    Line::from(vec![
-        Span::styled("K", key),
-        Span::styled(" Vole", text),
-        Span::styled(" | ", sep),
-        Span::styled("C", key),
-        Span::styled(" Cores", text),
-        Span::styled(" | ", sep),
-        Span::styled("B", key),
-        Span::styled(" Back", text),
-        Span::styled(" | ", sep),
-        Span::styled("Q", key),
-        Span::styled("/", sep),
-        Span::styled("Esc", key),
-        Span::styled("/", sep),
-        Span::styled("Ctrl+C", key),
-        Span::styled(" Quit", text),
-    ])
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AnalyzeFooterMode {
     Directory {
@@ -297,6 +269,7 @@ pub fn metric_bar_line(theme: &Theme, label: &str, percent: f64) -> Line<'static
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ratatui::style::Modifier;
 
     #[test]
     fn plain_progress_bar_bounds() {
@@ -408,8 +381,8 @@ mod tests {
 
     #[test]
     fn color_bucket_thresholds() {
-        assert_eq!(color_bucket(0.0), super::super::theme::ColorBucket::Ok);
-        assert_eq!(color_bucket(60.0), super::super::theme::ColorBucket::Warn);
-        assert_eq!(color_bucket(85.0), super::super::theme::ColorBucket::Danger);
+        assert_eq!(color_bucket(0.0), ColorBucket::Ok);
+        assert_eq!(color_bucket(60.0), ColorBucket::Warn);
+        assert_eq!(color_bucket(85.0), ColorBucket::Danger);
     }
 }

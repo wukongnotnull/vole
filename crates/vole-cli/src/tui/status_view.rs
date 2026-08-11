@@ -11,11 +11,14 @@ use vole_core::vole_proto::status::{
     ProxyStatus, StatusSnapshot, ThermalStatus,
 };
 
+use super::design::{
+    card_title, color_bucket, status_footer_line, Theme, CARD_ROW_GAP, COL_GUTTER, FOOTER_GAP,
+    OUTER_PAD,
+};
 use super::status_cat::render_mole_frame;
-use super::theme::{color_bucket, Theme};
 use super::widgets::{
     fit_status_header, format_bytes_bin, format_rate_mbs, line_pair, metric_bar_line, mini_bar,
-    plain_progress_bar, shorten, status_footer_line, status_layout_mode, StatusLayoutMode,
+    plain_progress_bar, shorten, status_layout_mode, StatusLayoutMode,
 };
 
 const ICON_CPU: &str = "◉";
@@ -25,14 +28,6 @@ const ICON_NETWORK: &str = "⇅";
 const ICON_BATTERY: &str = "◪";
 const ICON_PROCS: &str = "❊";
 const STATUS_NARROW: u16 = 80;
-/// Blank line between card rows (TUI stand-in for line spacing).
-const CARD_ROW_GAP: u16 = 1;
-/// Horizontal gutter between the two status columns.
-const COL_GUTTER: u16 = 2;
-/// Outer left/right inset so content is not flush against the terminal edge.
-const OUTER_PAD: u16 = 1;
-/// Blank line between the card block and the key-hint footer.
-const FOOTER_GAP: u16 = 1;
 
 /// Inset the draw area horizontally; shrinks/zeros the pad on very narrow terminals.
 fn inset_horizontal(area: Rect, pad: u16) -> Rect {
@@ -358,7 +353,7 @@ fn build_card_blocks(
 }
 
 fn card_header(icon: &str, title: &str, theme: &Theme) -> Line<'static> {
-    Line::from(Span::styled(format!("{} {}", icon, title), theme.title))
+    card_title(icon, title, theme)
 }
 
 fn render_cpu_card(

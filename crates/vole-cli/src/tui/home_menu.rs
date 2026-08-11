@@ -16,7 +16,7 @@ use crate::terminal::TerminalGuard;
 
 use super::home_menu_state::{HomeAction, HomeKey, HomeMenuConfig, HomeMenuState, HOME_ITEMS};
 use super::paginated_select::drain_pending_input;
-use super::theme::Theme;
+use super::design::{DesignSystem, Theme};
 
 pub const VOLE_TAGLINE: &str = "Deep clean and optimize your Mac.";
 pub const VOLE_REPO_URL: &str = "https://github.com/wukongnotnull/vole";
@@ -61,7 +61,7 @@ pub fn run_home_menu(opts: HomeMenuRunOpts) -> io::Result<HomeAction> {
     drain_pending_input(Duration::from_millis(200));
     let mut term = Terminal::new(CrosstermBackend::new(stdout()))?;
     let mut state = HomeMenuState::new(opts.cfg);
-    let theme = Theme::default();
+    let theme = DesignSystem::resolve().theme;
     let update_msg = opts.update_message.as_deref();
     loop {
         term.draw(|f| render_home(f, &state, &theme, update_msg))?;

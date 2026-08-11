@@ -16,7 +16,7 @@ use ratatui::{Frame, Terminal};
 use crate::terminal::TerminalGuard;
 
 use super::menu_state::{MenuConfig, MenuItem, MenuKey, MenuState, SelectOutcome};
-use super::theme::Theme;
+use super::design::{DesignSystem, Theme};
 
 /// Drain pending keyboard input until `timeout` elapses (mole #726).
 pub fn drain_pending_input(timeout: Duration) {
@@ -38,7 +38,7 @@ pub fn run_paginated_select(
     drain_pending_input(Duration::from_millis(200));
     let mut term = Terminal::new(CrosstermBackend::new(stdout()))?;
     let mut state = MenuState::new(items, cfg).map_err(|e| io::Error::other(e.to_string()))?;
-    let theme = Theme::default();
+    let theme = DesignSystem::resolve().theme;
     loop {
         term.draw(|f| render_menu(f, title, &state, &theme))?;
         if !event::poll(Duration::from_millis(50))? {

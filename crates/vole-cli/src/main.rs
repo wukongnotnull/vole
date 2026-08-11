@@ -36,7 +36,7 @@ use vole_core::vole_proto::{AnalyzeEntry, AnalyzeOutput};
     name = "vole",
     version,
     about = "macOS cleanup and monitoring",
-    after_help = "Run `vole` with no subcommand in a terminal to open the home menu (mole-style). Bare TTY `clean` / `optimize` scan a plan, prompt Proceed? [y/N], then apply."
+    after_help = "Run `vole` with no subcommand in a terminal to open the home menu (mole-style). Bare TTY `clean` / `optimize` scan a plan, prompt Proceed? [y/N], then apply.\n\nFull per-command usage (Usage + Options) follows below."
 )]
 struct Cli {
     #[command(subcommand)]
@@ -45,6 +45,31 @@ struct Cli {
 
 pub(crate) fn clap_command() -> clap::Command {
     Cli::command()
+}
+
+/// Top-level overview plus each subcommand's long help (Usage + Options).
+pub(crate) fn write_full_help<W: Write>(w: &mut W) -> io::Result<()> {
+    let mut root = clap_command();
+    root.write_long_help(&mut *w)?;
+    let subs: Vec<clap::Command> = root
+        .get_subcommands()
+        .filter(|c| c.get_name() != "help")
+        .cloned()
+        .collect();
+    for mut sub in subs {
+        let name = sub.get_name().to_string();
+        writeln!(&mut *w)?;
+        sub = sub.bin_name(format!("vole {name}"));
+        sub.write_long_help(&mut *w)?;
+    }
+    Ok(())
+}
+
+fn wants_full_help(args: &[String]) -> bool {
+    matches!(
+        args,
+        [h] if h == "-h" || h == "--help" || h == "help"
+    )
 }
 
 #[derive(Subcommand)]
@@ -344,6 +369,15 @@ impl From<CompletionShell> for Shell {
 }
 
 fn main() {
+    let argv: Vec<String> = std::env::args().skip(1).collect();
+    if wants_full_help(&argv) {
+        if let Err(e) = write_full_help(&mut io::stdout()) {
+            eprintln!("vole: {e}");
+            std::process::exit(1);
+        }
+        std::process::exit(0);
+    }
+
     let cli = Cli::parse();
     match cli.command {
         None => std::process::exit(interactive::run()),

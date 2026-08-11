@@ -50,8 +50,10 @@ pub fn run() -> i32 {
 
 fn print_help_and_exit() -> i32 {
     let _ = io::stdout().write_all(b"\x1b[2J\x1b[H");
-    let mut cmd = crate::clap_command();
-    let _ = cmd.print_long_help();
+    if let Err(e) = crate::write_full_help(&mut io::stdout()) {
+        eprintln!("vole: {e}");
+        return 1;
+    }
     0
 }
 

@@ -46,6 +46,38 @@ fn top_level_help_mentions_home_menu_not_numbered_plan_list() {
 }
 
 #[test]
+fn top_level_help_includes_subcommand_options() {
+    let output = Command::new(env!("CARGO_BIN_EXE_vole"))
+        .args(["--help"])
+        .output()
+        .expect("help");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // Full top-level help should embed each command's Usage + Options (clap-sourced).
+    for needle in [
+        "Usage: vole clean",
+        "--whitelist-list",
+        "Usage: vole uninstall",
+        "Usage: vole optimize",
+        "Usage: vole update",
+        "--nightly",
+        "Usage: vole remove",
+        "Usage: vole purge",
+        "Usage: vole installer",
+        "Usage: vole touchid",
+        "Usage: vole analyze",
+        "Usage: vole status",
+        "Usage: vole history",
+        "Usage: vole completions",
+    ] {
+        assert!(
+            stdout.contains(needle),
+            "missing `{needle}` in top-level --help:\n{stdout}"
+        );
+    }
+}
+
+#[test]
 fn clean_help_mentions_tty_confirm() {
     let output = Command::new(env!("CARGO_BIN_EXE_vole"))
         .args(["clean", "--help"])

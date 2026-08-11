@@ -36,7 +36,7 @@ use vole_core::vole_proto::{AnalyzeEntry, AnalyzeOutput};
     name = "vole",
     version,
     about = "macOS cleanup and monitoring",
-    after_help = "Run `vole` with no subcommand in a terminal to open the home menu. Bare TTY `clean` / `optimize` scan a plan, prompt Proceed? [y/N], then apply.\n\nFull per-command usage (Usage + Options) follows below."
+    after_help = "Notes:\n  - Run `vole` with no subcommand in a terminal to open the home menu.\n  - Bare TTY `clean` / `optimize`: scan a plan, prompt Proceed? [y/N], then apply.\n\nDetailed Usage and Options for each command follow."
 )]
 struct Cli {
     #[command(subcommand)]
@@ -59,6 +59,9 @@ pub(crate) fn write_full_help<W: Write>(w: &mut W) -> io::Result<()> {
     for mut sub in subs {
         let name = sub.get_name().to_string();
         writeln!(&mut *w)?;
+        writeln!(&mut *w, "────────────────────────────────────────────────────────")?;
+        writeln!(&mut *w, "  vole {name}")?;
+        writeln!(&mut *w, "────────────────────────────────────────────────────────")?;
         sub = sub.bin_name(format!("vole {name}"));
         sub.write_long_help(&mut *w)?;
     }
@@ -74,275 +77,281 @@ fn wants_full_help(args: &[String]) -> bool {
 
 #[derive(Subcommand)]
 enum Command {
-    /// 清理缓存与残留文件。
+    /// Clean caches and leftover files.
     ///
-    /// TTY 裸调用：扫 plan → 确认 → apply；`--plan` / `--json` / 非 TTY 只产出计划。
+    /// On a TTY with no flags: scan a plan, confirm, then apply.
+    /// With `--plan` / `--json`, or when not a TTY: emit a plan only.
     Clean {
-        /// 只产出候选集，不改动任何文件（非 TTY 默认；TTY 显式指定时跳过确认）。
+        /// Emit candidates only; do not delete (default when not a TTY; on a TTY skips confirm).
         #[arg(long, conflicts_with = "apply")]
         plan: bool,
-        /// 同 `--plan`。
+        /// Same as `--plan`.
         #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
         dry_run: bool,
-        /// 执行 plan 文件中的条目（须通过 TTL 与 TOCTOU 重验）。
+        /// Apply entries from a plan file (TTL + TOCTOU revalidation required).
         #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
         apply: Option<PathBuf>,
-        /// 永久删除而非移入废纸篓（`--apply` 或交互确认后 apply）。
+        /// Permanently delete instead of moving to Trash (`--apply` or after interactive confirm).
         #[arg(long)]
         permanent: bool,
-        /// 输出 JSON 而非人类可读文本。
+        /// Print JSON instead of human-readable text.
         #[arg(long)]
         json: bool,
-        /// 以 NDJSON 事件流输出到 stdout。
+        /// Stream NDJSON events to stdout.
         #[arg(long = "json-stream")]
         json_stream: bool,
-        /// 将 plan JSON 写入文件。
+        /// Write plan JSON to a file.
         #[arg(long, conflicts_with = "apply")]
         plan_out: Option<PathBuf>,
-        /// TTY 分页多选管理受保护缓存白名单；脚本用 --whitelist-add/remove/list。
+        /// TTY paginated multi-select for the protected-cache whitelist; scripts use --whitelist-*.
         #[arg(
             long,
             conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent"]
         )]
         whitelist: bool,
-        /// 向白名单添加路径 pattern（非交互）。
+        /// Add a path pattern to the whitelist (non-interactive).
         #[arg(
             long = "whitelist-add",
             value_name = "PATH",
             conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist"]
         )]
         whitelist_add: Option<String>,
-        /// 从白名单移除路径 pattern（非交互）。
+        /// Remove a path pattern from the whitelist (non-interactive).
         #[arg(
             long = "whitelist-remove",
             value_name = "PATH",
             conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist"]
         )]
         whitelist_remove: Option<String>,
-        /// 列出当前白名单（非交互）。
+        /// List the current whitelist (non-interactive).
         #[arg(
             long = "whitelist-list",
             conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist"]
         )]
         whitelist_list: bool,
     },
-    /// 卸载应用及其用户域残留。
+    /// Uninstall apps and their user-domain leftovers.
     ///
-    /// TTY 裸调用：分页多选 → 确认 → 卸载；`--plan` / `--json` / 非 TTY 只产出计划。
+    /// On a TTY with no flags: paginated select, confirm, then uninstall.
+    /// With `--plan` / `--json`, or when not a TTY: emit a plan only.
     Uninstall {
-        /// 只产出候选集，不改动任何文件（非 TTY 默认；TTY 显式指定时跳过交互）。
+        /// Emit candidates only; do not delete (default when not a TTY; on a TTY skips interactive UI).
         #[arg(long, conflicts_with = "apply")]
         plan: bool,
-        /// 同 `--plan`。
+        /// Same as `--plan`.
         #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
         dry_run: bool,
-        /// 执行 plan 文件中的条目。
+        /// Apply entries from a plan file.
         #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
         apply: Option<PathBuf>,
-        /// 永久删除而非移入废纸篓（`--apply` 或交互卸载）。
+        /// Permanently delete instead of moving to Trash (`--apply` or interactive uninstall).
         #[arg(long)]
         permanent: bool,
-        /// 输出 JSON。
+        /// Print JSON.
         #[arg(long)]
         json: bool,
-        /// NDJSON 事件流。
+        /// Stream NDJSON events.
         #[arg(long = "json-stream")]
         json_stream: bool,
-        /// 将 plan JSON 写入文件。
+        /// Write plan JSON to a file.
         #[arg(long, conflicts_with = "apply")]
         plan_out: Option<PathBuf>,
-        /// 可选：按 bundle id / 应用名过滤。
+        /// Optional filter by bundle id or app name.
         target: Option<String>,
     },
-    /// 系统优化任务（特权 DNS 经 sudo -n；其余长尾进 coverage_note）。
+    /// Run system optimization tasks.
     ///
-    /// TTY 裸调用：扫 plan → 确认 → apply；`--plan` / `--json` / 非 TTY 只产出计划。
+    /// Privileged DNS uses `sudo -n`; other gaps are noted in `coverage_note`.
+    /// On a TTY with no flags: scan a plan, confirm, then apply.
+    /// With `--plan` / `--json`, or when not a TTY: emit a plan only.
     #[command(visible_alias = "optimise")]
     Optimize {
-        /// 只产出候选集，不改动任何文件（非 TTY 默认；TTY 显式指定时跳过确认）。
+        /// Emit candidates only; do not change the system (default when not a TTY; on a TTY skips confirm).
         #[arg(long, conflicts_with = "apply")]
         plan: bool,
-        /// 同 `--plan`。
+        /// Same as `--plan`.
         #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
         dry_run: bool,
-        /// 执行 plan 文件中的条目。
+        /// Apply entries from a plan file.
         #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
         apply: Option<PathBuf>,
-        /// 永久删除而非移入废纸篓（`--apply` 或交互确认后 apply；仅影响 delete 类条目）。
+        /// Permanently delete instead of Trash (`--apply` or after confirm; delete-class entries only).
         #[arg(long)]
         permanent: bool,
-        /// 输出 JSON。
+        /// Print JSON.
         #[arg(long)]
         json: bool,
-        /// NDJSON 事件流。
+        /// Stream NDJSON events.
         #[arg(long = "json-stream")]
         json_stream: bool,
-        /// 将 plan JSON 写入文件。
+        /// Write plan JSON to a file.
         #[arg(long, conflicts_with = "apply")]
         plan_out: Option<PathBuf>,
-        /// 可选：只跑单个优化任务 id（实验性）。
+        /// Optional: run a single optimize task id (experimental).
         #[arg(long, value_name = "TASK_ID")]
         task: Option<String>,
-        /// TTY 分页多选管理优化任务白名单；脚本用 --whitelist-add/remove/list。
+        /// TTY paginated multi-select for the optimize-task whitelist; scripts use --whitelist-*.
         #[arg(
             long,
             conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "plan", "dry_run", "task"]
         )]
         whitelist: bool,
-        /// 向优化白名单添加任务 id（非交互）。
+        /// Add a task id to the optimize whitelist (non-interactive).
         #[arg(
             long = "whitelist-add",
             value_name = "TASK_ID",
             conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist", "plan", "dry_run", "task"]
         )]
         whitelist_add: Option<String>,
-        /// 从优化白名单移除任务 id（非交互）。
+        /// Remove a task id from the optimize whitelist (non-interactive).
         #[arg(
             long = "whitelist-remove",
             value_name = "TASK_ID",
             conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist", "plan", "dry_run", "task"]
         )]
         whitelist_remove: Option<String>,
-        /// 列出当前优化任务白名单（非交互）。
+        /// List the current optimize-task whitelist (non-interactive).
         #[arg(
             long = "whitelist-list",
             conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist", "plan", "dry_run", "task"]
         )]
         whitelist_list: bool,
     },
-    /// 实时系统监控。
+    /// Live system health monitor.
     Status {
-        /// 输出 JSON 而非 TUI。
+        /// Print JSON instead of the TUI.
         #[arg(long)]
         json: bool,
-        /// 连续 NDJSON 流（类似 `--watch` 持续输出）。
+        /// Continuous NDJSON stream (watch-style).
         #[arg(long = "json-stream")]
         json_stream: bool,
     },
-    /// 目录体积分析。
+    /// Analyze directory disk usage.
     #[command(visible_alias = "analyse")]
     Analyze {
-        /// 目标目录（默认 `$HOME`）。
+        /// Target directory (default: `$HOME`).
         path: Option<PathBuf>,
-        /// 输出 JSON 而非 TUI。
+        /// Print JSON instead of the TUI.
         #[arg(long)]
         json: bool,
     },
-    /// 查看操作历史与删除审计。
+    /// Review operation history and deletion audit.
     History {
-        /// 输出 JSON。
+        /// Print JSON.
         #[arg(long)]
         json: bool,
-        /// 最多展示的 session / deletion 条数（1..=200，默认 20）。
+        /// Max sessions / deletions to show (1..=200, default 20).
         #[arg(long, default_value_t = 20)]
         limit: u32,
     },
-    /// 清理陈旧项目构建物。
+    /// Remove stale project build artifacts.
     ///
-    /// TTY 裸调用：分页多选 → 确认 → 清理；`--plan` / `--json` / 非 TTY 只产出计划。
+    /// On a TTY with no flags: paginated select, confirm, then purge.
+    /// With `--plan` / `--json`, or when not a TTY: emit a plan only.
     Purge {
-        /// 只产出候选集，不改动任何文件（非 TTY 默认；TTY 显式指定时跳过交互）。
+        /// Emit candidates only; do not delete (default when not a TTY; on a TTY skips interactive UI).
         #[arg(long, conflicts_with = "apply")]
         plan: bool,
-        /// 同 `--plan`。
+        /// Same as `--plan`.
         #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
         dry_run: bool,
-        /// 执行 plan 文件中的条目。
+        /// Apply entries from a plan file.
         #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
         apply: Option<PathBuf>,
-        /// 永久删除而非移入废纸篓（`--apply` 或交互清理）。
+        /// Permanently delete instead of moving to Trash (`--apply` or interactive purge).
         #[arg(long)]
         permanent: bool,
-        /// 输出 JSON。
+        /// Print JSON.
         #[arg(long)]
         json: bool,
-        /// NDJSON 事件流。
+        /// Stream NDJSON events.
         #[arg(long = "json-stream")]
         json_stream: bool,
-        /// 将 plan JSON 写入文件。
+        /// Write plan JSON to a file.
         #[arg(long, conflicts_with = "apply")]
         plan_out: Option<PathBuf>,
-        /// 纳入零大小产物目录。
+        /// Include zero-size artifact directories.
         #[arg(long = "include-empty")]
         include_empty: bool,
     },
-    /// 查找并清理安装包。
+    /// Find and remove installer packages.
     ///
-    /// TTY 裸调用：分页多选 → 确认 → 清理；`--plan` / `--json` / 非 TTY 只产出计划。
+    /// On a TTY with no flags: paginated select, confirm, then clean up.
+    /// With `--plan` / `--json`, or when not a TTY: emit a plan only.
     Installer {
-        /// 只产出候选集，不改动任何文件（非 TTY 默认；TTY 显式指定时跳过交互）。
+        /// Emit candidates only; do not delete (default when not a TTY; on a TTY skips interactive UI).
         #[arg(long, conflicts_with = "apply")]
         plan: bool,
-        /// 同 `--plan`。
+        /// Same as `--plan`.
         #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
         dry_run: bool,
-        /// 执行 plan 文件中的条目。
+        /// Apply entries from a plan file.
         #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
         apply: Option<PathBuf>,
-        /// 永久删除而非移入废纸篓（`--apply` 或交互清理）。
+        /// Permanently delete instead of moving to Trash (`--apply` or interactive cleanup).
         #[arg(long)]
         permanent: bool,
-        /// 输出 JSON。
+        /// Print JSON.
         #[arg(long)]
         json: bool,
-        /// NDJSON 事件流。
+        /// Stream NDJSON events.
         #[arg(long = "json-stream")]
         json_stream: bool,
-        /// 将 plan JSON 写入文件。
+        /// Write plan JSON to a file.
         #[arg(long, conflicts_with = "apply")]
         plan_out: Option<PathBuf>,
     },
-    /// 配置 sudo 的 Touch ID（status / enable / disable）。
+    /// Configure Touch ID for sudo (`status` / `enable` / `disable`).
     Touchid {
-        /// `status` | `enable` | `disable`；省略则进入交互切换。
+        /// `status` | `enable` | `disable`; omit for interactive toggle.
         action: Option<String>,
-        /// 只预览将执行的 PAM 变更，不写文件。
+        /// Preview PAM changes without writing files.
         #[arg(long)]
         plan: bool,
-        /// 同 `--plan`。
+        /// Same as `--plan`.
         #[arg(long = "dry-run", short = 'n')]
         dry_run: bool,
-        /// 输出 JSON。
+        /// Print JSON.
         #[arg(long)]
         json: bool,
     },
-    /// 自更新（检测 → 下载 → 校验 → 安装）。
+    /// Self-update (check → download → verify → install).
     Update {
-        /// 强制重装；Homebrew 安装时同时解除「优先 brew」拦截。
+        /// Force reinstall; for Homebrew installs also bypasses the “prefer brew” gate.
         #[arg(long, short = 'f')]
         force: bool,
-        /// 安装最新 nightly（main）；Homebrew 安装拒绝。
+        /// Install latest nightly from `main` (rejected for Homebrew installs).
         #[arg(long)]
         nightly: bool,
-        /// 只检查是否有更新，不下载不安装。
+        /// Check for updates only; do not download or install.
         #[arg(long)]
         check: bool,
-        /// 非交互确认（含 Homebrew 自更新确认）。
+        /// Non-interactive confirm (including Homebrew self-update confirm).
         #[arg(long, short = 'y')]
         yes: bool,
-        /// 输出 JSON。
+        /// Print JSON.
         #[arg(long)]
         json: bool,
     },
-    /// 自卸载（删除本工具安装产物与自身配置）。
+    /// Uninstall vole (binaries and local config).
     Remove {
-        /// 只预览待删项，不删除。
+        /// Preview items to delete; do not delete.
         #[arg(long = "dry-run", short = 'n')]
         dry_run: bool,
-        /// 跳过交互确认。
+        /// Skip interactive confirmation.
         #[arg(long, short = 'y')]
         yes: bool,
-        /// 输出 JSON。
+        /// Print JSON.
         #[arg(long)]
         json: bool,
-        /// 同时删除操作审计日志（默认保留）。
+        /// Also delete the operation audit log (kept by default).
         #[arg(long = "purge-oplog")]
         purge_oplog: bool,
     },
-    /// 生成 shell 补全脚本（stdout）。
+    /// Generate a shell completion script to stdout.
     #[command(visible_alias = "completion")]
     Completions {
-        /// 目标 shell：bash / zsh / fish / elvish / powershell
+        /// Target shell: bash / zsh / fish / elvish / powershell
         shell: CompletionShell,
     },
 }

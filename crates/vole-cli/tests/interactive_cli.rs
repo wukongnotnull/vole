@@ -61,6 +61,28 @@ fn top_level_help_has_no_mole_mentions() {
 }
 
 #[test]
+fn top_level_help_is_english_with_section_headers() {
+    let output = Command::new(env!("CARGO_BIN_EXE_vole"))
+        .args(["--help"])
+        .output()
+        .expect("help");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !stdout.chars().any(|c| ('\u{4e00}'..='\u{9fff}').contains(&c)),
+        "top-level --help must not contain Chinese characters:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("────────────────────────────────────────────────────────"),
+        "expected command section separators:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("  vole clean"),
+        "expected clean section header:\n{stdout}"
+    );
+}
+
+#[test]
 fn top_level_help_includes_subcommand_options() {
     let output = Command::new(env!("CARGO_BIN_EXE_vole"))
         .args(["--help"])
@@ -101,9 +123,7 @@ fn clean_help_mentions_tty_confirm() {
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        stdout.contains("确认")
-            || stdout.to_lowercase().contains("confirm")
-            || stdout.contains("Proceed"),
+        stdout.to_lowercase().contains("confirm") || stdout.contains("Proceed"),
         "clean help={stdout}"
     );
 }
@@ -117,9 +137,7 @@ fn optimize_help_mentions_tty_confirm() {
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        stdout.contains("确认")
-            || stdout.to_lowercase().contains("confirm")
-            || stdout.contains("Proceed"),
+        stdout.to_lowercase().contains("confirm") || stdout.contains("Proceed"),
         "optimize help={stdout}"
     );
 }

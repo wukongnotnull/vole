@@ -760,8 +760,28 @@ fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
                             }
                         }
                     }
-                    // T9 Task 3 wires these; stubs keep match exhaustive for state tests.
-                    tui::AnalyzeEffect::Reveal(_) | tui::AnalyzeEffect::Refresh => {}
+                    tui::AnalyzeEffect::Reveal(paths) => {
+                        let n = paths.len();
+                        for p in paths {
+                            let argv = tui::reveal_argv(&p);
+                            if let Err(e) = tui::spawn_detached(&argv) {
+                                state.status = format!("Reveal failed: {e}");
+                            }
+                        }
+                        if state.status.is_empty() {
+                            state.status = if n == 1 {
+                                "Showing in Finder…".into()
+                            } else {
+                                format!("Showing {n} items in Finder…")
+                            };
+                        }
+                    }
+                    tui::AnalyzeEffect::Refresh => {
+                        scanning = true;
+                        scan_rx = None;
+                        state = tui::AnalyzeState::default();
+                        state.status = "Refreshing...".into();
+                    }
                     tui::AnalyzeEffect::None => {}
                 }
             }

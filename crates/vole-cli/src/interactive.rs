@@ -77,3 +77,14 @@ pub(crate) fn exec_self(args: &[&str]) -> io::Result<i32> {
     let status = Command::new(&exe).args(args).status()?;
     Ok(status.code().unwrap_or(1))
 }
+
+/// Reopen the bare `vole` home menu (status / paginated-select `B Back`).
+pub(crate) fn exit_to_home() -> ! {
+    match exec_self(&[]) {
+        Ok(code) => std::process::exit(code),
+        Err(e) => {
+            eprintln!("vole: {e}");
+            std::process::exit(1);
+        }
+    }
+}

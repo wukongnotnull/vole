@@ -548,6 +548,7 @@ fn run_whitelist_interactive() -> io::Result<()> {
             println!("Cancelled, no changes saved");
             Ok(())
         }
+        SelectOutcome::Back => crate::interactive::exit_to_home(),
         SelectOutcome::Confirmed(idxs) => {
             let merged =
                 whitelist::merge_whitelist_selection(&build.entries, &idxs, &build.custom_patterns);

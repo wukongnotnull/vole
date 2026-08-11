@@ -97,6 +97,7 @@ fn run_interactive(opts: &PurgeOptions) -> io::Result<()> {
 
         match run_paginated_select("Select Artifacts to Purge", items, cfg)? {
             SelectOutcome::Cancelled => return Ok(()),
+            SelectOutcome::Back => crate::interactive::exit_to_home(),
             SelectOutcome::Confirmed(idxs) if idxs.is_empty() => {
                 eprintln!("No items selected");
                 continue;

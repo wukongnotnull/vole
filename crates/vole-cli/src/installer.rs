@@ -100,6 +100,7 @@ fn run_interactive(opts: &InstallerOptions) -> io::Result<i32> {
 
         match run_paginated_select("Select Installers to Remove", items, cfg)? {
             SelectOutcome::Cancelled => return Ok(0),
+            SelectOutcome::Back => crate::interactive::exit_to_home(),
             SelectOutcome::Confirmed(idxs) if idxs.is_empty() => {
                 eprintln!("No installers selected");
                 continue;

@@ -902,9 +902,7 @@ fn cmd_status_tui() -> io::Result<()> {
                         cancel.cancel();
                     }
                     KeyCode::Char('q') | KeyCode::Esc => cancel.cancel(),
-                    KeyCode::Char('b') | KeyCode::Char('B') => {
-                        back_home = true;
-                    }
+                    KeyCode::Char('b') | KeyCode::Char('B') => back_home = true,
                     KeyCode::Char('k') | KeyCode::Char('K') => {
                         cat_hidden = !cat_hidden;
                         tui::save_cat_hidden(cat_hidden);
@@ -944,9 +942,7 @@ fn cmd_status_tui() -> io::Result<()> {
     term.show_cursor()?;
     guard.restore();
     if back_home {
-        // Home menu is bare `vole`; process is replaced on Unix.
-        let code = interactive::exec_self(&[])?;
-        std::process::exit(code);
+        interactive::exit_to_home();
     }
     if cancel.is_cancelled() {
         std::process::exit(130);

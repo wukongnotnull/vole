@@ -21,6 +21,8 @@ pub enum MenuKey {
     Space,
     Enter,
     Quit,
+    /// Return to the home menu (does not add to filter text).
+    Back,
     Char(char),
     Backspace,
 }
@@ -29,6 +31,8 @@ pub enum MenuKey {
 pub enum SelectOutcome {
     Confirmed(Vec<usize>),
     Cancelled,
+    /// Leave this menu and reopen the bare `vole` home menu.
+    Back,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -177,6 +181,17 @@ impl MenuState {
                     None
                 } else {
                     Some(SelectOutcome::Cancelled)
+                }
+            }
+            MenuKey::Back => {
+                if !self.filter_text.is_empty() {
+                    self.filter_text.clear();
+                    self.rebuild_view();
+                    self.cursor = 0;
+                    self.top = 0;
+                    None
+                } else {
+                    Some(SelectOutcome::Back)
                 }
             }
             MenuKey::Char(c) => {
@@ -441,6 +456,20 @@ mod tests {
         st.handle_key(MenuKey::Char('a'));
         assert!(st.handle_key(MenuKey::Quit).is_none()); // 清过滤
         assert_eq!(st.handle_key(MenuKey::Quit), Some(SelectOutcome::Cancelled));
+    }
+
+    #[test]
+    fn back_clears_filter_then_returns_home() {
+        let items = vec![MenuItem {
+            label: "Alpha".into(),
+            filter_name: None,
+            epoch: None,
+            size_kb: None,
+        }];
+        let mut st = MenuState::new(items, MenuConfig::default()).unwrap();
+        st.handle_key(MenuKey::Char('a'));
+        assert!(st.handle_key(MenuKey::Back).is_none());
+        assert_eq!(st.handle_key(MenuKey::Back), Some(SelectOutcome::Back));
     }
 
     #[test]

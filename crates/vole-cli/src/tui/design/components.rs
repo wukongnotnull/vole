@@ -77,9 +77,13 @@ pub fn home_controls_line(theme: &Theme, show_touchid: bool, show_update: bool) 
 /// Paginated multi-select footer.
 pub fn menu_footer_line(theme: &Theme) -> Line<'static> {
     let mut spans = Vec::new();
+    spans.extend(key_hint(theme, "↑↓", ""));
+    spans.push(footer_sep(theme));
     spans.extend(key_hint(theme, "Space", "Select"));
     spans.push(footer_sep(theme));
     spans.extend(key_hint(theme, "Enter", "Confirm"));
+    spans.push(footer_sep(theme));
+    spans.extend(key_hint(theme, "B", "Back"));
     spans.push(footer_sep(theme));
     spans.extend(key_hint(theme, "Q", "Cancel"));
     Line::from(spans)
@@ -113,5 +117,20 @@ mod tests {
         let text: String = with_u.spans.iter().map(|s| s.content.as_ref()).collect();
         assert!(text.contains("U"));
         assert!(text.contains("Update"));
+    }
+
+    #[test]
+    fn menu_footer_declares_arrows_and_back() {
+        let theme = Theme::new();
+        let text: String = menu_footer_line(&theme)
+            .spans
+            .iter()
+            .map(|s| s.content.as_ref())
+            .collect();
+        assert!(text.contains("↑↓"), "{text}");
+        assert!(text.contains("B"), "{text}");
+        assert!(text.contains("Back"), "{text}");
+        assert!(text.contains("Space"), "{text}");
+        assert!(text.contains("Q"), "{text}");
     }
 }

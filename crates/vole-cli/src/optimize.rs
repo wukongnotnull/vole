@@ -395,6 +395,7 @@ fn run_whitelist_interactive() -> io::Result<()> {
     );
 
     match run_paginated_select(&title, items, cfg)? {
+        SelectOutcome::Back => crate::interactive::exit_to_home(),
         SelectOutcome::Cancelled => {
             println!("Cancelled, no changes saved");
             Ok(())

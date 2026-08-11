@@ -68,6 +68,7 @@ fn map_key(key: KeyEvent) -> Option<MenuKey> {
         KeyCode::Backspace => Some(MenuKey::Backspace),
         KeyCode::Char(' ') => Some(MenuKey::Space),
         KeyCode::Char('q') | KeyCode::Char('Q') => Some(MenuKey::Quit),
+        KeyCode::Char('b') | KeyCode::Char('B') => Some(MenuKey::Back),
         KeyCode::Char(c) => {
             if key.modifiers.contains(KeyModifiers::CONTROL) {
                 None
@@ -182,6 +183,14 @@ mod tests {
         assert!(matches!(
             map_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)),
             Some(MenuKey::Quit)
+        ));
+        assert!(matches!(
+            map_key(KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE)),
+            Some(MenuKey::Back)
+        ));
+        assert!(matches!(
+            map_key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE)),
+            Some(MenuKey::Up)
         ));
     }
 }

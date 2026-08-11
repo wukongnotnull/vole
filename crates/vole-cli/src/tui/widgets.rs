@@ -432,7 +432,7 @@ mod tests {
 
     #[test]
     fn progress_bar_spans_colorize_whole_bar_like_mole() {
-        let theme = Theme::universal();
+        let theme = Theme::new();
         let spans = progress_bar_spans(&theme, 50.0);
         let style = theme.style_for_bucket(color_bucket(50.0));
         assert!(

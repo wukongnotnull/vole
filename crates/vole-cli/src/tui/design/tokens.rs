@@ -10,7 +10,3 @@ pub const CARD_ROW_GAP: u16 = 1;
 pub const COL_GUTTER: u16 = 2;
 /// Blank line between the card block and the key-hint footer.
 pub const FOOTER_GAP: u16 = 1;
-
-/// Legacy env name; ignored (TUI uses a single universal palette).
-#[allow(dead_code)]
-pub const ENV_THEME: &str = "VOLE_THEME";

@@ -1,8 +1,8 @@
-//! Single theme using Mole status lipgloss colors (dark-terminal palette).
+//! Single Mole-accent theme: body text inherits the terminal default foreground.
 
 use ratatui::style::{Color, Modifier, Style};
 
-/// Mole-parity semantic styles (`cmd/status/view.go`).
+/// Mole-parity accents (`cmd/status/view.go`) + unstyled body ink.
 #[derive(Debug, Clone)]
 pub struct Theme {
     pub title: Style,
@@ -24,14 +24,17 @@ pub struct Theme {
 
 impl Default for Theme {
     fn default() -> Self {
-        Self::universal()
+        Self::new()
     }
 }
 
 impl Theme {
-    /// Mole-aligned accents; body text inherits the terminal default foreground
-    /// (readable on both light and dark terminal themes, same as Mole's unstyled values).
-    pub fn universal() -> Self {
+    /// One palette for all terminals.
+    ///
+    /// - Accents: Mole dark-terminal colors (purple / green / amber / red).
+    /// - Body (`label` / `value` / `normal`): no fg — inherit the terminal default
+    ///   (black on light themes, light on dark themes), same as Mole's unstyled values.
+    pub fn new() -> Self {
         Self {
             title: Style::default()
                 .fg(Color::Rgb(0xC7, 0x9F, 0xD7))
@@ -45,7 +48,6 @@ impl Theme {
                 .add_modifier(Modifier::BOLD),
             rule: Style::default().fg(Color::Rgb(0x40, 0x40, 0x40)),
             bar_track: Style::default().fg(Color::Rgb(0x40, 0x40, 0x40)),
-            // Unstyled like mole `fmt.Sprintf` metric lines — inherit terminal fg.
             label: Style::default(),
             value: Style::default(),
             normal: Style::default(),
@@ -141,16 +143,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn universal_matches_mole_status_palette() {
-        let theme = Theme::universal();
+    fn single_theme_uses_mole_accents_and_inherits_body_fg() {
+        let theme = Theme::new();
         assert_eq!(theme.title.fg, Some(Color::Rgb(0xC7, 0x9F, 0xD7)));
         assert_eq!(theme.primary.fg, Some(Color::Rgb(0xBD, 0x93, 0xF9)));
         assert_eq!(theme.subtle.fg, Some(Color::Rgb(0x73, 0x73, 0x73)));
         assert_eq!(theme.ok.fg, Some(Color::Rgb(0xA5, 0xD6, 0xA7)));
         assert_eq!(theme.warn.fg, Some(Color::Rgb(0xFF, 0xD7, 0x5F)));
         assert_eq!(theme.danger.fg, Some(Color::Rgb(0xFF, 0x5F, 0x5F)));
-        assert_eq!(theme.rule.fg, Some(Color::Rgb(0x40, 0x40, 0x40)));
-        assert_eq!(theme.bar_track.fg, Some(Color::Rgb(0x40, 0x40, 0x40)));
         assert_eq!(theme.label.fg, None);
         assert_eq!(theme.value.fg, None);
         assert_eq!(theme.normal.fg, None);
@@ -158,7 +158,7 @@ mod tests {
 
     #[test]
     fn health_styles_match_mole_get_score_style() {
-        let theme = Theme::universal();
+        let theme = Theme::new();
         assert_eq!(
             theme.style_for_health(95).fg,
             Some(Color::Rgb(0x87, 0xFF, 0x87))

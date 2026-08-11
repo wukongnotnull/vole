@@ -1,4 +1,4 @@
-//! Vole TUI design system — tokens, universal theme, shared components.
+//! Vole TUI design system — tokens, single theme, shared components.
 
 mod components;
 mod layout;
@@ -13,7 +13,7 @@ pub use layout::{inset_content, inset_horizontal};
 #[allow(unused_imports)] // public design-system surface
 pub use theme::{color_bucket, size_tone, ColorBucket, SizeTone, Theme};
 #[allow(unused_imports)] // public design-system surface
-pub use tokens::{CARD_ROW_GAP, COL_GUTTER, ENV_THEME, FOOTER_GAP, OUTER_PAD, TOP_PAD};
+pub use tokens::{CARD_ROW_GAP, COL_GUTTER, FOOTER_GAP, OUTER_PAD, TOP_PAD};
 
 /// Resolved design system for a TUI session (theme + layout tokens).
 #[derive(Debug, Clone)]
@@ -22,12 +22,10 @@ pub struct DesignSystem {
 }
 
 impl DesignSystem {
-    /// Always the Mole-aligned palette.
-    ///
-    /// `VOLE_THEME` / `COLORFGBG` are ignored (kept as a documented no-op via [`ENV_THEME`]).
+    /// Single Mole-accent palette; body text inherits the terminal foreground.
     pub fn resolve() -> Self {
         Self {
-            theme: Theme::universal(),
+            theme: Theme::new(),
         }
     }
 }
@@ -37,7 +35,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn resolve_returns_mole_palette() {
+    fn resolve_returns_single_theme() {
         let ds = DesignSystem::resolve();
         assert_eq!(ds.theme.value.fg, None);
         assert_eq!(ds.theme.label.fg, None);

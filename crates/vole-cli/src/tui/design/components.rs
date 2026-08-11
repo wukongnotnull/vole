@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn status_footer_line_matches_plain_text() {
-        let theme = Theme::universal();
+        let theme = Theme::new();
         let line = status_footer_line(&theme);
         let joined: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
         assert_eq!(joined, status_footer());
@@ -103,7 +103,7 @@ mod tests {
 
     #[test]
     fn home_controls_include_optional_touchid() {
-        let theme = Theme::universal();
+        let theme = Theme::new();
         let with_t = home_controls_line(&theme, true, false);
         let text: String = with_t.spans.iter().map(|s| s.content.as_ref()).collect();
         assert!(text.contains("T"));

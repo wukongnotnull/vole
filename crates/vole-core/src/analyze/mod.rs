@@ -125,7 +125,7 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         let mut f = File::create(dir.join("x.bin")).unwrap();
-        f.write_all(&vec![1u8; 128]).unwrap();
+        f.write_all(&[1u8; 128]).unwrap();
         File::create(dir.join("y.txt")).unwrap();
 
         let cancel = CancelToken::new();

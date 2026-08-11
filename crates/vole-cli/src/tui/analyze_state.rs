@@ -928,7 +928,6 @@ mod tests {
         assert!(st.auto_sort_live);
         st.handle_key(AnalyzeKey::Down, &out, true, false);
         assert!(!st.auto_sort_live);
-        st.begin_live_scan();
         let mut st = AnalyzeState {
             live_sort_mode: LiveSortMode::FreezeOnMove,
             auto_sort_live: true,

@@ -342,7 +342,7 @@ mod tests {
         let mut a = File::create(dir.join("a.txt")).unwrap();
         a.write_all(b"aa").unwrap();
         let mut b = File::create(dir.join("b.txt")).unwrap();
-        b.write_all(&vec![0u8; 64]).unwrap();
+        b.write_all(&[0u8; 64]).unwrap();
 
         let cancel = CancelToken::new();
         let mut seen = Vec::new();

@@ -14,9 +14,7 @@ use ratatui::{Frame, Terminal};
 
 use crate::terminal::TerminalGuard;
 
-use super::design::{
-    inset_content, menu_footer_line, DesignSystem, Theme, FOOTER_GAP, TOP_PAD,
-};
+use super::design::{inset_content, menu_footer_line, DesignSystem, Theme, FOOTER_GAP, TOP_PAD};
 use super::menu_state::{MenuConfig, MenuItem, MenuKey, MenuState, SelectOutcome};
 
 /// Drain pending keyboard input until `timeout` elapses (mole #726).

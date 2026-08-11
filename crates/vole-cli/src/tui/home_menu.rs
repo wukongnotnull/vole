@@ -14,9 +14,7 @@ use ratatui::{Frame, Terminal};
 
 use crate::terminal::TerminalGuard;
 
-use super::design::{
-    home_controls_line, inset_content, DesignSystem, Theme, FOOTER_GAP, TOP_PAD,
-};
+use super::design::{home_controls_line, inset_content, DesignSystem, Theme, FOOTER_GAP, TOP_PAD};
 use super::home_menu_state::{HomeAction, HomeKey, HomeMenuConfig, HomeMenuState, HOME_ITEMS};
 use super::paginated_select::drain_pending_input;
 

@@ -9,20 +9,17 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  check:
-    # macOS runner 是必需的：vole-sys 对非 macOS target 会 compile_error!。
+  # macOS runner 是必需的：vole-sys 对非 macOS target 会 compile_error!。
+  lint:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          shared-key: lint
+          cache-on-failure: true
 
       - name: License and attribution
         run: ./scripts/check-license.sh
@@ -42,13 +39,50 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: test
+          cache-on-failure: true
+
       - name: Test
         run: cargo test --workspace
+
+  # PR：宿主架构编译已由 clippy/test 覆盖。
+  # main：再跑双架构交叉编译，发版前多一道门禁。
+  build-aarch64:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: aarch64-apple-darwin
+          cache-on-failure: true
 
       - name: Cross-compile aarch64
         run: |
           rustup target add aarch64-apple-darwin
           cargo build --workspace --target aarch64-apple-darwin
+
+  build-x86_64:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: x86_64-apple-darwin
+          cache-on-failure: true
 
       - name: Cross-compile x86_64
         run: |
@@ -62,8 +96,16 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: conformance
+          cache-on-failure: true
+
       - name: Build
         run: cargo build --workspace
+
       - name: Run plan-stage conformance dual-run
         # 只跑 plan 阶段：不删任何文件。apply 阶段用例留给一次性环境。
         run: |

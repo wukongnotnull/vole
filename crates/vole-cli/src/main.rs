@@ -301,7 +301,7 @@ enum Command {
         #[arg(long, conflicts_with = "apply")]
         plan_out: Option<PathBuf>,
     },
-    /// Configure Touch ID for sudo (`status` / `enable` / `disable`).
+    /// Configure Touch ID for sudo.
     Touchid {
         /// `status` | `enable` | `disable`; omit for interactive toggle.
         action: Option<String>,

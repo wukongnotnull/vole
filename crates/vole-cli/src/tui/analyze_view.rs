@@ -493,6 +493,7 @@ mod tests {
         assert!(f.contains("Enter"));
         assert!(f.contains("F File"));
         assert!(f.contains("R Refresh"));
+        assert!(f.contains("↑↓←→"));
     }
 
     #[test]

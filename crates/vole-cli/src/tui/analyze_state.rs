@@ -25,6 +25,8 @@ pub fn map_analyze_key(key: KeyEvent, filtering: bool) -> Option<AnalyzeKey> {
     match key.code {
         KeyCode::Up => Some(AnalyzeKey::Up),
         KeyCode::Down => Some(AnalyzeKey::Down),
+        KeyCode::Left => Some(AnalyzeKey::Back),
+        KeyCode::Right => Some(AnalyzeKey::Forward),
         KeyCode::Enter => Some(AnalyzeKey::Enter),
         KeyCode::Esc => Some(AnalyzeKey::Esc),
         KeyCode::Backspace | KeyCode::Delete => Some(AnalyzeKey::Delete),
@@ -40,9 +42,57 @@ pub fn map_analyze_key(key: KeyEvent, filtering: bool) -> Option<AnalyzeKey> {
             't' | 'T' => Some(AnalyzeKey::Top),
             'f' | 'F' => Some(AnalyzeKey::Reveal),
             'r' | 'R' => Some(AnalyzeKey::Refresh),
+            's' | 'S' => Some(AnalyzeKey::LiveSort),
+            'h' | 'H' | 'b' | 'B' => Some(AnalyzeKey::Back),
+            'l' | 'L' => Some(AnalyzeKey::Forward),
             _ => None,
         },
         _ => None,
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LiveSortMode {
+    FreezeOnMove,
+    Continuous,
+}
+
+pub fn live_sort_mode_from_env() -> LiveSortMode {
+    let raw = std::env::var("VOLE_ANALYZE_LIVE_SORT")
+        .or_else(|_| std::env::var("MOLE_ANALYZE_LIVE_SORT"))
+        .unwrap_or_default();
+    match raw.to_ascii_lowercase().trim() {
+        "continuous" => LiveSortMode::Continuous,
+        _ => LiveSortMode::FreezeOnMove,
+    }
+}
+
+pub fn next_live_sort_mode(mode: LiveSortMode) -> LiveSortMode {
+    match mode {
+        LiveSortMode::Continuous => LiveSortMode::FreezeOnMove,
+        LiveSortMode::FreezeOnMove => LiveSortMode::Continuous,
+    }
+}
+
+pub fn live_sort_mode_label(mode: LiveSortMode) -> &'static str {
+    match mode {
+        LiveSortMode::FreezeOnMove => "freeze-on-move",
+        LiveSortMode::Continuous => "continuous",
+    }
+}
+
+pub fn sort_entries_by_size(entries: &mut [AnalyzeEntry]) {
+    entries.sort_by(|a, b| b.size.cmp(&a.size).then_with(|| a.name.cmp(&b.name)));
+}
+
+pub fn upsert_live_child(out: &mut AnalyzeOutput, child: AnalyzeEntry) {
+    if let Some(i) = out.entries.iter().position(|e| e.path == child.path) {
+        let prev = out.entries[i].size;
+        out.total_size += child.size - prev;
+        out.entries[i] = child;
+    } else {
+        out.total_size += child.size;
+        out.entries.push(child);
     }
 }
 
@@ -52,6 +102,8 @@ pub enum AnalyzeKey {
     Down,
     Enter,
     Esc,
+    Back,
+    Forward,
     Quit,
     Space,
     Delete,
@@ -59,6 +111,7 @@ pub enum AnalyzeKey {
     Preview,
     Reveal,
     Refresh,
+    LiveSort,
     Filter,
     Top,
     FilterChar(char),
@@ -80,7 +133,7 @@ pub enum AnalyzeEffect {
     CancelDelete,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct AnalyzeState {
     pub selected: usize,
     pub show_large_files: bool,
@@ -92,9 +145,73 @@ pub struct AnalyzeState {
     pub large_filtering: bool,
     pub delete_confirm: bool,
     pub status: String,
+    pub live_sort_mode: LiveSortMode,
+    pub auto_sort_live: bool,
+}
+
+impl Default for AnalyzeState {
+    fn default() -> Self {
+        Self {
+            selected: 0,
+            show_large_files: false,
+            multi_selected: BTreeSet::new(),
+            large_multi_selected: BTreeSet::new(),
+            entry_filter: String::new(),
+            large_filter: String::new(),
+            entry_filtering: false,
+            large_filtering: false,
+            delete_confirm: false,
+            status: String::new(),
+            live_sort_mode: live_sort_mode_from_env(),
+            auto_sort_live: false,
+        }
+    }
 }
 
 impl AnalyzeState {
+    pub fn begin_live_scan(&mut self) {
+        self.auto_sort_live = true;
+    }
+
+    pub fn note_live_cursor_move(&mut self, scanning: bool) {
+        if scanning && !self.show_large_files && self.live_sort_mode == LiveSortMode::FreezeOnMove {
+            self.auto_sort_live = false;
+        }
+    }
+
+    pub fn apply_live_sort_after_progress(&mut self, out: &mut AnalyzeOutput) {
+        if !self.auto_sort_live {
+            return;
+        }
+        let selected_path = if self.live_sort_mode == LiveSortMode::Continuous {
+            self.visible_entries(out)
+                .get(self.selected)
+                .map(|e| e.path.clone())
+        } else {
+            None
+        };
+        sort_entries_by_size(&mut out.entries);
+        match self.live_sort_mode {
+            LiveSortMode::FreezeOnMove => {
+                self.selected = 0;
+            }
+            LiveSortMode::Continuous => {
+                if let Some(path) = selected_path {
+                    if let Some(i) = out.entries.iter().position(|e| e.path == path) {
+                        self.selected = i;
+                    }
+                }
+            }
+        }
+    }
+
+    /// Returns whether selection should pin to row 0 after Done (mole pinFirstRow).
+    pub fn take_live_scan_pin_first(&mut self) -> bool {
+        let pin = self.live_sort_mode == LiveSortMode::FreezeOnMove && self.auto_sort_live;
+        self.auto_sort_live = false;
+        pin
+    }
+
     pub fn visible_entries<'a>(&self, out: &'a AnalyzeOutput) -> Vec<&'a AnalyzeEntry> {
         let q = self.entry_filter.to_lowercase();
         out.entries
@@ -143,7 +260,7 @@ impl AnalyzeState {
 
         match key {
             AnalyzeKey::Quit => AnalyzeEffect::Quit,
-            AnalyzeKey::Esc => {
+            AnalyzeKey::Esc | AnalyzeKey::Back => {
                 if self.show_large_files {
                     if !self.large_filter.is_empty() {
                         self.large_filter.clear();
@@ -171,7 +288,11 @@ impl AnalyzeState {
                 }
             }
             AnalyzeKey::Up => {
+                let prev = self.selected;
                 self.selected = self.selected.saturating_sub(1);
+                if prev != self.selected {
+                    self.note_live_cursor_move(scanning);
+                }
                 AnalyzeEffect::None
             }
             AnalyzeKey::Down => {
@@ -180,12 +301,16 @@ impl AnalyzeState {
                 } else {
                     self.visible_entries(out).len()
                 };
+                let prev = self.selected;
                 if self.selected + 1 < len {
                     self.selected += 1;
                 }
+                if prev != self.selected {
+                    self.note_live_cursor_move(scanning);
+                }
                 AnalyzeEffect::None
             }
-            AnalyzeKey::Enter => {
+            AnalyzeKey::Enter | AnalyzeKey::Forward => {
                 if self.show_large_files {
                     return AnalyzeEffect::None;
                 }
@@ -195,6 +320,15 @@ impl AnalyzeState {
                         return AnalyzeEffect::EnterDir(entry.path.clone());
                     }
                 }
+                AnalyzeEffect::None
+            }
+            AnalyzeKey::LiveSort => {
+                if !scanning || out.overview || self.show_large_files {
+                    return AnalyzeEffect::None;
+                }
+                self.live_sort_mode = next_live_sort_mode(self.live_sort_mode);
+                self.auto_sort_live = self.live_sort_mode == LiveSortMode::Continuous;
+                self.status = format!("Live sort: {}", live_sort_mode_label(self.live_sort_mode));
                 AnalyzeEffect::None
             }
             AnalyzeKey::Space => self.toggle_multi(out, scanning),
@@ -715,5 +849,123 @@ mod tests {
             st.handle_key(AnalyzeKey::Refresh, &out, false, false),
             AnalyzeEffect::Refresh
         );
+    }
+
+    #[test]
+    fn map_key_nav_aliases_and_live_sort() {
+        assert_eq!(
+            map_analyze_key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE), false),
+            Some(AnalyzeKey::Back)
+        );
+        assert_eq!(
+            map_analyze_key(KeyEvent::new(KeyCode::Char('h'), KeyModifiers::NONE), false),
+            Some(AnalyzeKey::Back)
+        );
+        assert_eq!(
+            map_analyze_key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE), false),
+            Some(AnalyzeKey::Forward)
+        );
+        assert_eq!(
+            map_analyze_key(KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE), false),
+            Some(AnalyzeKey::Forward)
+        );
+        assert_eq!(
+            map_analyze_key(KeyEvent::new(KeyCode::Char('s'), KeyModifiers::NONE), false),
+            Some(AnalyzeKey::LiveSort)
+        );
+        assert_eq!(
+            map_analyze_key(KeyEvent::new(KeyCode::Char('h'), KeyModifiers::NONE), true),
+            Some(AnalyzeKey::FilterChar('h'))
+        );
+    }
+
+    #[test]
+    fn back_and_forward_match_esc_and_enter() {
+        let out = sample_out();
+        let mut st = AnalyzeState::default();
+        assert_eq!(
+            st.handle_key(AnalyzeKey::Forward, &out, false, false),
+            AnalyzeEffect::EnterDir("/tmp/a/Caches".into())
+        );
+        assert_eq!(
+            st.handle_key(AnalyzeKey::Back, &out, false, true),
+            AnalyzeEffect::GoBack
+        );
+        st.show_large_files = true;
+        assert_eq!(
+            st.handle_key(AnalyzeKey::Back, &out, false, true),
+            AnalyzeEffect::None
+        );
+        assert!(!st.show_large_files);
+    }
+
+    #[test]
+    fn live_sort_toggles_only_while_scanning() {
+        let out = sample_out();
+        let mut st = AnalyzeState {
+            live_sort_mode: LiveSortMode::FreezeOnMove,
+            ..AnalyzeState::default()
+        };
+        st.handle_key(AnalyzeKey::LiveSort, &out, false, false);
+        assert_eq!(st.live_sort_mode, LiveSortMode::FreezeOnMove);
+        st.handle_key(AnalyzeKey::LiveSort, &out, true, false);
+        assert_eq!(st.live_sort_mode, LiveSortMode::Continuous);
+        assert!(st.auto_sort_live);
+        assert!(st.status.contains("continuous"));
+        st.handle_key(AnalyzeKey::LiveSort, &out, true, false);
+        assert_eq!(st.live_sort_mode, LiveSortMode::FreezeOnMove);
+        assert!(!st.auto_sort_live);
+    }
+
+    #[test]
+    fn freeze_on_move_stops_after_effective_down() {
+        let out = sample_out();
+        let mut st = AnalyzeState {
+            live_sort_mode: LiveSortMode::FreezeOnMove,
+            ..AnalyzeState::default()
+        };
+        st.begin_live_scan();
+        assert!(st.auto_sort_live);
+        st.handle_key(AnalyzeKey::Down, &out, true, false);
+        assert!(!st.auto_sort_live);
+        let mut st = AnalyzeState {
+            live_sort_mode: LiveSortMode::FreezeOnMove,
+            auto_sort_live: true,
+            selected: out.entries.len() - 1,
+            ..AnalyzeState::default()
+        };
+        st.handle_key(AnalyzeKey::Down, &out, true, false);
+        assert!(st.auto_sort_live, "boundary down must not freeze");
+    }
+
+    #[test]
+    fn continuous_keeps_selected_path_after_sort() {
+        let mut out = sample_out();
+        // smaller first so sort will move Caches to index 0
+        out.entries = vec![
+            AnalyzeEntry {
+                name: "notes.txt".into(),
+                path: "/tmp/a/notes.txt".into(),
+                size: 100,
+                is_dir: false,
+                ..Default::default()
+            },
+            AnalyzeEntry {
+                name: "Caches".into(),
+                path: "/tmp/a/Caches".into(),
+                size: 200,
+                is_dir: true,
+                ..Default::default()
+            },
+        ];
+        let mut st = AnalyzeState {
+            live_sort_mode: LiveSortMode::Continuous,
+            auto_sort_live: true,
+            selected: 1, // Caches
+            ..AnalyzeState::default()
+        };
+        st.apply_live_sort_after_progress(&mut out);
+        assert_eq!(out.entries[0].name, "Caches");
+        assert_eq!(st.selected, 0);
     }
 }

@@ -5,10 +5,25 @@ use std::path::Path;
 use crate::vole_proto::{AnalyzeEntry, AnalyzeFileEntry, AnalyzeOutput};
 
 use crate::cancel::CancelToken;
-use crate::scan::{scan_directory, ScanResult};
+use crate::scan::{scan_directory, scan_directory_with_progress, DirEntry, ScanResult};
 
 pub fn analyze_directory(path: &Path, cancel: &CancelToken) -> std::io::Result<AnalyzeOutput> {
     let scan = scan_directory(path, cancel)?;
+    Ok(to_analyze_output(path, false, scan))
+}
+
+/// 同 [`analyze_directory`]，每完成一个根子项回调（TUI live sort）。
+pub fn analyze_directory_with_progress<F>(
+    path: &Path,
+    cancel: &CancelToken,
+    mut on_child: F,
+) -> std::io::Result<AnalyzeOutput>
+where
+    F: FnMut(AnalyzeEntry),
+{
+    let scan = scan_directory_with_progress(path, cancel, |entry| {
+        on_child(dir_entry_to_analyze(entry));
+    })?;
     Ok(to_analyze_output(path, false, scan))
 }
 
@@ -20,15 +35,7 @@ pub fn to_analyze_output(path: &Path, overview: bool, scan: ScanResult) -> Analy
         entries: scan
             .entries
             .into_iter()
-            .map(|e| AnalyzeEntry {
-                name: e.name,
-                path: e.path.to_string_lossy().into_owned(),
-                size: e.size as i64,
-                is_dir: e.is_dir,
-                insight: false,
-                cleanable: false,
-                last_access: e.last_access.map(format_access_time),
-            })
+            .map(|e| dir_entry_to_analyze(&e))
             .collect(),
         large_files: scan
             .large_files
@@ -41,6 +48,18 @@ pub fn to_analyze_output(path: &Path, overview: bool, scan: ScanResult) -> Analy
             .collect(),
         total_size: scan.total_size as i64,
         total_files: Some(scan.total_files as i64),
+    }
+}
+
+fn dir_entry_to_analyze(e: &DirEntry) -> AnalyzeEntry {
+    AnalyzeEntry {
+        name: e.name.clone(),
+        path: e.path.to_string_lossy().into_owned(),
+        size: e.size as i64,
+        is_dir: e.is_dir,
+        insight: false,
+        cleanable: false,
+        last_access: e.last_access.map(format_access_time),
     }
 }
 
@@ -92,4 +111,36 @@ fn format_access_time(t: std::time::SystemTime) -> String {
         second,
         nanos
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::{self, File};
+    use std::io::Write;
+
+    #[test]
+    fn progress_matches_blocking_analyze() {
+        let dir = std::env::temp_dir().join(format!("vole-analyze-prog-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let mut f = File::create(dir.join("x.bin")).unwrap();
+        f.write_all(&[1u8; 128]).unwrap();
+        File::create(dir.join("y.txt")).unwrap();
+
+        let cancel = CancelToken::new();
+        let mut kids = Vec::new();
+        let live = analyze_directory_with_progress(&dir, &cancel, |e| {
+            assert!(!e.path.is_empty());
+            kids.push(e.path.clone());
+        })
+        .unwrap();
+        let blocking = analyze_directory(&dir, &cancel).unwrap();
+        assert_eq!(kids.len(), 2);
+        assert_eq!(live.path, blocking.path);
+        assert_eq!(live.total_size, blocking.total_size);
+        assert_eq!(live.total_files, blocking.total_files);
+        assert_eq!(live.entries.len(), blocking.entries.len());
+        let _ = fs::remove_dir_all(&dir);
+    }
 }

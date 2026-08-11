@@ -902,8 +902,10 @@ mod tests {
     #[test]
     fn live_sort_toggles_only_while_scanning() {
         let out = sample_out();
-        let mut st = AnalyzeState::default();
-        st.live_sort_mode = LiveSortMode::FreezeOnMove;
+        let mut st = AnalyzeState {
+            live_sort_mode: LiveSortMode::FreezeOnMove,
+            ..AnalyzeState::default()
+        };
         st.handle_key(AnalyzeKey::LiveSort, &out, false, false);
         assert_eq!(st.live_sort_mode, LiveSortMode::FreezeOnMove);
         st.handle_key(AnalyzeKey::LiveSort, &out, true, false);
@@ -918,14 +920,21 @@ mod tests {
     #[test]
     fn freeze_on_move_stops_after_effective_down() {
         let out = sample_out();
-        let mut st = AnalyzeState::default();
-        st.live_sort_mode = LiveSortMode::FreezeOnMove;
+        let mut st = AnalyzeState {
+            live_sort_mode: LiveSortMode::FreezeOnMove,
+            ..AnalyzeState::default()
+        };
         st.begin_live_scan();
         assert!(st.auto_sort_live);
         st.handle_key(AnalyzeKey::Down, &out, true, false);
         assert!(!st.auto_sort_live);
         st.begin_live_scan();
-        st.selected = out.entries.len() - 1;
+        let mut st = AnalyzeState {
+            live_sort_mode: LiveSortMode::FreezeOnMove,
+            auto_sort_live: true,
+            selected: out.entries.len() - 1,
+            ..AnalyzeState::default()
+        };
         st.handle_key(AnalyzeKey::Down, &out, true, false);
         assert!(st.auto_sort_live, "boundary down must not freeze");
     }
@@ -950,10 +959,12 @@ mod tests {
                 ..Default::default()
             },
         ];
-        let mut st = AnalyzeState::default();
-        st.live_sort_mode = LiveSortMode::Continuous;
-        st.auto_sort_live = true;
-        st.selected = 1; // Caches
+        let mut st = AnalyzeState {
+            live_sort_mode: LiveSortMode::Continuous,
+            auto_sort_live: true,
+            selected: 1, // Caches
+            ..AnalyzeState::default()
+        };
         st.apply_live_sort_after_progress(&mut out);
         assert_eq!(out.entries[0].name, "Caches");
         assert_eq!(st.selected, 0);

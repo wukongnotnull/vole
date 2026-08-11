@@ -118,6 +118,19 @@ pub fn render_status(
     );
 }
 
+/// Row heights from card line counts — content-sized so tall terminals don't
+/// stretch every card row equally (leftover space sinks via a trailing `Min(0)`).
+fn card_row_heights(card_lens: &[usize], two_column: bool) -> Vec<u16> {
+    if two_column {
+        card_lens
+            .chunks(2)
+            .map(|pair| pair.iter().copied().max().unwrap_or(1).max(1) as u16)
+            .collect()
+    } else {
+        card_lens.iter().map(|&n| n.max(1) as u16).collect()
+    }
+}
+
 fn render_cards(
     frame: &mut Frame,
     area: Rect,
@@ -127,38 +140,35 @@ fn render_cards(
     cpu_cores: i32,
 ) {
     let cards = build_card_blocks(snap, theme, width, cpu_cores);
-    match status_layout_mode(width) {
-        StatusLayoutMode::Single => {
-            let n = cards.len().max(1) as u16;
-            let constraints: Vec<Constraint> = (0..n).map(|_| Constraint::Min(3)).collect();
-            let rows = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints(constraints)
-                .split(area);
-            for (i, card) in cards.into_iter().enumerate() {
-                if let Some(rect) = rows.get(i) {
-                    frame.render_widget(Paragraph::new(card), *rect);
-                }
+    let two_column = matches!(status_layout_mode(width), StatusLayoutMode::TwoColumn);
+    let heights = card_row_heights(
+        &cards.iter().map(|c| c.len()).collect::<Vec<_>>(),
+        two_column,
+    );
+    let mut constraints: Vec<Constraint> = heights.iter().map(|&h| Constraint::Length(h)).collect();
+    // Absorb leftover vertical space below the cards, not between them.
+    constraints.push(Constraint::Min(0));
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(constraints)
+        .split(area);
+
+    if two_column {
+        for (row_i, pair) in cards.chunks(2).enumerate() {
+            let Some(row) = rows.get(row_i) else { break };
+            let cols = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+                .split(*row);
+            frame.render_widget(Paragraph::new(pair[0].clone()), cols[0]);
+            if pair.len() > 1 {
+                frame.render_widget(Paragraph::new(pair[1].clone()), cols[1]);
             }
         }
-        StatusLayoutMode::TwoColumn => {
-            let row_count = cards.len().div_ceil(2).max(1) as u16;
-            let row_constraints: Vec<Constraint> =
-                (0..row_count).map(|_| Constraint::Min(3)).collect();
-            let rows = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints(row_constraints)
-                .split(area);
-            for (row_i, pair) in cards.chunks(2).enumerate() {
-                let Some(row) = rows.get(row_i) else { break };
-                let cols = Layout::default()
-                    .direction(Direction::Horizontal)
-                    .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-                    .split(*row);
-                frame.render_widget(Paragraph::new(pair[0].clone()), cols[0]);
-                if pair.len() > 1 {
-                    frame.render_widget(Paragraph::new(pair[1].clone()), cols[1]);
-                }
+    } else {
+        for (i, card) in cards.into_iter().enumerate() {
+            if let Some(rect) = rows.get(i) {
+                frame.render_widget(Paragraph::new(card), *rect);
             }
         }
     }
@@ -713,5 +723,15 @@ mod tests {
         assert!(joined.contains("CPU"));
         assert!(joined.contains("Total"));
         assert!(joined.contains("Load"));
+    }
+
+    #[test]
+    fn card_row_heights_follow_content_not_equal_stretch() {
+        assert_eq!(
+            card_row_heights(&[5, 8, 10, 2, 4, 3], true),
+            vec![8, 10, 4]
+        );
+        assert_eq!(card_row_heights(&[5, 8, 3], false), vec![5, 8, 3]);
+        assert_eq!(card_row_heights(&[2], true), vec![2]);
     }
 }

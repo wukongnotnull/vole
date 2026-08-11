@@ -58,6 +58,8 @@ pub fn render_status(
         .map(|info| info.message.as_str());
     let alert = format_process_alert(snap.process_alerts.as_slice());
     let show_cat = !opts.cat_hidden && width >= 20;
+    let cards = build_card_blocks(snap, theme, width, opts.cpu_cores);
+    let cards_h = cards_block_height(&cards, width);
 
     let mut constraints = vec![Constraint::Length(1)];
     if alert.is_some() {
@@ -69,8 +71,10 @@ pub fn render_status(
     if show_cat {
         constraints.push(Constraint::Length(4));
     }
-    constraints.push(Constraint::Min(4));
+    // Content-sized cards + footer; leftover space sinks below the key hints.
+    constraints.push(Constraint::Length(cards_h.max(1)));
     constraints.push(Constraint::Length(1));
+    constraints.push(Constraint::Min(0));
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -109,7 +113,7 @@ pub fn render_status(
         idx += 1;
     }
 
-    render_cards(frame, chunks[idx], snap, theme, width, opts.cpu_cores);
+    render_cards(frame, chunks[idx], &cards, width);
     idx += 1;
 
     frame.render_widget(
@@ -119,7 +123,7 @@ pub fn render_status(
 }
 
 /// Row heights from card line counts — content-sized so tall terminals don't
-/// stretch every card row equally (leftover space sinks via a trailing `Min(0)`).
+/// stretch every card row equally.
 fn card_row_heights(card_lens: &[usize], two_column: bool) -> Vec<u16> {
     if two_column {
         card_lens
@@ -131,23 +135,25 @@ fn card_row_heights(card_lens: &[usize], two_column: bool) -> Vec<u16> {
     }
 }
 
-fn render_cards(
-    frame: &mut Frame,
-    area: Rect,
-    snap: &StatusSnapshot,
-    theme: &Theme,
-    width: u16,
-    cpu_cores: i32,
-) {
-    let cards = build_card_blocks(snap, theme, width, cpu_cores);
+fn cards_block_height(cards: &[Vec<Line<'static>>], width: u16) -> u16 {
     let two_column = matches!(status_layout_mode(width), StatusLayoutMode::TwoColumn);
     let heights = card_row_heights(
         &cards.iter().map(|c| c.len()).collect::<Vec<_>>(),
         two_column,
     );
-    let mut constraints: Vec<Constraint> = heights.iter().map(|&h| Constraint::Length(h)).collect();
-    // Absorb leftover vertical space below the cards, not between them.
-    constraints.push(Constraint::Min(0));
+    heights.iter().sum()
+}
+
+fn render_cards(frame: &mut Frame, area: Rect, cards: &[Vec<Line<'static>>], width: u16) {
+    let two_column = matches!(status_layout_mode(width), StatusLayoutMode::TwoColumn);
+    let heights = card_row_heights(
+        &cards.iter().map(|c| c.len()).collect::<Vec<_>>(),
+        two_column,
+    );
+    let constraints: Vec<Constraint> = heights.iter().map(|&h| Constraint::Length(h)).collect();
+    if constraints.is_empty() {
+        return;
+    }
     let rows = Layout::default()
         .direction(Direction::Vertical)
         .constraints(constraints)
@@ -166,9 +172,9 @@ fn render_cards(
             }
         }
     } else {
-        for (i, card) in cards.into_iter().enumerate() {
+        for (i, card) in cards.iter().enumerate() {
             if let Some(rect) = rows.get(i) {
-                frame.render_widget(Paragraph::new(card), *rect);
+                frame.render_widget(Paragraph::new(card.clone()), *rect);
             }
         }
     }
@@ -733,5 +739,17 @@ mod tests {
         );
         assert_eq!(card_row_heights(&[5, 8, 3], false), vec![5, 8, 3]);
         assert_eq!(card_row_heights(&[2], true), vec![2]);
+    }
+
+    #[test]
+    fn cards_block_height_sums_two_column_rows() {
+        let cards: Vec<Vec<Line<'static>>> = [5usize, 8, 10, 2, 4, 3]
+            .into_iter()
+            .map(|n| (0..n).map(|_| Line::from("x")).collect())
+            .collect();
+        // width > 80 → two-column: rows 8+10+4
+        assert_eq!(cards_block_height(&cards, 100), 22);
+        // narrow → single column sum
+        assert_eq!(cards_block_height(&cards, 80), 32);
     }
 }

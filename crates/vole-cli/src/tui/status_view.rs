@@ -15,7 +15,7 @@ use super::status_cat::render_mole_frame;
 use super::theme::{color_bucket, Theme};
 use super::widgets::{
     fit_status_header, format_bytes_bin, format_rate_mbs, line_pair, metric_bar_line, mini_bar,
-    plain_progress_bar, shorten, status_footer, status_layout_mode, StatusLayoutMode,
+    plain_progress_bar, shorten, status_footer_line, status_layout_mode, StatusLayoutMode,
 };
 
 const ICON_CPU: &str = "◉";
@@ -31,6 +31,8 @@ const CARD_ROW_GAP: u16 = 1;
 const COL_GUTTER: u16 = 2;
 /// Outer left/right inset so content is not flush against the terminal edge.
 const OUTER_PAD: u16 = 1;
+/// Blank line between the card block and the key-hint footer.
+const FOOTER_GAP: u16 = 1;
 
 /// Inset the draw area horizontally; shrinks/zeros the pad on very narrow terminals.
 fn inset_horizontal(area: Rect, pad: u16) -> Rect {
@@ -91,8 +93,11 @@ pub fn render_status(
     if show_cat {
         constraints.push(Constraint::Length(4));
     }
-    // Content-sized cards + footer; leftover space sinks below the key hints.
+    // Content-sized cards + gap + footer; leftover space sinks below the key hints.
     constraints.push(Constraint::Length(cards_h.max(1)));
+    if FOOTER_GAP > 0 {
+        constraints.push(Constraint::Length(FOOTER_GAP));
+    }
     constraints.push(Constraint::Length(1));
     constraints.push(Constraint::Min(0));
 
@@ -136,10 +141,11 @@ pub fn render_status(
     render_cards(frame, chunks[idx], &cards, width);
     idx += 1;
 
-    frame.render_widget(
-        Paragraph::new(Line::from(Span::styled(status_footer(), theme.subtle))),
-        chunks[idx],
-    );
+    if FOOTER_GAP > 0 {
+        idx += 1; // blank gap between cards and key hints
+    }
+
+    frame.render_widget(Paragraph::new(status_footer_line(theme)), chunks[idx]);
 }
 
 /// Row heights from card line counts — content-sized so tall terminals don't

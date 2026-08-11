@@ -1,5 +1,6 @@
 //! 基础 TUI 组件与可单测布局 helper。
 
+use ratatui::style::Modifier;
 use ratatui::text::{Line, Span};
 
 use super::theme::{color_bucket, Theme};
@@ -196,6 +197,30 @@ pub fn status_footer() -> String {
     "K Vole | C Cores | B Back | Q/Esc/Ctrl+C Quit".to_string()
 }
 
+/// Key letters in primary+bold; action labels in white — easier to scan than subtle gray.
+pub fn status_footer_line(theme: &Theme) -> Line<'static> {
+    let key = theme.primary.add_modifier(Modifier::BOLD);
+    let sep = theme.subtle;
+    let text = theme.value;
+    Line::from(vec![
+        Span::styled("K", key),
+        Span::styled(" Vole", text),
+        Span::styled(" | ", sep),
+        Span::styled("C", key),
+        Span::styled(" Cores", text),
+        Span::styled(" | ", sep),
+        Span::styled("B", key),
+        Span::styled(" Back", text),
+        Span::styled(" | ", sep),
+        Span::styled("Q", key),
+        Span::styled("/", sep),
+        Span::styled("Esc", key),
+        Span::styled("/", sep),
+        Span::styled("Ctrl+C", key),
+        Span::styled(" Quit", text),
+    ])
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AnalyzeFooterMode {
     Directory {
@@ -333,6 +358,23 @@ mod tests {
         assert!(f.contains('C') || f.contains("Cores"), "{f}");
         assert!(f.contains('B') || f.contains("Back"), "{f}");
         assert!(f.contains('Q'), "{f}");
+    }
+
+    #[test]
+    fn status_footer_line_highlights_keys() {
+        let theme = Theme::default();
+        let line = status_footer_line(&theme);
+        let joined: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
+        assert_eq!(joined, status_footer());
+        let key_style = theme.primary.add_modifier(Modifier::BOLD);
+        assert!(
+            line.spans.iter().any(|s| s.content == "K" && s.style == key_style),
+            "{line:?}"
+        );
+        assert!(
+            line.spans.iter().any(|s| s.content == "B" && s.style == key_style),
+            "{line:?}"
+        );
     }
 
     #[test]

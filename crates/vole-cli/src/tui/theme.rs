@@ -7,7 +7,6 @@ use ratatui::style::{Color, Modifier, Style};
 #[derive(Debug, Clone)]
 pub struct Theme {
     pub title: Style,
-    #[allow(dead_code)] // reserved for hardware identity accents (mole primary)
     pub primary: Style,
     pub subtle: Style,
     pub ok: Style,

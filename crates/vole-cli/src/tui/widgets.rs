@@ -2,7 +2,8 @@
 
 use ratatui::text::{Line, Span};
 
-use super::design::{color_bucket, ColorBucket, Theme};
+use super::design::{color_bucket, Theme};
+#[allow(unused_imports)] // re-export for tests / external callers
 pub use super::design::{status_footer, status_footer_line};
 
 pub const PROGRESS_BAR_WIDTH: usize = 16;
@@ -381,6 +382,7 @@ mod tests {
 
     #[test]
     fn color_bucket_thresholds() {
+        use crate::tui::design::ColorBucket;
         assert_eq!(color_bucket(0.0), ColorBucket::Ok);
         assert_eq!(color_bucket(60.0), ColorBucket::Warn);
         assert_eq!(color_bucket(85.0), ColorBucket::Danger);

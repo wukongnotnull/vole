@@ -15,6 +15,7 @@ pub use tokens::{CARD_ROW_GAP, COL_GUTTER, ENV_THEME, FOOTER_GAP, OUTER_PAD};
 /// Resolved design system for a TUI session (theme + mode + layout tokens).
 #[derive(Debug, Clone)]
 pub struct DesignSystem {
+    #[allow(dead_code)] // available for mode-aware widgets / prefs UI
     pub mode: ColorMode,
     pub theme: Theme,
 }

@@ -25,10 +25,10 @@ use clap_complete::{generate, Shell};
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
-use vole_core::analyze::analyze_directory;
+use vole_core::analyze::{analyze_directory, analyze_directory_with_progress};
 use vole_core::cancel::CancelToken;
 use vole_core::status::{CollectionMode, StatusCollector, REFRESH_INTERVAL};
-use vole_core::vole_proto::AnalyzeOutput;
+use vole_core::vole_proto::{AnalyzeEntry, AnalyzeOutput};
 
 #[derive(Parser)]
 #[command(
@@ -600,6 +600,11 @@ fn map_scan_cancel(err: io::Error) -> io::Error {
     err
 }
 
+enum AnalyzeScanMsg {
+    Child(AnalyzeEntry),
+    Done(AnalyzeOutput),
+}
+
 fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
     terminal::install_panic_hook();
     let mut guard = terminal::TerminalGuard::enter()?;
@@ -618,7 +623,7 @@ fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
     let mut state = tui::AnalyzeState::default();
     let mut out = AnalyzeOutput::default();
     let mut scanning = true;
-    let mut scan_rx: Option<std::sync::mpsc::Receiver<io::Result<AnalyzeOutput>>> = None;
+    let mut scan_rx: Option<std::sync::mpsc::Receiver<io::Result<AnalyzeScanMsg>>> = None;
     let mut pending_delete: Vec<String> = Vec::new();
 
     let poll = Duration::from_millis(33);
@@ -626,11 +631,32 @@ fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
     loop {
         if scanning && scan_rx.is_none() {
             let path = stack.last().cloned().unwrap();
-            out.path = path.to_string_lossy().into_owned();
+            let mode = state.live_sort_mode;
+            out = AnalyzeOutput {
+                path: path.to_string_lossy().into_owned(),
+                ..AnalyzeOutput::default()
+            };
+            state = tui::AnalyzeState {
+                live_sort_mode: mode,
+                status: state.status.clone(),
+                ..tui::AnalyzeState::default()
+            };
+            state.begin_live_scan();
             let cancel_scan = cancel.clone();
             let (tx, rx) = std::sync::mpsc::channel();
             std::thread::spawn(move || {
-                let _ = tx.send(analyze_directory(&path, &cancel_scan));
+                let tx_child = tx.clone();
+                let result = analyze_directory_with_progress(&path, &cancel_scan, |child| {
+                    let _ = tx_child.send(Ok(AnalyzeScanMsg::Child(child)));
+                });
+                match result {
+                    Ok(snapshot) => {
+                        let _ = tx.send(Ok(AnalyzeScanMsg::Done(snapshot)));
+                    }
+                    Err(e) => {
+                        let _ = tx.send(Err(e));
+                    }
+                }
             });
             scan_rx = Some(rx);
         }
@@ -658,15 +684,43 @@ fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
         })?;
 
         if let Some(rx) = &scan_rx {
-            if let Ok(result) = rx.try_recv() {
-                scan_rx = None;
+            while let Ok(result) = rx.try_recv() {
                 match result {
-                    Ok(snapshot) => {
+                    Ok(AnalyzeScanMsg::Child(child)) => {
+                        tui::upsert_live_child(&mut out, child);
+                        state.apply_live_sort_after_progress(&mut out);
+                        state.clamp_selection(&out);
+                    }
+                    Ok(AnalyzeScanMsg::Done(snapshot)) => {
+                        scan_rx = None;
+                        let pin = state.take_live_scan_pin_first();
+                        let keep_path = if !pin {
+                            state
+                                .visible_entries(&out)
+                                .get(state.selected)
+                                .map(|e| e.path.clone())
+                        } else {
+                            None
+                        };
+                        let mode = state.live_sort_mode;
                         out = snapshot;
-                        state = tui::AnalyzeState::default();
+                        state = tui::AnalyzeState {
+                            live_sort_mode: mode,
+                            ..tui::AnalyzeState::default()
+                        };
+                        if pin {
+                            state.selected = 0;
+                        } else if let Some(path) = keep_path {
+                            if let Some(i) = out.entries.iter().position(|e| e.path == path) {
+                                state.selected = i;
+                            }
+                        }
                         scanning = false;
+                        break;
                     }
                     Err(e) if e.kind() == io::ErrorKind::Interrupted => {
+                        scan_rx = None;
+                        cancel.cancel();
                         break;
                     }
                     Err(e) => return Err(e),
@@ -681,19 +735,30 @@ fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
                     continue;
                 };
                 let effect = state.handle_key(ak, &out, scanning, can_go_back);
+                if scanning && state.auto_sort_live {
+                    state.apply_live_sort_after_progress(&mut out);
+                }
                 match effect {
                     tui::AnalyzeEffect::Quit => cancel.cancel(),
                     tui::AnalyzeEffect::GoBack => {
                         stack.pop();
                         scanning = true;
                         scan_rx = None;
-                        state = tui::AnalyzeState::default();
+                        let mode = state.live_sort_mode;
+                        state = tui::AnalyzeState {
+                            live_sort_mode: mode,
+                            ..tui::AnalyzeState::default()
+                        };
                     }
                     tui::AnalyzeEffect::EnterDir(path) => {
                         stack.push(PathBuf::from(path));
                         scanning = true;
                         scan_rx = None;
-                        state = tui::AnalyzeState::default();
+                        let mode = state.live_sort_mode;
+                        state = tui::AnalyzeState {
+                            live_sort_mode: mode,
+                            ..tui::AnalyzeState::default()
+                        };
                     }
                     tui::AnalyzeEffect::RequestDelete(paths) => {
                         pending_delete = paths;
@@ -779,8 +844,12 @@ fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
                     tui::AnalyzeEffect::Refresh => {
                         scanning = true;
                         scan_rx = None;
-                        state = tui::AnalyzeState::default();
-                        state.status = "Refreshing...".into();
+                        let mode = state.live_sort_mode;
+                        state = tui::AnalyzeState {
+                            live_sort_mode: mode,
+                            status: "Refreshing...".into(),
+                            ..tui::AnalyzeState::default()
+                        };
                     }
                     tui::AnalyzeEffect::None => {}
                 }

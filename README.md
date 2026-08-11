@@ -35,7 +35,7 @@
 - **冻结 NDJSON 协议**：CLI、脚本与未来桌面 app 共用同一编排层
 - **规则数据化**：**540** 条高价值清理规则以 TOML 声明，可 diff、可禁用、可 fixture 回归（含用户域 orphaned app data）
 
-**产品 v2 CLI 全家桶**（包线 **`2.x`**，当前 **`2.13.0`**）：顶层命令面已覆盖 Mole 1.48.1 路由表（豁免见规格），含 `purge` / `installer` / `touchid` / 自更新 `update` / 自卸载 `remove`，以及挂在 `clean` 内的只读 **hints**；英式/兼容别名 `optimise` / `analyse` / `completion`。命令面闸门：`scripts/check-command-surface.sh --enforce`（CI 硬门禁）。**TUI 交互对齐**见下方「使用提示」。
+**产品 v2 CLI 全家桶**（包线 **`2.x`**，当前 **`2.14.0`**）：顶层命令面已覆盖 Mole 1.48.1 路由表（豁免见规格），含 `purge` / `installer` / `touchid` / 自更新 `update` / 自卸载 `remove`，以及挂在 `clean` 内的只读 **hints**；英式/兼容别名 `optimise` / `analyse` / `completion`。命令面闸门：`scripts/check-command-surface.sh --enforce`（CI 硬门禁）。**TUI 交互对齐**见下方「使用提示」。
 
 适合：想要更现代、更可脚本化、更偏「安全预览再执行」的日常清理与磁盘洞察。Mole 广谱 `/Library` 边缘与桌面 Helper 仍非本仓主路径；需要时请对照 [Mole](https://github.com/tw93/Mole) 或 [vole-macos](https://github.com/wukongnotnull/vole-macos)。
 
@@ -56,14 +56,14 @@ brew install vole
 
 源码 HEAD：`brew install --HEAD wukongnotnull/vole/vole`
 
-**预编译包**（[v2.13.0](https://github.com/wukongnotnull/vole/releases/tag/v2.13.0)，Developer ID 签名 + 公证；资产待发布）
+**预编译包**（[v2.14.0](https://github.com/wukongnotnull/vole/releases/tag/v2.14.0)，Developer ID 签名 + 公证；资产待发布）
 
 ```bash
 # Apple Silicon；Intel 将 aarch64 换为 x86_64
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v2.13.0/vole-2.13.0-aarch64-apple-darwin.tar.gz
-tar xzf vole-2.13.0-aarch64-apple-darwin.tar.gz
-install -m 755 vole-2.13.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-mkdir -p ~/.local/share/vole && cp -R vole-2.13.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v2.14.0/vole-2.14.0-aarch64-apple-darwin.tar.gz
+tar xzf vole-2.14.0-aarch64-apple-darwin.tar.gz
+install -m 755 vole-2.14.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+mkdir -p ~/.local/share/vole && cp -R vole-2.14.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 ```
 
 保持 `bin` + `share/vole/rules` 相对布局即可；自定义规则目录时再设 `VOLE_RULES_DIR`。
@@ -166,9 +166,9 @@ Vole 是本地系统维护工具，部分命令会执行破坏性文件操作。
 | `vole clean --whitelist` | 分页多选保护目录并写盘 | `--whitelist-add` / `--whitelist-remove` / `--whitelist-list` |
 | `vole optimize --whitelist` | 分页多选跳过优化任务并写盘 | `--whitelist-add` / `--whitelist-remove` / `--whitelist-list`（任务 id） |
 | `vole status` | 动画 cat + 健康面板；`k` 隐藏 cat、`c` 循环 CPU 核心数（prefs 持久化） | `--json` / `--json-stream` |
-| `vole analyze` | mole 同构视觉面板；Space/⌫/O/P/F/R/`/`/T（诚实 footer） | `--json` |
+| `vole analyze` | mole 同构视觉面板；↑↓←→ / hbl；Space/⌫/O/P/F/R/`/`/T；扫描中 `S` live sort（诚实 footer） | `--json` |
 
-共享组件：`PaginatedMultiSelect`（键位/过滤/排序/预选；env `VOLE_MENU_*`，可选兼容 `MOLE_MENU_*`）。analyze 已接线 Space/⌫/O/P/F/R/`/`/T（删除走保护+废纸篓；`F` Finder reveal、`R` 重扫）。status 动画 cat + `k`/`c`、`optimize --whitelist` 见 [`docs/releases/v2.12.0.md`](docs/releases/v2.12.0.md)；analyze F/R 见 [`docs/releases/v2.13.0.md`](docs/releases/v2.13.0.md)。
+共享组件：`PaginatedMultiSelect`（键位/过滤/排序/预选；env `VOLE_MENU_*`，可选兼容 `MOLE_MENU_*`）。analyze 已接线 ←→/h/b/l、Space/⌫/O/P/F/R/`/`/T、扫描中 `S` live sort（删除走保护+废纸篓；`F` Finder reveal、`R` 重扫）。status 动画 cat + `k`/`c`、`optimize --whitelist` 见 [`docs/releases/v2.12.0.md`](docs/releases/v2.12.0.md)；analyze F/R 见 [`docs/releases/v2.13.0.md`](docs/releases/v2.13.0.md)；导航别名与 live sort 见 [`docs/releases/v2.14.0.md`](docs/releases/v2.14.0.md)。
 
 首页 Enter 进 **Clean / Optimize** 即 TTY 确认流（扫 plan → `Proceed? [y/N]` → apply）；Uninstall / Analyze / Status 已接 TTY 交互或 TUI。
 
@@ -275,7 +275,7 @@ $ vole completions zsh > ~/.zfunc/_vole
 | | **Vole** | **Mole** |
 |---|---|---|
 | 实现 | 纯 Rust 单一二进制 | Bash + Go 混合 |
-| 成熟度 | **2.13.0**：**裸 `vole` ratatui 首页** + **Clean/Optimize TTY 确认双轨** + **analyze 进阶键（含 F/R）** + **status 动画 cat/`k`/`c`** + **`optimize --whitelist`** + **TUI 交互对齐（T5–T9）**；**产品 v2 CLI 全家桶已收口**（M5–M10 + §3.2 闸门） | 成熟、功能最全 |
+| 成熟度 | **2.14.0**：**裸 `vole` ratatui 首页** + **Clean/Optimize TTY 确认双轨** + **analyze 进阶键（含 F/R、←→、扫描中 S）** + **status 动画 cat/`k`/`c`** + **`optimize --whitelist`** + **TUI 交互对齐（T5–T10）**；**产品 v2 CLI 全家桶已收口**（M5–M10 + §3.2 闸门） | 成熟、功能最全 |
 | 核心命令 | `status` / `analyze` / `clean`（+hints）/ `history` / `uninstall` / `optimize` / `purge` / `installer` / `touchid` / `update` / `remove` + 别名 | Mole 顶层路由 ⊇（`check-command-surface.sh --enforce`） |
 | 清理模型 | `--plan` / `--apply` 两阶段 + 默认废纸篓；orphaned 启发式 | `--dry-run` 预览 + 深度清理流水线 |
 | 机器可读输出 | Mole 兼容 JSON **子集** + 自有 NDJSON 事件流 | `--json`（status / analyze / history） |

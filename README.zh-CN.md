@@ -63,7 +63,7 @@
 
 需要 **macOS 12 或更高**。
 
-当前已发布版本：**[v2.13.0](https://github.com/wukongnotnull/vole/releases/tag/v2.13.0)**（Developer ID 签名并经 Apple 公证）。Apple Silicon 与 Intel 均有对应安装包。
+当前已发布版本：**[v2.15.0](https://github.com/wukongnotnull/vole/releases/tag/v2.15.0)**（Developer ID 签名并经 Apple 公证）。Apple Silicon 与 Intel 均有对应安装包。
 
 ### 方式一：下载安装包
 
@@ -73,14 +73,14 @@
   - Intel：`…-x86_64-apple-darwin.tar.gz`
 3. 解压后，把 `bin/vole` 放到你 PATH 里的目录（例如 `~/.local/bin`），并保留同包里的 `share/vole/rules` 目录
 
-示例（Apple Silicon / v2.13.0；请以 Release 页实际文件名为准）：
+示例（Apple Silicon / v2.15.0；请以 Release 页实际文件名为准）：
 
 ```bash
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v2.13.0/vole-2.13.0-aarch64-apple-darwin.tar.gz
-tar xzf vole-2.13.0-aarch64-apple-darwin.tar.gz
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v2.15.0/vole-2.15.0-aarch64-apple-darwin.tar.gz
+tar xzf vole-2.15.0-aarch64-apple-darwin.tar.gz
 mkdir -p ~/.local/bin ~/.local/share/vole
-install -m 755 vole-2.13.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-cp -R vole-2.13.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+install -m 755 vole-2.15.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+cp -R vole-2.15.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 ```
 
 若终端提示找不到 `vole`，把下面这行写进 `~/.zshrc` 后执行 `source ~/.zshrc`：

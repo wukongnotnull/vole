@@ -11,6 +11,7 @@ mod remove;
 mod signals;
 mod terminal;
 mod touchid;
+mod tty_spinner;
 mod tui;
 mod uninstall;
 mod update;

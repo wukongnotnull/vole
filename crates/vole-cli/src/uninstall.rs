@@ -78,6 +78,8 @@ fn run_interactive(opts: &UninstallOptions) -> io::Result<()> {
     let catalog = ProtectionCatalog::embedded();
     let protection = AppProtection::new();
 
+    // Mole-style stderr spinner while scanning apps and measuring sizes (before the menu).
+    let spinner = crate::tty_spinner::TtySpinner::start("Scanning applications...");
     let scanned = scan_applications(&apps_dirs).map_err(|e| io::Error::other(e.to_string()))?;
     let candidates: Vec<AppIdentity> = scanned
         .into_iter()
@@ -100,25 +102,33 @@ fn run_interactive(opts: &UninstallOptions) -> io::Result<()> {
         .collect();
 
     if candidates.is_empty() {
+        spinner.stop();
         eprintln!("No removable apps found.");
         return Ok(());
     }
 
+    // Measure sizes once while the spinner is still running; reuse across menu retries.
+    let size_kb_by_idx: Vec<Option<u64>> = candidates
+        .iter()
+        .map(|app| {
+            let path_str = app.app_path.display().to_string();
+            match measure_path_size_kb(&path_str) {
+                PathSizeKb::Known(kb) => Some(kb),
+                PathSizeKb::Unknown => None,
+            }
+        })
+        .collect();
+    spinner.stop();
+
     let selected_apps = loop {
         let items: Vec<MenuItem> = candidates
             .iter()
-            .map(|app| {
-                let path_str = app.app_path.display().to_string();
-                let size_kb = match measure_path_size_kb(&path_str) {
-                    PathSizeKb::Known(kb) => Some(kb),
-                    PathSizeKb::Unknown => None,
-                };
-                MenuItem {
-                    label: app.display_name.clone(),
-                    filter_name: Some(app.display_name.clone()),
-                    epoch: None,
-                    size_kb,
-                }
+            .zip(size_kb_by_idx.iter())
+            .map(|(app, &size_kb)| MenuItem {
+                label: app.display_name.clone(),
+                filter_name: Some(app.display_name.clone()),
+                epoch: None,
+                size_kb,
             })
             .collect();
 

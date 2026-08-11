@@ -760,6 +760,8 @@ fn cmd_analyze_tui(initial: &Path, cancel: CancelToken) -> io::Result<()> {
                             }
                         }
                     }
+                    // T9 Task 3 wires these; stubs keep match exhaustive for state tests.
+                    tui::AnalyzeEffect::Reveal(_) | tui::AnalyzeEffect::Refresh => {}
                     tui::AnalyzeEffect::None => {}
                 }
             }

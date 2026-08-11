@@ -1,76 +1,51 @@
-//! Animated ASCII mole cat frames (ported from mole `cmd/status/view.go`).
+//! Animated ASCII vole frames (front-facing, inspired by the Vole logo).
 
-const MOLE_BODY: &[&[&str]] = &[
+/// Front-facing vole: round ears, whiskers, buck tooth, short tail.
+/// Frames only vary eyes / feet for a gentle bob while sliding sideways.
+const VOLE_BODY: &[&[&str]] = &[
     &[
-        r#"     /\_/\"#,
-        r#" ___/ o o \"#,
-        r#"/___   =-= /"#,
-        r#"\____)-m-m)"#,
+        r#"     (\__/)"#,
+        r#"   ≡( • • )≡"#,
+        r#"    (  ▽T )"#,
+        r#"     uu~uu"#,
     ],
     &[
-        r#"     /\_/\"#,
-        r#" ___/ o o \"#,
-        r#"/___   =-= /"#,
-        r#"\____)mm__)"#,
+        r#"     (\__/)"#,
+        r#"   ≡( • • )≡"#,
+        r#"    (  ▽T )"#,
+        r#"     u u~u"#,
     ],
     &[
-        r#"     /\_/\"#,
-        r#" ___/ · · \"#,
-        r#"/___   =-= /"#,
-        r#"\___)-m__m)"#,
+        r#"     (\__/)"#,
+        r#"   ≡( · · )≡"#,
+        r#"    (  ▽T )"#,
+        r#"     uu~uu"#,
     ],
     &[
-        r#"     /\_/\"#,
-        r#" ___/ o o \"#,
-        r#"/___   =-= /"#,
-        r#"\____)-mm-)"#,
+        r#"     (\__/)"#,
+        r#"   ≡( • • )≡"#,
+        r#"    (  ▽T )"#,
+        r#"      uu~u"#,
     ],
 ];
 
-const MOLE_BODY_MIRROR: &[&[&str]] = &[
-    &[
-        r#"    /\_/\"#,
-        r#"   / o o \___"#,
-        r#"  \ =-=   ___\"#,
-        r#"  (m-m-(____/"#,
-    ],
-    &[
-        r#"    /\_/\"#,
-        r#"   / o o \___"#,
-        r#"  \ =-=   ___\"#,
-        r#"  (__mm(____/"#,
-    ],
-    &[
-        r#"    /\_/\"#,
-        r#"   / · · \___"#,
-        r#"  \ =-=   ___\"#,
-        r#"  (m__m-(___/"#,
-    ],
-    &[
-        r#"    /\_/\"#,
-        r#"   / o o \___"#,
-        r#"  \ =-=   ___\"#,
-        r#"  (-mm-(____/"#,
-    ],
-];
+/// Horizontal slide divisor: higher = slower travel across the status bar.
+const MOVE_SLOWDOWN: u64 = 4;
 
-/// Render one animated mole frame (4 lines), walking horizontally.
+/// Max display columns of the vole sprite (widest line).
+const VOLE_WIDTH: usize = 12;
+
+/// Render one animated vole frame (4 lines), facing the viewer while sliding.
 pub fn render_mole_frame(anim_frame: u64, term_width: usize) -> String {
-    let mole_width = 15usize;
-    let max_pos = term_width.saturating_sub(mole_width);
+    let max_pos = term_width.saturating_sub(VOLE_WIDTH);
     let cycle_length = (max_pos * 2).max(1);
-    let mut pos = (anim_frame as usize) % cycle_length;
-    let moving_left = pos > max_pos;
-    if moving_left {
+    let travel = (anim_frame / MOVE_SLOWDOWN) as usize;
+    let mut pos = travel % cycle_length;
+    if pos > max_pos {
         pos = cycle_length - pos;
     }
 
-    let frames = if moving_left {
-        MOLE_BODY_MIRROR
-    } else {
-        MOLE_BODY
-    };
-    let body = frames[(anim_frame as usize) % frames.len()];
+    let body = VOLE_BODY[(anim_frame as usize / MOVE_SLOWDOWN as usize) % VOLE_BODY.len()];
     let padding = " ".repeat(pos);
     body.iter()
         .map(|line| format!("{padding}{line}"))
@@ -83,10 +58,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn mole_frame_contains_ears_and_moves() {
+    fn mole_frame_contains_logo_cues_and_moves() {
         let a = render_mole_frame(0, 80);
-        let b = render_mole_frame(10, 80);
-        assert!(a.contains(r"/\_/\"));
+        let b = render_mole_frame(MOVE_SLOWDOWN * 10, 80);
+        assert!(a.contains(r"(\__/)"), "{a}");
+        assert!(a.contains("≡("), "{a}");
+        assert!(a.contains("▽T"), "{a}");
+        assert!(a.contains("uu~uu"), "{a}");
         assert_ne!(a, b);
+    }
+
+    #[test]
+    fn mole_frame_stays_front_facing() {
+        // Far into a leftward half of the cycle — still the same front sprite.
+        let wide = 80usize;
+        let max_pos = wide - VOLE_WIDTH;
+        let leftward_frame = MOVE_SLOWDOWN * (max_pos as u64 + 5);
+        let frame = render_mole_frame(leftward_frame, wide);
+        assert!(frame.contains(r"(\__/)"), "{frame}");
+        assert!(frame.contains("▽T"), "{frame}");
+        assert!(frame.contains("≡("), "{frame}");
     }
 }

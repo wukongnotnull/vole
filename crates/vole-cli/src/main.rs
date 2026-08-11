@@ -920,7 +920,8 @@ fn cmd_status_tui() -> io::Result<()> {
             last_collect = std::time::Instant::now();
         }
 
-        let step = 1u64 + (snap.cpu.usage / 25.0).floor().max(0.0) as u64;
+        // Cap step so the front-facing vole slides slowly even under high CPU.
+        let step = (1u64 + (snap.cpu.usage / 50.0).floor().max(0.0) as u64).min(2);
         anim_frame = anim_frame.wrapping_add(step);
 
         let opts = tui::StatusRenderOpts {

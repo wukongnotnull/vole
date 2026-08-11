@@ -1,4 +1,4 @@
-//! Vole TUI design system — tokens, single theme, shared components.
+//! Vole TUI design system — tokens, warm single theme, shared components.
 
 mod components;
 mod layout;
@@ -22,7 +22,7 @@ pub struct DesignSystem {
 }
 
 impl DesignSystem {
-    /// Single Mole-accent palette; body text inherits the terminal foreground.
+    /// Single Vole-accent palette; body text inherits the terminal foreground.
     pub fn resolve() -> Self {
         Self {
             theme: Theme::new(),
@@ -41,7 +41,7 @@ mod tests {
         assert_eq!(ds.theme.label.fg, None);
         assert_eq!(
             ds.theme.primary.fg,
-            Some(ratatui::style::Color::Rgb(0xBD, 0x93, 0xF9))
+            Some(ratatui::style::Color::Rgb(0xC4, 0x78, 0x5A))
         );
     }
 }

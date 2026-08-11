@@ -761,8 +761,8 @@ mod tests {
     }
 
     #[test]
-    fn light_header_keeps_msg_and_identity_in_value_ink() {
-        let theme = Theme::light();
+    fn header_keeps_msg_and_identity_in_value_ink() {
+        let theme = Theme::universal();
         let snap = sample_snap();
         let line = build_status_header(&snap, 120, &theme);
         assert!(

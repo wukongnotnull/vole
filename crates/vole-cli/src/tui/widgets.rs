@@ -432,7 +432,7 @@ mod tests {
 
     #[test]
     fn progress_bar_spans_split_fill_and_track() {
-        let theme = Theme::light();
+        let theme = Theme::universal();
         let spans = progress_bar_spans(&theme, 50.0);
         let fill = theme.style_for_bucket(color_bucket(50.0));
         assert!(

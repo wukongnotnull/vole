@@ -1,4 +1,4 @@
-//! Vole TUI design system — tokens, dual-rail themes, shared components.
+//! Vole TUI design system — tokens, universal theme, shared components.
 
 mod components;
 mod layout;
@@ -11,41 +11,24 @@ pub use components::{
 #[allow(unused_imports)] // public design-system surface
 pub use layout::{inset_content, inset_horizontal};
 #[allow(unused_imports)] // public design-system surface
-pub use theme::{
-    color_bucket, resolve_color_mode, size_tone, ColorBucket, ColorMode, SizeTone, Theme,
-};
+pub use theme::{color_bucket, size_tone, ColorBucket, SizeTone, Theme};
 #[allow(unused_imports)] // public design-system surface
 pub use tokens::{CARD_ROW_GAP, COL_GUTTER, ENV_THEME, FOOTER_GAP, OUTER_PAD, TOP_PAD};
 
-/// Resolved design system for a TUI session (theme + mode + layout tokens).
+/// Resolved design system for a TUI session (theme + layout tokens).
 #[derive(Debug, Clone)]
 pub struct DesignSystem {
-    #[allow(dead_code)] // available for mode-aware widgets / prefs UI
-    pub mode: ColorMode,
     pub theme: Theme,
 }
 
 impl DesignSystem {
+    /// Always the universal mid-contrast palette.
+    ///
+    /// `VOLE_THEME` / `COLORFGBG` are ignored (kept as a documented no-op via [`ENV_THEME`]).
     pub fn resolve() -> Self {
-        let mode = resolve_color_mode();
-        Self::for_mode(mode)
-    }
-
-    pub fn for_mode(mode: ColorMode) -> Self {
         Self {
-            mode,
-            theme: Theme::for_mode(mode),
+            theme: Theme::universal(),
         }
-    }
-
-    #[allow(dead_code)] // explicit rails for tests / future prefs UI
-    pub fn dark() -> Self {
-        Self::for_mode(ColorMode::Dark)
-    }
-
-    #[allow(dead_code)] // explicit rails for tests / future prefs UI
-    pub fn light() -> Self {
-        Self::for_mode(ColorMode::Light)
     }
 }
 
@@ -54,15 +37,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn resolve_returns_matching_theme_rail() {
-        let light = DesignSystem::light();
-        assert_eq!(light.mode, ColorMode::Light);
+    fn resolve_returns_universal_theme() {
+        let ds = DesignSystem::resolve();
         assert_eq!(
-            light.theme.value.fg,
-            Some(ratatui::style::Color::Rgb(0x12, 0x12, 0x12))
+            ds.theme.value.fg,
+            Some(ratatui::style::Color::Rgb(0x4A, 0x4A, 0x4A))
         );
-        let dark = DesignSystem::dark();
-        assert_eq!(dark.mode, ColorMode::Dark);
-        assert_eq!(dark.theme.value.fg, Some(ratatui::style::Color::White));
     }
 }

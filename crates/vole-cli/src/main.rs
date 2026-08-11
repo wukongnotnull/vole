@@ -36,7 +36,7 @@ use vole_core::vole_proto::{AnalyzeEntry, AnalyzeOutput};
     name = "vole",
     version,
     about = "macOS cleanup and monitoring",
-    after_help = "Run `vole` with no subcommand in a terminal to open the home menu (mole-style). Bare TTY `clean` / `optimize` scan a plan, prompt Proceed? [y/N], then apply.\n\nFull per-command usage (Usage + Options) follows below."
+    after_help = "Run `vole` with no subcommand in a terminal to open the home menu. Bare TTY `clean` / `optimize` scan a plan, prompt Proceed? [y/N], then apply.\n\nFull per-command usage (Usage + Options) follows below."
 )]
 struct Cli {
     #[command(subcommand)]
@@ -99,7 +99,7 @@ enum Command {
         /// 将 plan JSON 写入文件。
         #[arg(long, conflicts_with = "apply")]
         plan_out: Option<PathBuf>,
-        /// TTY 分页多选管理受保护缓存白名单（对齐 mole `clean --whitelist`）；脚本用 --whitelist-add/remove/list。
+        /// TTY 分页多选管理受保护缓存白名单；脚本用 --whitelist-add/remove/list。
         #[arg(
             long,
             conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent"]
@@ -180,10 +180,10 @@ enum Command {
         /// 将 plan JSON 写入文件。
         #[arg(long, conflicts_with = "apply")]
         plan_out: Option<PathBuf>,
-        /// 可选：只跑单个 Mole task id（实验性）。
+        /// 可选：只跑单个优化任务 id（实验性）。
         #[arg(long, value_name = "TASK_ID")]
         task: Option<String>,
-        /// TTY 分页多选管理优化任务白名单（对齐 mole `optimize --whitelist`）；脚本用 --whitelist-add/remove/list。
+        /// TTY 分页多选管理优化任务白名单；脚本用 --whitelist-add/remove/list。
         #[arg(
             long,
             conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "plan", "dry_run", "task"]
@@ -215,11 +215,11 @@ enum Command {
         /// 输出 JSON 而非 TUI。
         #[arg(long)]
         json: bool,
-        /// 连续 NDJSON 流（对齐 mole --watch）。
+        /// 连续 NDJSON 流（类似 `--watch` 持续输出）。
         #[arg(long = "json-stream")]
         json_stream: bool,
     },
-    /// 目录体积分析（对齐 mole analyze）。
+    /// 目录体积分析。
     #[command(visible_alias = "analyse")]
     Analyze {
         /// 目标目录（默认 `$HOME`）。
@@ -228,7 +228,7 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// 查看操作历史与删除审计（对齐 mole history）。
+    /// 查看操作历史与删除审计。
     History {
         /// 输出 JSON。
         #[arg(long)]
@@ -292,7 +292,7 @@ enum Command {
         #[arg(long, conflicts_with = "apply")]
         plan_out: Option<PathBuf>,
     },
-    /// 配置 sudo 的 Touch ID（status / enable / disable；对齐 mole touchid）。
+    /// 配置 sudo 的 Touch ID（status / enable / disable）。
     Touchid {
         /// `status` | `enable` | `disable`；省略则进入交互切换。
         action: Option<String>,
@@ -306,7 +306,7 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// 自更新（检测 → 下载 → 校验 → 安装；对齐 mole update）。
+    /// 自更新（检测 → 下载 → 校验 → 安装）。
     Update {
         /// 强制重装；Homebrew 安装时同时解除「优先 brew」拦截。
         #[arg(long, short = 'f')]
@@ -324,7 +324,7 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// 自卸载（删除本工具安装产物与自身配置；对齐 mole remove）。
+    /// 自卸载（删除本工具安装产物与自身配置）。
     Remove {
         /// 只预览待删项，不删除。
         #[arg(long = "dry-run", short = 'n')]
@@ -335,7 +335,7 @@ enum Command {
         /// 输出 JSON。
         #[arg(long)]
         json: bool,
-        /// 同时删除 Mole 兼容审计日志（默认保留）。
+        /// 同时删除操作审计日志（默认保留）。
         #[arg(long = "purge-oplog")]
         purge_oplog: bool,
     },
@@ -558,7 +558,7 @@ fn main() {
             std::process::exit(code);
         }
         Some(Command::Completions { shell }) => {
-            let mut cmd = Cli::command();
+            let mut cmd = clap_command();
             generate(Shell::from(shell), &mut cmd, "vole", &mut io::stdout());
         }
     }

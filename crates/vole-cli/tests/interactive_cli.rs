@@ -26,7 +26,7 @@ fn top_level_help_mentions_home_menu_not_numbered_plan_list() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     // after_help 或 about：指向终端首页，而非暗示 11 项数字菜单
     assert!(
-        stdout.to_lowercase().contains("home menu") || stdout.contains("mole-style"),
+        stdout.to_lowercase().contains("home menu"),
         "help={stdout}"
     );
     assert!(
@@ -42,6 +42,21 @@ fn top_level_help_mentions_home_menu_not_numbered_plan_list() {
     assert!(
         !stdout.contains("Select [1-11]"),
         "stale numbered menu leaked into help: {stdout}"
+    );
+}
+
+#[test]
+fn top_level_help_has_no_mole_mentions() {
+    let output = Command::new(env!("CARGO_BIN_EXE_vole"))
+        .args(["--help"])
+        .output()
+        .expect("help");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let lower = stdout.to_lowercase();
+    assert!(
+        !lower.contains("mole"),
+        "top-level --help must not mention mole:\n{stdout}"
     );
 }
 

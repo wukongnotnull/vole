@@ -17,9 +17,14 @@ use crate::terminal::TerminalGuard;
 use super::design::{home_controls_line, inset_content, DesignSystem, Theme, FOOTER_GAP, TOP_PAD};
 use super::home_menu_state::{HomeAction, HomeKey, HomeMenuConfig, HomeMenuState, HOME_ITEMS};
 use super::paginated_select::drain_pending_input;
+use super::status_cat::render_mole_frame;
 
 pub const VOLE_TAGLINE: &str = "Deep clean and optimize your Mac.";
 pub const VOLE_REPO_URL: &str = "https://github.com/wukongnotnull/vole";
+
+/// Match status: hide the sliding vole when the terminal is too narrow.
+const VOLE_MIN_WIDTH: u16 = 20;
+const VOLE_HEIGHT: u16 = 4;
 
 pub struct HomeMenuRunOpts {
     pub cfg: HomeMenuConfig,
@@ -63,25 +68,23 @@ pub fn run_home_menu(opts: HomeMenuRunOpts) -> io::Result<HomeAction> {
     let mut state = HomeMenuState::new(opts.cfg);
     let theme = DesignSystem::resolve().theme;
     let update_msg = opts.update_message.as_deref();
+    let mut anim_frame: u64 = 0;
     loop {
-        term.draw(|f| render_home(f, &state, &theme, update_msg))?;
-        if !event::poll(Duration::from_millis(50))? {
-            continue;
+        term.draw(|f| render_home(f, &state, &theme, update_msg, anim_frame))?;
+        if event::poll(Duration::from_millis(50))? {
+            if let Event::Key(key) = event::read()? {
+                if key.kind == KeyEventKind::Press {
+                    if let Some(hk) = map_key(key) {
+                        if let Some(action) = state.handle_key(hk) {
+                            guard.restore();
+                            drain_pending_input(Duration::from_millis(100));
+                            return Ok(action);
+                        }
+                    }
+                }
+            }
         }
-        let Event::Key(key) = event::read()? else {
-            continue;
-        };
-        if key.kind != KeyEventKind::Press {
-            continue;
-        }
-        let Some(hk) = map_key(key) else {
-            continue;
-        };
-        if let Some(action) = state.handle_key(hk) {
-            guard.restore();
-            drain_pending_input(Duration::from_millis(100));
-            return Ok(action);
-        }
+        anim_frame = anim_frame.wrapping_add(1);
     }
 }
 
@@ -90,12 +93,15 @@ fn render_home(
     state: &HomeMenuState,
     theme: &Theme,
     update_message: Option<&str>,
+    anim_frame: u64,
 ) {
     let area = inset_content(frame.area());
     let show_update = update_message.is_some_and(|s| !s.trim().is_empty());
-    // top + brand(5) + blank + [update + blank] + items(5) + footer_gap + footer(1) + sink
+    let show_vole = area.width >= VOLE_MIN_WIDTH;
+    // top + brand(5) + blank + [vole(4)] + [update] + items(5) + footer_gap + footer(1) + sink
     let brand_h = 5u16;
     let update_h = if show_update { 2u16 } else { 0 };
+    let vole_h = if show_vole { VOLE_HEIGHT } else { 0 };
     let items_h = 5u16;
     let footer_h = 1u16;
 
@@ -105,6 +111,9 @@ fn render_home(
     }
     constraints.push(Constraint::Length(brand_h));
     constraints.push(Constraint::Length(1));
+    if vole_h > 0 {
+        constraints.push(Constraint::Length(vole_h));
+    }
     if update_h > 0 {
         constraints.push(Constraint::Length(update_h));
     }
@@ -146,6 +155,12 @@ fn render_home(
     frame.render_widget(Paragraph::new(brand_lines), chunks[idx]);
     idx += 1;
     idx += 1; // blank under brand
+
+    if show_vole {
+        let vole = render_mole_frame(anim_frame, area.width as usize);
+        frame.render_widget(Paragraph::new(vole).style(theme.ok), chunks[idx]);
+        idx += 1;
+    }
 
     if update_h > 0 {
         let msg = update_message.unwrap_or("Update available");
@@ -214,5 +229,11 @@ mod tests {
             map_key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE)),
             Some(HomeKey::Quit)
         ));
+    }
+
+    #[test]
+    fn vole_min_width_matches_status() {
+        assert_eq!(VOLE_MIN_WIDTH, 20);
+        assert_eq!(VOLE_HEIGHT, 4);
     }
 }

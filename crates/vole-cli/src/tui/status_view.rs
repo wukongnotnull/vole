@@ -25,6 +25,10 @@ const ICON_NETWORK: &str = "⇅";
 const ICON_BATTERY: &str = "◪";
 const ICON_PROCS: &str = "❊";
 const STATUS_NARROW: u16 = 80;
+/// Blank line between card rows (TUI stand-in for line spacing).
+const CARD_ROW_GAP: u16 = 1;
+/// Horizontal gutter between the two status columns.
+const COL_GUTTER: u16 = 2;
 
 #[derive(Debug, Clone, Copy)]
 pub struct StatusRenderOpts {
@@ -141,7 +145,37 @@ fn cards_block_height(cards: &[Vec<Line<'static>>], width: u16) -> u16 {
         &cards.iter().map(|c| c.len()).collect::<Vec<_>>(),
         two_column,
     );
-    heights.iter().sum()
+    if heights.is_empty() {
+        return 0;
+    }
+    let gaps = (heights.len().saturating_sub(1) as u16).saturating_mul(CARD_ROW_GAP);
+    heights.iter().copied().sum::<u16>().saturating_add(gaps)
+}
+
+fn row_constraints_with_gaps(heights: &[u16]) -> Vec<Constraint> {
+    let mut constraints = Vec::with_capacity(heights.len().saturating_mul(2));
+    for (i, &h) in heights.iter().enumerate() {
+        if i > 0 && CARD_ROW_GAP > 0 {
+            constraints.push(Constraint::Length(CARD_ROW_GAP));
+        }
+        constraints.push(Constraint::Length(h));
+    }
+    constraints
+}
+
+fn split_two_columns(area: Rect) -> (Rect, Rect) {
+    let gutter = COL_GUTTER.min(area.width.saturating_sub(2));
+    let left_w = area.width.saturating_sub(gutter) / 2;
+    let right_w = area.width.saturating_sub(gutter + left_w);
+    let cols = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Length(left_w),
+            Constraint::Length(gutter),
+            Constraint::Length(right_w),
+        ])
+        .split(area);
+    (cols[0], cols[2])
 }
 
 fn render_cards(frame: &mut Frame, area: Rect, cards: &[Vec<Line<'static>>], width: u16) {
@@ -150,7 +184,7 @@ fn render_cards(frame: &mut Frame, area: Rect, cards: &[Vec<Line<'static>>], wid
         &cards.iter().map(|c| c.len()).collect::<Vec<_>>(),
         two_column,
     );
-    let constraints: Vec<Constraint> = heights.iter().map(|&h| Constraint::Length(h)).collect();
+    let constraints = row_constraints_with_gaps(&heights);
     if constraints.is_empty() {
         return;
     }
@@ -159,21 +193,22 @@ fn render_cards(frame: &mut Frame, area: Rect, cards: &[Vec<Line<'static>>], wid
         .constraints(constraints)
         .split(area);
 
+    // Row widgets land on even indices when CARD_ROW_GAP inserts spacer slots.
+    let step = if CARD_ROW_GAP > 0 { 2 } else { 1 };
     if two_column {
         for (row_i, pair) in cards.chunks(2).enumerate() {
-            let Some(row) = rows.get(row_i) else { break };
-            let cols = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-                .split(*row);
-            frame.render_widget(Paragraph::new(pair[0].clone()), cols[0]);
+            let Some(row) = rows.get(row_i * step) else {
+                break;
+            };
+            let (left, right) = split_two_columns(*row);
+            frame.render_widget(Paragraph::new(pair[0].clone()), left);
             if pair.len() > 1 {
-                frame.render_widget(Paragraph::new(pair[1].clone()), cols[1]);
+                frame.render_widget(Paragraph::new(pair[1].clone()), right);
             }
         }
     } else {
         for (i, card) in cards.iter().enumerate() {
-            if let Some(rect) = rows.get(i) {
+            if let Some(rect) = rows.get(i * step) {
                 frame.render_widget(Paragraph::new(card.clone()), *rect);
             }
         }
@@ -281,7 +316,7 @@ fn build_card_blocks(
     cpu_cores: i32,
 ) -> Vec<Vec<Line<'static>>> {
     let card_w = if matches!(status_layout_mode(width), StatusLayoutMode::TwoColumn) {
-        width / 2
+        width.saturating_sub(COL_GUTTER) / 2
     } else {
         width
     };
@@ -301,10 +336,7 @@ fn build_card_blocks(
 }
 
 fn card_header(icon: &str, title: &str, theme: &Theme) -> Line<'static> {
-    Line::from(vec![
-        Span::styled(format!("{} {}", icon, title), theme.title),
-        Span::styled("  ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌".to_string(), theme.rule),
-    ])
+    Line::from(Span::styled(format!("{} {}", icon, title), theme.title))
 }
 
 fn render_cpu_card(
@@ -345,12 +377,14 @@ fn render_cpu_card(
             cpu_cores as usize
         };
         for (idx, val) in cores.into_iter().take(limit) {
-            lines.push(Line::from(format!(
-                "Core{:<2} {}  {:5.1}%",
-                idx + 1,
-                plain_progress_bar(val),
-                val
-            )));
+            lines.push(Line::from(vec![
+                Span::styled(format!("Core{:<2}", idx + 1), theme.label),
+                Span::styled(
+                    format!(" {}", plain_progress_bar(val)),
+                    theme.style_for_bucket(color_bucket(val)),
+                ),
+                Span::styled(format!("  {:5.1}%", val), theme.value),
+            ]));
         }
     }
     let load = if cpu.p_core_count > 0 && cpu.e_core_count > 0 {
@@ -364,7 +398,7 @@ fn render_cpu_card(
             cpu.load1, cpu.load5, cpu.load15, cpu.logical_cpu
         )
     };
-    lines.push(Line::from(Span::styled(load, theme.value)));
+    lines.push(Line::from(Span::styled(load, theme.subtle)));
     lines
 }
 
@@ -455,13 +489,21 @@ fn render_disk_card(
                     format!("{}{}", prefix, i + 1)
                 };
                 let free = d.total.saturating_sub(d.used);
-                lines.push(Line::from(format!(
-                    "{:<6} {}  {} used, {} free",
-                    label,
-                    plain_progress_bar(d.used_percent),
-                    format_bytes_bin(d.used),
-                    format_bytes_bin(free)
-                )));
+                lines.push(Line::from(vec![
+                    Span::styled(format!("{:<6}", label), theme.label),
+                    Span::styled(
+                        format!(" {}", plain_progress_bar(d.used_percent)),
+                        theme.style_for_bucket(color_bucket(d.used_percent)),
+                    ),
+                    Span::styled(
+                        format!(
+                            "  {} used, {} free",
+                            format_bytes_bin(d.used),
+                            format_bytes_bin(free)
+                        ),
+                        theme.value,
+                    ),
+                ]));
             }
         };
         push_group("INTR", &internal);
@@ -474,14 +516,14 @@ fn render_disk_card(
             }
             lines.push(line_pair(theme, "Total", &parts.join(" · ")));
         }
-        lines.push(Line::from(format!(
-            "SMART  {}",
-            format_smart_summary(disks)
+        lines.push(Line::from(Span::styled(
+            format!("SMART  {}", format_smart_summary(disks)),
+            theme.subtle,
         )));
     }
-    lines.push(Line::from(format!(
-        "I/O    R {:.1} · W {:.1} MB/s",
-        read_rate, write_rate
+    lines.push(Line::from(Span::styled(
+        format!("I/O    R {:.1} · W {:.1} MB/s", read_rate, write_rate),
+        theme.subtle,
     )));
     lines
 }
@@ -595,13 +637,23 @@ fn render_process_card(
         } else {
             String::new()
         };
-        let mut row = format!("#{:<5} {} {:5.1}% {:>7}", i + 1, bar, p.cpu, mem);
-        let remain = (card_width as usize).saturating_sub(row.chars().count() + 1);
-        if remain > 0 {
-            row.push(' ');
-            row.push_str(&shorten(&p.name, remain));
-        }
-        lines.push(Line::from(row));
+        let prefix = format!("#{:<5} {} {:5.1}% {:>7}", i + 1, bar, p.cpu, mem);
+        let remain = (card_width as usize).saturating_sub(prefix.chars().count() + 1);
+        let name = if remain > 0 {
+            format!(" {}", shorten(&p.name, remain))
+        } else {
+            String::new()
+        };
+        lines.push(Line::from(vec![
+            Span::styled(format!("#{:<5}", i + 1), theme.label),
+            Span::styled(
+                format!(" {}", bar),
+                theme.style_for_bucket(color_bucket(p.cpu)),
+            ),
+            Span::styled(format!(" {:5.1}%", p.cpu), theme.value),
+            Span::styled(format!(" {:>7}", mem), theme.subtle),
+            Span::styled(name, theme.value),
+        ]));
     }
     lines
 }
@@ -622,16 +674,24 @@ fn render_network_card(
     let (rx, tx) = nets.iter().fold((0.0, 0.0), |(rx, tx), n| {
         (rx + n.rx_rate_mbs, tx + n.tx_rate_mbs)
     });
-    lines.push(Line::from(format!(
-        "Down   {}  {}",
-        plain_progress_bar((rx * 10.0).min(100.0)),
-        format_rate_mbs(rx)
-    )));
-    lines.push(Line::from(format!(
-        "Up     {}  {}",
-        plain_progress_bar((tx * 10.0).min(100.0)),
-        format_rate_mbs(tx)
-    )));
+    let rx_pct = (rx * 10.0).min(100.0);
+    let tx_pct = (tx * 10.0).min(100.0);
+    lines.push(Line::from(vec![
+        Span::styled(format!("{:<6}", "Down"), theme.label),
+        Span::styled(
+            format!(" {}", plain_progress_bar(rx_pct)),
+            theme.style_for_bucket(color_bucket(rx_pct)),
+        ),
+        Span::styled(format!("  {}", format_rate_mbs(rx)), theme.value),
+    ]));
+    lines.push(Line::from(vec![
+        Span::styled(format!("{:<6}", "Up"), theme.label),
+        Span::styled(
+            format!(" {}", plain_progress_bar(tx_pct)),
+            theme.style_for_bucket(color_bucket(tx_pct)),
+        ),
+        Span::styled(format!("  {}", format_rate_mbs(tx)), theme.value),
+    ]));
     let mut info = Vec::new();
     if proxy.enabled {
         info.push(format!("Proxy {}", proxy.kind));
@@ -747,9 +807,18 @@ mod tests {
             .into_iter()
             .map(|n| (0..n).map(|_| Line::from("x")).collect())
             .collect();
-        // width > 80 → two-column: rows 8+10+4
-        assert_eq!(cards_block_height(&cards, 100), 22);
-        // narrow → single column sum
-        assert_eq!(cards_block_height(&cards, 80), 32);
+        // width > 80 → two-column: rows 8+10+4 plus 2 gaps
+        assert_eq!(cards_block_height(&cards, 100), 22 + 2 * CARD_ROW_GAP);
+        // narrow → single column sum plus 5 gaps
+        assert_eq!(cards_block_height(&cards, 80), 32 + 5 * CARD_ROW_GAP);
+    }
+
+    #[test]
+    fn card_header_omits_dense_rule() {
+        let theme = Theme::default();
+        let line = card_header(ICON_CPU, "CPU", &theme);
+        let text: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
+        assert!(text.contains("CPU"), "{text}");
+        assert!(!text.contains('╌'), "{text}");
     }
 }

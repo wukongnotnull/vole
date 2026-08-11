@@ -12,13 +12,13 @@ use vole_core::vole_proto::status::{
 };
 
 use super::design::{
-    card_title, color_bucket, status_footer_line, Theme, CARD_ROW_GAP, COL_GUTTER, FOOTER_GAP,
-    OUTER_PAD,
+    card_title, status_footer_line, Theme, CARD_ROW_GAP, COL_GUTTER, FOOTER_GAP, OUTER_PAD,
 };
 use super::status_cat::render_mole_frame;
 use super::widgets::{
     fit_status_header, format_bytes_bin, format_rate_mbs, line_pair, metric_bar_line, mini_bar,
-    plain_progress_bar, shorten, status_layout_mode, StatusLayoutMode,
+    mini_bar_spans, plain_progress_bar, progress_bar_spans, shorten, status_layout_mode,
+    StatusLayoutMode,
 };
 
 const ICON_CPU: &str = "◉";
@@ -367,14 +367,10 @@ fn render_cpu_card(
     if thermal.cpu_temp > 0.0 {
         usage.push_str(&format!(" @ {:.1}°C", thermal.cpu_temp));
     }
-    lines.push(Line::from(vec![
-        Span::styled("Total ".to_string(), theme.label),
-        Span::styled(
-            format!(" {}", plain_progress_bar(cpu.usage)),
-            theme.style_for_bucket(color_bucket(cpu.usage)),
-        ),
-        Span::styled(format!("  {}", usage), theme.value),
-    ]));
+    let mut total = vec![Span::styled("Total ".to_string(), theme.label)];
+    total.extend(progress_bar_spans(theme, cpu.usage));
+    total.push(Span::styled(format!("  {usage}"), theme.value));
+    lines.push(Line::from(total));
     if cpu.per_core_estimated {
         lines.push(Line::from(Span::styled(
             "Per-core data unavailable, using averaged load".to_string(),
@@ -394,14 +390,10 @@ fn render_cpu_card(
             cpu_cores as usize
         };
         for (idx, val) in cores.into_iter().take(limit) {
-            lines.push(Line::from(vec![
-                Span::styled(format!("Core{:<2}", idx + 1), theme.label),
-                Span::styled(
-                    format!(" {}", plain_progress_bar(val)),
-                    theme.style_for_bucket(color_bucket(val)),
-                ),
-                Span::styled(format!("  {:5.1}%", val), theme.value),
-            ]));
+            let mut row = vec![Span::styled(format!("Core{:<2}", idx + 1), theme.label)];
+            row.extend(progress_bar_spans(theme, val));
+            row.push(Span::styled(format!("  {val:5.1}%"), theme.value));
+            lines.push(Line::from(row));
         }
     }
     let load = if cpu.p_core_count > 0 && cpu.e_core_count > 0 {
@@ -506,21 +498,17 @@ fn render_disk_card(
                     format!("{}{}", prefix, i + 1)
                 };
                 let free = d.total.saturating_sub(d.used);
-                lines.push(Line::from(vec![
-                    Span::styled(format!("{:<6}", label), theme.label),
-                    Span::styled(
-                        format!(" {}", plain_progress_bar(d.used_percent)),
-                        theme.style_for_bucket(color_bucket(d.used_percent)),
+                let mut row = vec![Span::styled(format!("{:<6}", label), theme.label)];
+                row.extend(progress_bar_spans(theme, d.used_percent));
+                row.push(Span::styled(
+                    format!(
+                        "  {} used, {} free",
+                        format_bytes_bin(d.used),
+                        format_bytes_bin(free)
                     ),
-                    Span::styled(
-                        format!(
-                            "  {} used, {} free",
-                            format_bytes_bin(d.used),
-                            format_bytes_bin(free)
-                        ),
-                        theme.value,
-                    ),
-                ]));
+                    theme.value,
+                ));
+                lines.push(Line::from(row));
             }
         };
         push_group("INTR", &internal);
@@ -661,16 +649,16 @@ fn render_process_card(
         } else {
             String::new()
         };
-        lines.push(Line::from(vec![
-            Span::styled(format!("#{:<5}", i + 1), theme.label),
-            Span::styled(
-                format!(" {}", bar),
-                theme.style_for_bucket(color_bucket(p.cpu)),
-            ),
-            Span::styled(format!(" {:5.1}%", p.cpu), theme.value),
-            Span::styled(format!(" {:>7}", mem), theme.subtle),
-            Span::styled(name, theme.value),
-        ]));
+        let mut row = vec![Span::styled(format!("#{:<5}", i + 1), theme.label)];
+        if wide {
+            row.extend(progress_bar_spans(theme, p.cpu));
+        } else {
+            row.extend(mini_bar_spans(theme, p.cpu));
+        }
+        row.push(Span::styled(format!(" {:5.1}%", p.cpu), theme.value));
+        row.push(Span::styled(format!(" {:>7}", mem), theme.subtle));
+        row.push(Span::styled(name, theme.value));
+        lines.push(Line::from(row));
     }
     lines
 }
@@ -693,22 +681,14 @@ fn render_network_card(
     });
     let rx_pct = (rx * 10.0).min(100.0);
     let tx_pct = (tx * 10.0).min(100.0);
-    lines.push(Line::from(vec![
-        Span::styled(format!("{:<6}", "Down"), theme.label),
-        Span::styled(
-            format!(" {}", plain_progress_bar(rx_pct)),
-            theme.style_for_bucket(color_bucket(rx_pct)),
-        ),
-        Span::styled(format!("  {}", format_rate_mbs(rx)), theme.value),
-    ]));
-    lines.push(Line::from(vec![
-        Span::styled(format!("{:<6}", "Up"), theme.label),
-        Span::styled(
-            format!(" {}", plain_progress_bar(tx_pct)),
-            theme.style_for_bucket(color_bucket(tx_pct)),
-        ),
-        Span::styled(format!("  {}", format_rate_mbs(tx)), theme.value),
-    ]));
+    let mut down = vec![Span::styled(format!("{:<6}", "Down"), theme.label)];
+    down.extend(progress_bar_spans(theme, rx_pct));
+    down.push(Span::styled(format!("  {}", format_rate_mbs(rx)), theme.value));
+    lines.push(Line::from(down));
+    let mut up = vec![Span::styled(format!("{:<6}", "Up"), theme.label)];
+    up.extend(progress_bar_spans(theme, tx_pct));
+    up.push(Span::styled(format!("  {}", format_rate_mbs(tx)), theme.value));
+    lines.push(Line::from(up));
     let mut info = Vec::new();
     if proxy.enabled {
         info.push(format!("Proxy {}", proxy.kind));

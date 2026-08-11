@@ -26,20 +26,50 @@ pub fn status_layout_mode(width: u16) -> StatusLayoutMode {
 
 /// mole `plainProgressBar`：16 格 `█░`。
 pub fn plain_progress_bar(percent: f64) -> String {
-    let pct = percent.clamp(0.0, 100.0);
-    let filled = ((pct / 100.0) * PROGRESS_BAR_WIDTH as f64) as usize;
-    let filled = filled.min(PROGRESS_BAR_WIDTH);
-    format!(
-        "{}{}",
-        "█".repeat(filled),
-        "░".repeat(PROGRESS_BAR_WIDTH - filled)
-    )
+    let (filled, empty) = progress_bar_counts(percent, PROGRESS_BAR_WIDTH);
+    format!("{}{}", "█".repeat(filled), "░".repeat(empty))
 }
 
 /// mole `miniBar`：5 格 `▮▯`（窄进程条）。
 pub fn mini_bar(percent: f64) -> String {
     let filled = ((percent / 20.0) as usize).clamp(0, 5);
     format!("{}{}", "▮".repeat(filled), "▯".repeat(5 - filled))
+}
+
+fn progress_bar_counts(percent: f64, width: usize) -> (usize, usize) {
+    let pct = percent.clamp(0.0, 100.0);
+    let filled = ((pct / 100.0) * width as f64) as usize;
+    let filled = filled.min(width);
+    (filled, width - filled)
+}
+
+/// Split fill/track colors so empty `░` stays visible on light backgrounds.
+pub fn progress_bar_spans(theme: &Theme, percent: f64) -> Vec<Span<'static>> {
+    let (filled, empty) = progress_bar_counts(percent, PROGRESS_BAR_WIDTH);
+    let fill = theme.style_for_bucket(color_bucket(percent));
+    let mut spans = vec![Span::raw(" ")];
+    if filled > 0 {
+        spans.push(Span::styled("█".repeat(filled), fill));
+    }
+    if empty > 0 {
+        spans.push(Span::styled("░".repeat(empty), theme.bar_track));
+    }
+    spans
+}
+
+/// Narrow process bar with split fill/track colors.
+pub fn mini_bar_spans(theme: &Theme, percent: f64) -> Vec<Span<'static>> {
+    let filled = ((percent / 20.0) as usize).clamp(0, 5);
+    let empty = 5 - filled;
+    let fill = theme.style_for_bucket(color_bucket(percent));
+    let mut spans = vec![Span::raw(" ")];
+    if filled > 0 {
+        spans.push(Span::styled("▮".repeat(filled), fill));
+    }
+    if empty > 0 {
+        spans.push(Span::styled("▯".repeat(empty), theme.bar_track));
+    }
+    spans
 }
 
 /// mole analyze `coloredProgressBar` 的无色骨架（24 宽）。
@@ -258,13 +288,10 @@ pub fn line_pair(theme: &Theme, label: &str, value: &str) -> Line<'static> {
 }
 
 pub fn metric_bar_line(theme: &Theme, label: &str, percent: f64) -> Line<'static> {
-    let bar = plain_progress_bar(percent);
-    let bucket = color_bucket(percent);
-    Line::from(vec![
-        Span::styled(format!("{:<6}", label), theme.label),
-        Span::styled(format!(" {}", bar), theme.style_for_bucket(bucket)),
-        Span::styled(format!("  {:5.1}%", percent), theme.value),
-    ])
+    let mut spans = vec![Span::styled(format!("{:<6}", label), theme.label)];
+    spans.extend(progress_bar_spans(theme, percent));
+    spans.push(Span::styled(format!("  {:5.1}%", percent), theme.value));
+    Line::from(spans)
 }
 
 #[cfg(test)]
@@ -283,6 +310,23 @@ mod tests {
                 .filter(|c| *c == '█')
                 .count(),
             8
+        );
+    }
+
+    #[test]
+    fn progress_bar_spans_split_fill_and_track() {
+        let theme = Theme::light();
+        let spans = progress_bar_spans(&theme, 50.0);
+        let fill = theme.style_for_bucket(color_bucket(50.0));
+        assert!(
+            spans.iter().any(|s| s.content.contains('█') && s.style == fill),
+            "{spans:?}"
+        );
+        assert!(
+            spans
+                .iter()
+                .any(|s| s.content.contains('░') && s.style == theme.bar_track),
+            "{spans:?}"
         );
     }
 

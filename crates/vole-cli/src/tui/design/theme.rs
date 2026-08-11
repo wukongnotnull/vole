@@ -24,6 +24,8 @@ pub struct Theme {
     pub danger: Style,
     #[allow(dead_code)] // kept for mole-parity accents; status cards use clean titles
     pub rule: Style,
+    /// Empty progress-bar track (`░` / `▯`) — separate from fill color for contrast.
+    pub bar_track: Style,
     pub label: Style,
     pub value: Style,
     pub normal: Style,
@@ -51,6 +53,7 @@ impl Theme {
                 .fg(Color::Rgb(0xFF, 0x5F, 0x5F))
                 .add_modifier(Modifier::BOLD),
             rule: Style::default().fg(Color::Rgb(0x40, 0x40, 0x40)),
+            bar_track: Style::default().fg(Color::Rgb(0x40, 0x40, 0x40)),
             label: Style::default().fg(Color::Rgb(0x73, 0x73, 0x73)),
             value: Style::default().fg(Color::White),
             normal: Style::default().fg(Color::White),
@@ -69,13 +72,14 @@ impl Theme {
             primary: Style::default()
                 .fg(Color::Rgb(0x5B, 0x2C, 0xB0))
                 .add_modifier(Modifier::BOLD),
-            subtle: Style::default().fg(Color::Rgb(0x5A, 0x5A, 0x5A)),
+            subtle: Style::default().fg(Color::Rgb(0x3D, 0x3D, 0x3D)),
             ok: Style::default().fg(Color::Rgb(0x1B, 0x7A, 0x3C)),
             warn: Style::default().fg(Color::Rgb(0xA0, 0x6E, 0x00)),
             danger: Style::default()
                 .fg(Color::Rgb(0xC4, 0x28, 0x28))
                 .add_modifier(Modifier::BOLD),
-            rule: Style::default().fg(Color::Rgb(0xB0, 0xB0, 0xB0)),
+            rule: Style::default().fg(Color::Rgb(0x8A, 0x8A, 0x8A)),
+            bar_track: Style::default().fg(Color::Rgb(0x8A, 0x8A, 0x8A)),
             label: Style::default().fg(Color::Rgb(0x4A, 0x4A, 0x4A)),
             value: Style::default().fg(Color::Rgb(0x1A, 0x1A, 0x1A)),
             normal: Style::default().fg(Color::Rgb(0x1A, 0x1A, 0x1A)),
@@ -233,6 +237,8 @@ mod tests {
         assert_ne!(light.value.fg, Some(Color::White));
         assert_ne!(light.normal.fg, Some(Color::White));
         assert_eq!(light.value.fg, Some(Color::Rgb(0x1A, 0x1A, 0x1A)));
+        assert_eq!(light.subtle.fg, Some(Color::Rgb(0x3D, 0x3D, 0x3D)));
+        assert_eq!(light.bar_track.fg, Some(Color::Rgb(0x8A, 0x8A, 0x8A)));
     }
 
     #[test]

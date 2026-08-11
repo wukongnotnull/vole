@@ -1,0 +1,39 @@
+---
+description: vole / vole-macos 发版前必须先询问用户并得到明确确认，禁止自动发版。
+alwaysApply: true
+---
+
+# 发版必须事先征询并获确认
+
+对本仓（vole）以及关联仓（vole-macos）：**是否发版、何时发版、发哪个版本**，均须事先询问用户，并在得到**明确肯定确认**后才能执行发版相关操作。
+
+本规则**优先于** `default-yes-when-asking`：发版场景不适用「默认同意 / 自动推进」。
+
+## 什么算发版（须先问）
+
+包括但不限于：
+
+- 创建 GitHub Release / 上传 release assets
+- 打并推送版本 tag（如 `v1.2.3`）
+- 发布到 Homebrew / 其他分发渠道
+- 修改并提交正式版本号以启动发版流程（crate / app / marketing version）
+- 触发或执行发版 workflow / 脚本（如 release.yml、打包上传）
+
+## 必须遵守
+
+1. **先问后做。** 即使判断「该发了」或 CI/合并已就绪，也只汇报建议，等待用户明确同意（如「发」「确认发版」「发布 vX.Y.Z」）。
+2. **禁止默认同意。** 不得因 `default-yes-when-asking` 或「继续推进」而自动发版。
+3. **两边仓库各自确认。** vole 与 vole-macos 发版分别征询；用户只确认其中一个时，不得顺带发另一个。
+4. **确认范围要具体。** 询问时应说明：仓库、建议版本号、主要变更摘要；未指明版本时先给出推荐版本再请确认。
+
+## 允许不经发版确认的操作
+
+- 日常 commit / push / 开 PR / 合并 PR（仍遵循其它规则）
+- 讨论「要不要发版」、准备 changelog、核对版本号草稿（不推 tag、不建 Release）
+
+## 示例
+
+```text
+❌ BAD：main 合并且 CI 绿 → 直接 gh release create / git push origin vX.Y.Z
+✅ GOOD：汇报「建议 vole 发 vX.Y.Z，主要变更：…。是否发版？」→ 等用户确认后再执行
+```

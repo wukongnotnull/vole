@@ -13,7 +13,8 @@ pub struct Theme {
     pub danger: Style,
     #[allow(dead_code)] // kept for mole-parity accents; status cards use clean titles
     pub rule: Style,
-    /// Empty progress-bar track (`░` / `▯`) — separate from fill color for contrast.
+    /// Legacy track style; status bars colorize the whole bar like mole.
+    #[allow(dead_code)]
     pub bar_track: Style,
     pub label: Style,
     pub value: Style,
@@ -28,7 +29,8 @@ impl Default for Theme {
 }
 
 impl Theme {
-    /// Mole-aligned palette (assumes a dark terminal background, same as Mole).
+    /// Mole-aligned accents; body text inherits the terminal default foreground
+    /// (readable on both light and dark terminal themes, same as Mole's unstyled values).
     pub fn universal() -> Self {
         Self {
             title: Style::default()
@@ -43,9 +45,10 @@ impl Theme {
                 .add_modifier(Modifier::BOLD),
             rule: Style::default().fg(Color::Rgb(0x40, 0x40, 0x40)),
             bar_track: Style::default().fg(Color::Rgb(0x40, 0x40, 0x40)),
-            label: Style::default().fg(Color::Rgb(0x73, 0x73, 0x73)),
-            value: Style::default().fg(Color::White),
-            normal: Style::default().fg(Color::White),
+            // Unstyled like mole `fmt.Sprintf` metric lines — inherit terminal fg.
+            label: Style::default(),
+            value: Style::default(),
+            normal: Style::default(),
             selected: Style::default()
                 .fg(Color::Rgb(0x00, 0xD7, 0xFF))
                 .add_modifier(Modifier::BOLD),
@@ -148,8 +151,9 @@ mod tests {
         assert_eq!(theme.danger.fg, Some(Color::Rgb(0xFF, 0x5F, 0x5F)));
         assert_eq!(theme.rule.fg, Some(Color::Rgb(0x40, 0x40, 0x40)));
         assert_eq!(theme.bar_track.fg, Some(Color::Rgb(0x40, 0x40, 0x40)));
-        assert_eq!(theme.value.fg, Some(Color::White));
-        assert_eq!(theme.normal.fg, Some(Color::White));
+        assert_eq!(theme.label.fg, None);
+        assert_eq!(theme.value.fg, None);
+        assert_eq!(theme.normal.fg, None);
     }
 
     #[test]

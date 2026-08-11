@@ -39,7 +39,8 @@ mod tests {
     #[test]
     fn resolve_returns_mole_palette() {
         let ds = DesignSystem::resolve();
-        assert_eq!(ds.theme.value.fg, Some(ratatui::style::Color::White));
+        assert_eq!(ds.theme.value.fg, None);
+        assert_eq!(ds.theme.label.fg, None);
         assert_eq!(
             ds.theme.primary.fg,
             Some(ratatui::style::Color::Rgb(0xBD, 0x93, 0xF9))

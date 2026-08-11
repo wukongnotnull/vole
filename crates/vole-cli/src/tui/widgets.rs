@@ -44,31 +44,31 @@ fn progress_bar_counts(percent: f64, width: usize) -> (usize, usize) {
     (filled, width - filled)
 }
 
-/// Split fill/track colors so empty `░` stays visible on light backgrounds.
+/// mole `colorizePercent`: paint the whole bar (`█`+`░`) with one bucket color.
 pub fn progress_bar_spans(theme: &Theme, percent: f64) -> Vec<Span<'static>> {
     let (filled, empty) = progress_bar_counts(percent, PROGRESS_BAR_WIDTH);
-    let fill = theme.style_for_bucket(color_bucket(percent));
+    let style = theme.style_for_bucket(color_bucket(percent));
     let mut spans = vec![Span::raw(" ")];
     if filled > 0 {
-        spans.push(Span::styled("█".repeat(filled), fill));
+        spans.push(Span::styled("█".repeat(filled), style));
     }
     if empty > 0 {
-        spans.push(Span::styled("░".repeat(empty), theme.bar_track));
+        spans.push(Span::styled("░".repeat(empty), style));
     }
     spans
 }
 
-/// Narrow process bar with split fill/track colors.
+/// Narrow process bar; same whole-bar colorize as mole.
 pub fn mini_bar_spans(theme: &Theme, percent: f64) -> Vec<Span<'static>> {
     let filled = ((percent / 20.0) as usize).clamp(0, 5);
     let empty = 5 - filled;
-    let fill = theme.style_for_bucket(color_bucket(percent));
+    let style = theme.style_for_bucket(color_bucket(percent));
     let mut spans = vec![Span::raw(" ")];
     if filled > 0 {
-        spans.push(Span::styled("▮".repeat(filled), fill));
+        spans.push(Span::styled("▮".repeat(filled), style));
     }
     if empty > 0 {
-        spans.push(Span::styled("▯".repeat(empty), theme.bar_track));
+        spans.push(Span::styled("▯".repeat(empty), style));
     }
     spans
 }
@@ -431,20 +431,20 @@ mod tests {
     }
 
     #[test]
-    fn progress_bar_spans_split_fill_and_track() {
+    fn progress_bar_spans_colorize_whole_bar_like_mole() {
         let theme = Theme::universal();
         let spans = progress_bar_spans(&theme, 50.0);
-        let fill = theme.style_for_bucket(color_bucket(50.0));
+        let style = theme.style_for_bucket(color_bucket(50.0));
         assert!(
             spans
                 .iter()
-                .any(|s| s.content.contains('█') && s.style == fill),
+                .any(|s| s.content.contains('█') && s.style == style),
             "{spans:?}"
         );
         assert!(
             spans
                 .iter()
-                .any(|s| s.content.contains('░') && s.style == theme.bar_track),
+                .any(|s| s.content.contains('░') && s.style == style),
             "{spans:?}"
         );
     }

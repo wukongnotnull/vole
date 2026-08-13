@@ -61,7 +61,7 @@
 
 現在の公開版：**[v2.16.0](https://github.com/wukongnotnull/vole/releases/tag/v2.16.0)**（Developer ID 署名＋Apple 公証）。Apple Silicon / Intel 両対応。
 
-### AI にプロンプトを送ってインストール
+### 方法 1：AI にプロンプトを送ってインストール
 
 下のブロックを Cursor、Claude Code、Codex、ChatGPT などの AI アシスタントに貼り付けてください。代わりにインストールしてくれます。
 
@@ -86,7 +86,16 @@ macOS 12 以上が必要です。インストールだけ行い、clean / uninst
 
 短く言うなら: `https://github.com/wukongnotnull/vole の公式手順で Vole をインストールして`
 
-### 方法 1：ダウンロード（推奨）
+### 方法 2：Homebrew
+
+```bash
+brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
+brew install vole
+```
+
+その後 `vole` を実行。brew が失敗したり版が合わない場合は、下のダウンロードを使ってください。
+
+### 方法 3：ダウンロード
 
 1. [最新 Release](https://github.com/wukongnotnull/vole/releases/latest) を開く
 2. チップ用の圧縮ファイルを入手：
@@ -109,15 +118,6 @@ cp -R vole-2.16.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 ```
-
-### 方法 2：Homebrew
-
-```bash
-brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
-brew install vole
-```
-
-その後 `vole` を実行。brew が失敗したり版が合わない場合は、上のダウンロードを使ってください。
 
 ---
 

@@ -61,7 +61,7 @@ Requires **macOS 12+**.
 
 Current release: **[v2.16.0](https://github.com/wukongnotnull/vole/releases/tag/v2.16.0)** (Developer ID signed and notarized). Builds for Apple Silicon and Intel.
 
-### Install with an AI prompt
+### Option 1: Install with an AI prompt
 
 Paste the block below into Cursor, Claude Code, Codex, ChatGPT, or any coding assistant. It will install Vole for you.
 
@@ -86,7 +86,16 @@ Then run `vole --version`, and tell me the install path and version.
 
 Or just say: `Install Vole from https://github.com/wukongnotnull/vole`
 
-### Option 1: Download (recommended)
+### Option 2: Homebrew
+
+```bash
+brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
+brew install vole
+```
+
+Then run `vole`. If brew fails or the version looks wrong, use the download option below.
+
+### Option 3: Download
 
 1. Open the [latest Release](https://github.com/wukongnotnull/vole/releases/latest)
 2. Download the archive for your chip:
@@ -109,15 +118,6 @@ If Terminal says `vole: command not found`, add this to `~/.zshrc`, then run `so
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 ```
-
-### Option 2: Homebrew
-
-```bash
-brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
-brew install vole
-```
-
-Then run `vole`. If brew fails or the version looks wrong, use the download option above.
 
 ---
 

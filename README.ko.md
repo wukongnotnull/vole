@@ -61,7 +61,7 @@
 
 현재 공개 버전: **[v2.16.0](https://github.com/wukongnotnull/vole/releases/tag/v2.16.0)** (Developer ID 서명 및 Apple 공증). Apple Silicon·Intel 모두 제공.
 
-### AI 프롬프트로 설치
+### 방법 1: AI 프롬프트로 설치
 
 아래 블록을 Cursor, Claude Code, Codex, ChatGPT 등 AI 어시스턴트에 붙여 넣으면 대신 설치해 줍니다.
 
@@ -86,7 +86,16 @@ macOS 12 이상이 필요합니다. 설치만 하고, clean / uninstall / optimi
 
 짧게는: `https://github.com/wukongnotnull/vole 공식 안내대로 Vole을 설치해 줘`
 
-### 방법 1: 다운로드 (권장)
+### 방법 2: Homebrew
+
+```bash
+brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
+brew install vole
+```
+
+설치 후 `vole` 실행. brew가 실패하거나 버전이 맞지 않으면 아래 다운로드를 사용하세요.
+
+### 방법 3: 다운로드
 
 1. [최신 Release](https://github.com/wukongnotnull/vole/releases/latest) 열기
 2. 칩에 맞는 압축 파일 받기:
@@ -109,15 +118,6 @@ cp -R vole-2.16.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 ```
-
-### 방법 2: Homebrew
-
-```bash
-brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
-brew install vole
-```
-
-설치 후 `vole` 실행. brew가 실패하거나 버전이 맞지 않으면 위 다운로드를 사용하세요.
 
 ---
 

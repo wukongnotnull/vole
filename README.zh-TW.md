@@ -61,7 +61,7 @@
 
 目前已發布版本：**[v2.16.0](https://github.com/wukongnotnull/vole/releases/tag/v2.16.0)**（Developer ID 簽名並經 Apple 公證）。Apple Silicon 與 Intel 均有對應安裝包。
 
-### 發給 AI 安裝
+### 方式一：發給 AI 安裝
 
 把下面這段提示詞複製發給 Cursor、Claude Code、Codex、ChatGPT 等 AI 助手，它會幫你完成安裝。
 
@@ -86,7 +86,16 @@
 
 也可以直接說：`幫我按 https://github.com/wukongnotnull/vole 的官方說明安裝 Vole`
 
-### 方式一：下載安裝包（推薦）
+### 方式二：Homebrew
+
+```bash
+brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
+brew install vole
+```
+
+裝好後直接執行 `vole`。若 brew 安裝失敗或版本對不上，請改用下方「下載安裝包」。
+
+### 方式三：下載安裝包
 
 1. 開啟 [最新 Release](https://github.com/wukongnotnull/vole/releases/latest)
 2. 下載對應晶片的壓縮包：
@@ -109,15 +118,6 @@ cp -R vole-2.16.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 ```
-
-### 方式二：Homebrew
-
-```bash
-brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
-brew install vole
-```
-
-裝好後直接執行 `vole`。若 brew 安裝失敗或版本對不上，請改用上方「下載安裝包」。
 
 ---
 

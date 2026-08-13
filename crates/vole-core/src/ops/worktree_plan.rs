@@ -530,10 +530,11 @@ fn collect_blockers(git: &dyn GitProbe, wt: &Path, locked: bool) -> Vec<String> 
                 .file_name()
                 .and_then(|n| n.to_str())
                 .unwrap_or("");
-            if !name.is_empty() && !super::purge_plan::PURGE_TARGETS.contains(&name) {
-                if !blockers.iter().any(|b| b == "ignored-keep") {
-                    blockers.push("ignored-keep".into());
-                }
+            if !name.is_empty()
+                && !super::purge_plan::PURGE_TARGETS.contains(&name)
+                && !blockers.iter().any(|b| b == "ignored-keep")
+            {
+                blockers.push("ignored-keep".into());
             }
         }
     }

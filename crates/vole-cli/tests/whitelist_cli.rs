@@ -26,7 +26,7 @@ fn whitelist_help_mentions_paginated_or_flags() {
 fn whitelist_list_add_remove_non_tty() {
     let dir = tempfile::tempdir().unwrap();
     let home = dir.path().join("home");
-    fs::create_dir_all(home.join(".config/mole")).unwrap();
+    fs::create_dir_all(home.join(".config/vole")).unwrap();
 
     let add = vole()
         .env("HOME", &home)

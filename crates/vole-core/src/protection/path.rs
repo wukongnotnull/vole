@@ -282,7 +282,7 @@ fn matches_critical_user_paths(path: &str) -> bool {
     {
         return true;
     }
-    if path.contains("/Library/Logs/mole") {
+    if path.contains("/Library/Logs/mole") || path.contains("/Library/Logs/vole") {
         return true;
     }
     if path.contains("/Library/Application Support/Codex")
@@ -687,6 +687,21 @@ mod tests {
             path,
             &catalog,
             ProtectionMode::Uninstall
+        ));
+    }
+
+    #[test]
+    fn vole_and_mole_operation_logs_are_protected() {
+        let c = cat();
+        assert!(should_protect_path(
+            "/Users/demo/Library/Logs/vole/operations.log",
+            &c,
+            ProtectionMode::Cleanup
+        ));
+        assert!(should_protect_path(
+            "/Users/demo/Library/Logs/mole/operations.log",
+            &c,
+            ProtectionMode::Cleanup
         ));
     }
 }

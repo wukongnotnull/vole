@@ -203,7 +203,7 @@ fn coverage_note_for_long_tail(only_task: Option<&str>) -> Option<String> {
         return None;
     }
     Some(format!(
-        "Skipped sudo/system long-tail optimize tasks (use Mole if needed): {}",
+        "Skipped sudo/system long-tail optimize tasks: {}",
         skipped.join("; ")
     ))
 }

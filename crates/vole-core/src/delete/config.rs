@@ -40,11 +40,26 @@ pub fn test_trash_dir() -> Option<PathBuf> {
 }
 
 pub fn deletion_log_path() -> PathBuf {
-    std::env::var_os("MOLE_DELETE_LOG")
-        .map(PathBuf::from)
-        .or_else(|| {
-            std::env::var_os("HOME")
-                .map(|h| PathBuf::from(h).join("Library/Logs/mole/deletions.log"))
-        })
-        .unwrap_or_else(|| PathBuf::from("Library/Logs/mole/deletions.log"))
+    crate::user_paths::deletions_log_write_path()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_env;
+
+    #[test]
+    fn deletion_log_write_path_defaults_to_vole() {
+        let _guard = test_env::lock();
+        std::env::remove_var("VOLE_DELETE_LOG");
+        std::env::remove_var("MOLE_DELETE_LOG");
+        std::env::set_var("HOME", "/Users/demo");
+        let path = deletion_log_path();
+        assert!(
+            path.ends_with("Library/Logs/vole/deletions.log"),
+            "{}",
+            path.display()
+        );
+        std::env::remove_var("HOME");
+    }
 }

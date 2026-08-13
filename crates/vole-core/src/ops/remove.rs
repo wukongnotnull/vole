@@ -115,10 +115,12 @@ pub fn plan_remove(opts: &RemoveOptions) -> RemovePlan {
     }
 
     if opts.purge_oplog {
-        for name in ["operations.log", "deletions.log"] {
-            let p = opts.home.join("Library/Logs/mole").join(name);
-            if p.is_file() {
-                push_unique_path(&mut items, &mut seen, RemoveItemKind::Oplog, p);
+        for dir in ["Library/Logs/vole", "Library/Logs/mole"] {
+            for name in ["operations.log", "deletions.log"] {
+                let p = opts.home.join(dir).join(name);
+                if p.is_file() {
+                    push_unique_path(&mut items, &mut seen, RemoveItemKind::Oplog, p);
+                }
             }
         }
     }

@@ -74,6 +74,20 @@ impl HistoryReport {
         }
     }
 
+    pub(crate) fn from_parts(
+        operations_log: PathBuf,
+        deletions_log: PathBuf,
+        sessions: Vec<HistorySession>,
+        deletions: Vec<HistoryDeletion>,
+    ) -> Self {
+        Self {
+            operations_log,
+            deletions_log,
+            sessions,
+            deletions,
+        }
+    }
+
     pub fn to_json(&self, limit: u32) -> HistoryJson {
         let limit = normalize_limit(limit);
         HistoryJson {

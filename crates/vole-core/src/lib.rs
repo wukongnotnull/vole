@@ -33,6 +33,7 @@ pub mod sysorphan;
 pub mod system_leftovers;
 pub mod tmbackup;
 pub mod units;
+pub mod user_paths;
 pub mod whitelist;
 
 #[cfg(test)]

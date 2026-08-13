@@ -82,7 +82,12 @@ pub(crate) fn gate_interactive(stdin_tty: bool, stdout_tty: bool, opts: &Optimiz
         && !opts.is_whitelist_command()
 }
 
+pub(crate) fn optimize_scan_spinner_message() -> &'static str {
+    "Scanning optimize tasks..."
+}
+
 fn run_interactive(opts: &OptimizeOptions) -> io::Result<()> {
+    let spinner = crate::tty_spinner::TtySpinner::start(optimize_scan_spinner_message());
     let home = env::var_os("HOME")
         .map(PathBuf::from)
         .ok_or_else(|| io::Error::other("HOME not set"))?;
@@ -103,10 +108,12 @@ fn run_interactive(opts: &OptimizeOptions) -> io::Result<()> {
         .map_err(|e| io::Error::other(e.to_string()))?;
 
     if plan.entries.is_empty() {
+        spinner.stop();
         eprintln!("Nothing to optimize.");
         return Ok(());
     }
 
+    spinner.stop();
     print_human_plan(&plan);
 
     eprint!("Proceed with optimize? [y/N] ");
@@ -469,5 +476,13 @@ mod tests {
                 ..bare_opts()
             }
         ));
+    }
+
+    #[test]
+    fn optimize_scan_spinner_message_matches_plan_copy() {
+        assert_eq!(
+            optimize_scan_spinner_message(),
+            "Scanning optimize tasks..."
+        );
     }
 }

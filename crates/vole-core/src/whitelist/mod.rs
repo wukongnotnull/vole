@@ -10,18 +10,15 @@ use std::path::{Path, PathBuf};
 
 use crate::optimize::optimize_catalog;
 
-const HEADER: &str = "# Mole Whitelist - Protected paths won't be deleted\n# Default protections: Playwright browsers, HuggingFace models, Maven repo, Ollama models, Surge Mac, R renv, Finder metadata\n# Add one pattern per line to keep items safe.";
+const HEADER: &str = "# Vole Whitelist - Protected paths won't be deleted\n# Default protections: Playwright browsers, HuggingFace models, Maven repo, Ollama models, Surge Mac, R renv, Finder metadata\n# Add one pattern per line to keep items safe.";
 
 const OPTIMIZE_HEADER: &str =
-    "# Mole Optimize Whitelist - Listed tasks are skipped\n# One task id per line\n";
+    "# Vole Optimize Whitelist - Listed tasks are skipped\n# One task id per line\n";
 
 const FINDER_METADATA_SENTINEL: &str = "FINDER_METADATA";
 
 fn config_path() -> PathBuf {
-    std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .map(|h| h.join(".config/mole/whitelist"))
-        .unwrap_or_else(|| PathBuf::from(".config/mole/whitelist"))
+    crate::user_paths::whitelist_write_path()
 }
 
 fn home_path() -> PathBuf {
@@ -73,7 +70,7 @@ pub fn to_portable_pattern(pattern: &str, home: &Path) -> String {
 }
 
 pub fn clean_config_exists() -> bool {
-    config_path().exists()
+    crate::user_paths::whitelist_read_path().exists()
 }
 
 pub fn clean_config_display_path() -> String {
@@ -181,7 +178,7 @@ pub fn merge_whitelist_selection(
 }
 
 pub fn load_clean() -> io::Result<Vec<String>> {
-    let path = config_path();
+    let path = crate::user_paths::whitelist_read_path();
     if !path.exists() {
         return Ok(vec![]);
     }
@@ -266,10 +263,7 @@ pub fn is_match(path: &Path, patterns: &[String]) -> bool {
 }
 
 fn optimize_config_path() -> PathBuf {
-    std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .map(|h| h.join(".config/mole/whitelist_optimize"))
-        .unwrap_or_else(|| PathBuf::from(".config/mole/whitelist_optimize"))
+    crate::user_paths::optimize_whitelist_write_path()
 }
 
 pub fn optimize_config_display_path() -> String {
@@ -279,7 +273,7 @@ pub fn optimize_config_display_path() -> String {
 }
 
 pub fn load_optimize() -> io::Result<Vec<String>> {
-    let path = optimize_config_path();
+    let path = crate::user_paths::optimize_whitelist_read_path();
     if !path.exists() {
         return Ok(vec![]);
     }
@@ -518,6 +512,85 @@ mod tests {
     }
 
     #[test]
+    fn clean_config_display_path_uses_vole() {
+        let _guard = test_env::lock();
+        std::env::set_var("HOME", "/Users/demo");
+        let display = clean_config_display_path();
+        assert!(
+            display.contains(".config/vole/whitelist"),
+            "expected vole whitelist path, got {display}"
+        );
+        assert!(
+            !display.to_ascii_lowercase().contains("mole"),
+            "display path must not mention mole: {display}"
+        );
+        std::env::remove_var("HOME");
+    }
+
+    #[test]
+    fn load_clean_falls_back_to_mole_whitelist() {
+        let _guard = test_env::lock();
+        let root = std::env::temp_dir().join(format!("vole-wl-fb-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let home = root.join("h");
+        std::fs::create_dir_all(home.join(".config/mole")).unwrap();
+        std::env::set_var("HOME", &home);
+        std::fs::write(
+            home.join(".config/mole/whitelist"),
+            "# header\n~/Library/Caches/from-mole/*\n",
+        )
+        .unwrap();
+        let loaded = load_clean().unwrap();
+        assert_eq!(loaded, vec!["~/Library/Caches/from-mole/*".to_string()]);
+        assert!(clean_config_exists());
+        std::env::remove_var("HOME");
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn save_clean_writes_vole_whitelist_not_mole() {
+        let _guard = test_env::lock();
+        let root = std::env::temp_dir().join(format!("vole-wl-sv-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let home = root.join("h");
+        std::fs::create_dir_all(&home).unwrap();
+        std::env::set_var("HOME", &home);
+        save_clean(&["~/keep-me/*".into()]).unwrap();
+        assert!(home.join(".config/vole/whitelist").is_file());
+        assert!(!home.join(".config/mole/whitelist").exists());
+        std::env::remove_var("HOME");
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn load_clean_prefers_vole_over_mole() {
+        let _guard = test_env::lock();
+        let root = std::env::temp_dir().join(format!("vole-wl-pref-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let home = root.join("h");
+        std::fs::create_dir_all(home.join(".config/mole")).unwrap();
+        std::fs::create_dir_all(home.join(".config/vole")).unwrap();
+        std::env::set_var("HOME", &home);
+        std::fs::write(home.join(".config/mole/whitelist"), "~/from-mole/*\n").unwrap();
+        std::fs::write(home.join(".config/vole/whitelist"), "~/from-vole/*\n").unwrap();
+        assert_eq!(load_clean().unwrap(), vec!["~/from-vole/*".to_string()]);
+        std::env::remove_var("HOME");
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn whitelist_file_headers_omit_mole() {
+        assert!(
+            !HEADER.to_ascii_lowercase().contains("mole"),
+            "clean whitelist header must not mention Mole: {HEADER}"
+        );
+        assert!(
+            !OPTIMIZE_HEADER.to_ascii_lowercase().contains("mole"),
+            "optimize whitelist header must not mention Mole: {OPTIMIZE_HEADER}"
+        );
+    }
+
+    #[test]
     fn optimize_whitelist_roundtrip_and_menu() {
         let _guard = test_env::lock();
         let home = std::env::temp_dir().join(format!("vole-owl-{}", std::process::id()));
@@ -544,5 +617,39 @@ mod tests {
 
         std::env::remove_var("HOME");
         let _ = std::fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn optimize_config_display_path_uses_vole() {
+        let _guard = test_env::lock();
+        std::env::set_var("HOME", "/Users/demo");
+        let display = optimize_config_display_path();
+        assert!(
+            display.contains(".config/vole/whitelist_optimize"),
+            "expected vole optimize whitelist path, got {display}"
+        );
+        assert!(
+            !display.to_ascii_lowercase().contains("mole"),
+            "display path must not mention mole: {display}"
+        );
+        std::env::remove_var("HOME");
+    }
+
+    #[test]
+    fn load_optimize_falls_back_to_mole_file() {
+        let _guard = test_env::lock();
+        let root = std::env::temp_dir().join(format!("vole-owl-fb-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let home = root.join("h");
+        std::fs::create_dir_all(home.join(".config/mole")).unwrap();
+        std::env::set_var("HOME", &home);
+        std::fs::write(
+            home.join(".config/mole/whitelist_optimize"),
+            "dock_refresh\n",
+        )
+        .unwrap();
+        assert_eq!(load_optimize().unwrap(), vec!["dock_refresh".to_string()]);
+        std::env::remove_var("HOME");
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

@@ -200,7 +200,7 @@ pub fn is_project_root_for_hints(dir: &Path) -> bool {
     PROJECT_INDICATORS.iter().any(|ind| dir.join(ind).exists())
 }
 
-fn resolve_search_roots(home: &Path) -> Vec<PathBuf> {
+pub(crate) fn resolve_search_roots(home: &Path) -> Vec<PathBuf> {
     let mut roots = Vec::new();
     let mut seen = BTreeSet::new();
 

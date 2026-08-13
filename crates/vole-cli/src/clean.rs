@@ -86,7 +86,12 @@ pub(crate) fn gate_interactive(stdin_tty: bool, stdout_tty: bool, opts: &CleanOp
         && !opts.is_whitelist_command()
 }
 
+pub(crate) fn clean_scan_spinner_message() -> &'static str {
+    "Scanning caches..."
+}
+
 fn run_interactive(opts: &CleanOptions) -> io::Result<()> {
+    let spinner = crate::tty_spinner::TtySpinner::start(clean_scan_spinner_message());
     let rules = load_rules_from_dir(default_rules_dir()).map_err(map_load_error)?;
     let enabled = enabled_rule_count(&rules);
     let whitelist_patterns = whitelist::load_clean()?;
@@ -108,6 +113,7 @@ fn run_interactive(opts: &CleanOptions) -> io::Result<()> {
     drop(orch);
 
     if plan.entries.is_empty() {
+        spinner.stop();
         eprintln!("Nothing to clean.");
         return Ok(());
     }
@@ -117,6 +123,7 @@ fn run_interactive(opts: &CleanOptions) -> io::Result<()> {
     let mut proto = plan_to_proto(&plan).map_err(map_proto_error)?;
     proto.coverage_note = Some(note);
     let hints = collect_plan_hints();
+    spinner.stop();
     print_human_plan(&plan, &base_note);
     print_human_hints(&hints);
 
@@ -667,5 +674,10 @@ mod tests {
                 ..bare_opts()
             }
         ));
+    }
+
+    #[test]
+    fn clean_scan_spinner_message_matches_mole() {
+        assert_eq!(clean_scan_spinner_message(), "Scanning caches...");
     }
 }

@@ -83,5 +83,19 @@ fn plan_json_lists_extra_worktree_and_apply_trashes_it() {
         "stderr={}",
         String::from_utf8_lossy(&apply.stderr)
     );
-    assert!(!wt.exists() || trash.read_dir().unwrap().next().is_some());
+    assert!(repo.join("README").exists(), "primary checkout must remain");
+    assert!(!wt.exists(), "worktree checkout should be gone");
+    let list = Command::new("git")
+        .args(["worktree", "list", "--porcelain"])
+        .current_dir(&repo)
+        .output()
+        .unwrap();
+    assert!(list.status.success());
+    let listed = String::from_utf8_lossy(&list.stdout);
+    let wt_s = wt.canonicalize().unwrap_or(wt.clone());
+    assert!(
+        !listed.contains(wt_s.to_string_lossy().as_ref())
+            && !listed.contains(wt.to_string_lossy().as_ref()),
+        "worktree still registered: {listed}"
+    );
 }

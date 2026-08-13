@@ -292,13 +292,19 @@ pub fn build_worktree_plan(
         None => super::purge_plan::resolve_search_roots(opts.home),
     };
     let mut timed_out_repos = 0u64;
-    if let Ok(top) = opts.git.rev_parse_toplevel(opts.cwd) {
-        if !roots.iter().any(|r| r == &top) {
-            roots.push(top);
+    let cwd_top = opts.git.rev_parse_toplevel(opts.cwd).ok();
+    if let Some(top) = cwd_top.as_ref() {
+        if !roots.iter().any(|r| same_path(r, top)) {
+            roots.push(top.clone());
         }
     }
 
-    let repos = discover_git_repos(&roots);
+    let mut repos = discover_git_repos(&roots);
+    if let Some(top) = cwd_top {
+        if !repos.iter().any(|r| same_path(r, &top)) {
+            repos.push(top);
+        }
+    }
     let cwd_canon = opts
         .cwd
         .canonicalize()
@@ -358,9 +364,6 @@ pub fn build_worktree_plan(
             continue;
         }
         let repo = repo_from_gitfile(&child).unwrap_or_else(|| child.clone());
-        if is_excluded(&canon, &cwd_canon, &repo) {
-            continue;
-        }
         records.push(make_record(
             opts,
             protection,
@@ -408,13 +411,38 @@ fn is_excluded(canon: &Path, cwd: &Path, primary: &Path) -> bool {
     canon == cwd || cwd.starts_with(canon)
 }
 
+fn same_path(a: &Path, b: &Path) -> bool {
+    let a = a.canonicalize().unwrap_or_else(|_| a.to_path_buf());
+    let b = b.canonicalize().unwrap_or_else(|_| b.to_path_buf());
+    a == b
+}
+
+fn looks_like_git_checkout(path: &Path) -> bool {
+    let git = path.join(".git");
+    git.is_dir() || git.is_file()
+}
+
 fn discover_git_repos(roots: &[PathBuf]) -> Vec<PathBuf> {
     let mut repos = BTreeSet::new();
     for root in roots {
         if !root.is_dir() {
             continue;
         }
-        for ent in jwalk::WalkDir::new(root).max_depth(6).skip_hidden(false) {
+        for ent in jwalk::WalkDir::new(root)
+            .max_depth(6)
+            .skip_hidden(false)
+            .process_read_dir(|_, path, _, children| {
+                if has_purge_component(path) {
+                    children.clear();
+                    return;
+                }
+                children.retain(|child| match child {
+                    Ok(e) => !super::purge_plan::PURGE_TARGETS
+                        .contains(&e.file_name.to_str().unwrap_or("")),
+                    Err(_) => true,
+                });
+            })
+        {
             let Ok(ent) = ent else {
                 continue;
             };
@@ -422,7 +450,7 @@ fn discover_git_repos(roots: &[PathBuf]) -> Vec<PathBuf> {
             if has_purge_component(&path) {
                 continue;
             }
-            if path.join(".git").is_dir() {
+            if looks_like_git_checkout(&path) {
                 repos.insert(path);
             }
         }
@@ -521,27 +549,30 @@ fn collect_blockers(git: &dyn GitProbe, wt: &Path, locked: bool) -> Vec<String> 
         Err(_) => blockers.push("status-unknown".into()),
         Ok(_) => {}
     }
-    if let Ok(s) = git.status_porcelain(wt, true) {
-        for line in s.lines() {
-            let Some(rest) = line.strip_prefix("!! ") else {
-                continue;
-            };
-            let name = Path::new(rest.trim_end_matches('/'))
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("");
-            if !name.is_empty()
-                && !super::purge_plan::PURGE_TARGETS.contains(&name)
-                && !blockers.iter().any(|b| b == "ignored-keep")
-            {
-                blockers.push("ignored-keep".into());
+    match git.status_porcelain(wt, true) {
+        Ok(s) => {
+            for line in s.lines() {
+                let Some(rest) = line.strip_prefix("!! ") else {
+                    continue;
+                };
+                let name = Path::new(rest.trim_end_matches('/'))
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("");
+                if !name.is_empty()
+                    && !super::purge_plan::PURGE_TARGETS.contains(&name)
+                    && !blockers.iter().any(|b| b == "ignored-keep")
+                {
+                    blockers.push("ignored-keep".into());
+                }
             }
         }
+        Err(_) => push_status_unknown(&mut blockers),
     }
-    if let Ok(s) = git.log_unpushed(wt) {
-        if !s.trim().is_empty() {
-            blockers.push("unpushed".into());
-        }
+    match git.log_unpushed(wt) {
+        Ok(s) if !s.trim().is_empty() => blockers.push("unpushed".into()),
+        Err(_) => push_status_unknown(&mut blockers),
+        Ok(_) => {}
     }
     if locked {
         blockers.push("locked".into());
@@ -549,9 +580,19 @@ fn collect_blockers(git: &dyn GitProbe, wt: &Path, locked: bool) -> Vec<String> 
     blockers
 }
 
+fn push_status_unknown(blockers: &mut Vec<String>) {
+    if !blockers.iter().any(|b| b == "status-unknown") {
+        blockers.push("status-unknown".into());
+    }
+}
+
 fn dir_size(path: &Path) -> u64 {
+    let deadline = Instant::now() + MEDIUM_PROBE;
     let mut total = 0u64;
     for ent in jwalk::WalkDir::new(path).max_depth(4).skip_hidden(false) {
+        if Instant::now() >= deadline {
+            break;
+        }
         let Ok(ent) = ent else {
             continue;
         };
@@ -951,6 +992,104 @@ prunable gitdir gone
                 .filter(|b| *b == "ignored-keep")
                 .count(),
             1
+        );
+    }
+
+    #[test]
+    fn cwd_gitfile_worktree_lists_siblings_when_primary_outside_search_roots() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path();
+        let repo = home.join("outside/app");
+        fs::create_dir_all(repo.join(".git")).unwrap();
+        let extra = home.join("Projects/wt");
+        fs::create_dir_all(&extra).unwrap();
+        fs::write(extra.join(".git"), b"gitdir: /x/worktrees/wt\n").unwrap();
+        let other = home.join("tmp/old");
+        fs::create_dir_all(&other).unwrap();
+        fs::write(other.join(".git"), b"gitdir: /x/worktrees/old\n").unwrap();
+        fs::write(other.join("README"), b"x").unwrap();
+        let porcelain = format!(
+            "worktree {}\nHEAD a\nbranch refs/heads/main\n\nworktree {}\nHEAD b\ndetached\n\nworktree {}\nHEAD c\ndetached\n",
+            repo.display(),
+            extra.display(),
+            other.display()
+        );
+        let git = FakeGit {
+            lists: std::collections::HashMap::from([(extra.clone(), porcelain)]),
+            toplevel: extra.clone(),
+            statuses: std::collections::HashMap::new(),
+            ignored: std::collections::HashMap::new(),
+            unpushed: std::collections::HashMap::new(),
+            ages: std::collections::HashMap::from([(other.clone(), 10)]),
+        };
+        let empty: [PathBuf; 0] = [];
+        let plan = build_worktree_plan(
+            &AppProtection::new(),
+            &WorktreePlanOptions {
+                home,
+                cwd: &extra,
+                ttl_secs: 900,
+                search_roots: Some(&empty),
+                now: SystemTime::now(),
+                git: &git,
+            },
+        )
+        .unwrap();
+        let other_canon = other.canonicalize().unwrap();
+        let repo_canon = repo.canonicalize().unwrap();
+        let cwd_canon = extra.canonicalize().unwrap();
+        assert!(plan.entries.iter().all(|e| e.path != repo_canon));
+        assert!(plan.entries.iter().all(|e| e.path != cwd_canon));
+        assert!(
+            plan.entries
+                .iter()
+                .any(|e| e.path == other_canon && e.rule_id == "worktree:linked"),
+            "entries={:?}",
+            plan.entries
+                .iter()
+                .map(|e| (&e.path, &e.rule_id))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn independent_clone_in_agent_container_is_orphan_dir_not_hidden() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path();
+        let clone = home.join(".codex/worktrees/solo");
+        fs::create_dir_all(clone.join(".git")).unwrap();
+        fs::write(clone.join("README"), b"x").unwrap();
+        let git = FakeGit {
+            lists: std::collections::HashMap::new(),
+            toplevel: home.to_path_buf(),
+            statuses: std::collections::HashMap::new(),
+            ignored: std::collections::HashMap::new(),
+            unpushed: std::collections::HashMap::new(),
+            ages: std::collections::HashMap::from([(clone.clone(), 10)]),
+        };
+        let empty: [PathBuf; 0] = [];
+        let plan = build_worktree_plan(
+            &AppProtection::new(),
+            &WorktreePlanOptions {
+                home,
+                cwd: home,
+                ttl_secs: 900,
+                search_roots: Some(&empty),
+                now: SystemTime::now(),
+                git: &git,
+            },
+        )
+        .unwrap();
+        let clone_canon = clone.canonicalize().unwrap();
+        assert!(
+            plan.entries
+                .iter()
+                .any(|e| e.path == clone_canon && e.rule_id == "worktree:orphan-dir"),
+            "entries={:?}",
+            plan.entries
+                .iter()
+                .map(|e| (&e.path, &e.rule_id))
+                .collect::<Vec<_>>()
         );
     }
 }

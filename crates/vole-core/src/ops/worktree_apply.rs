@@ -135,7 +135,7 @@ pub fn apply_worktree_proto_plan(
             .path
             .canonicalize()
             .unwrap_or_else(|_| entry.path.clone());
-        if is_hard_excluded(&canon, &cwd, &repo) {
+        if is_hard_excluded(&canon, &cwd, &repo, &entry.rule_id) {
             skipped += 1;
             skip_tracker.record(SkipReason::Whitelisted, &entry.rule_id);
             continue;
@@ -180,7 +180,14 @@ pub fn apply_worktree_proto_plan(
             ctx.oplog,
         ) {
             Ok(outcome) => {
-                let mut pruned = ctx.git.prune(&repo);
+                let should_prune = entry.rule_id != "worktree:orphan-dir"
+                    || (canon != repo.canonicalize().unwrap_or_else(|_| repo.clone())
+                        && repo.exists());
+                let mut pruned = if should_prune {
+                    ctx.git.prune(&repo)
+                } else {
+                    Ok(())
+                };
                 if pruned.is_err() && has_locked_blocker(entry) {
                     let _ = ctx.git.unlock(&repo, &entry.path);
                     pruned = ctx.git.prune(&repo);
@@ -237,13 +244,33 @@ fn is_worktree_rule(rule_id: &str) -> bool {
     )
 }
 
-fn is_hard_excluded(canon: &Path, cwd: &Path, repo: &Path) -> bool {
+fn is_hard_excluded(canon: &Path, cwd: &Path, repo: &Path, rule_id: &str) -> bool {
+    if canon == cwd || cwd.starts_with(canon) {
+        return true;
+    }
+    if rule_id == "worktree:orphan-dir" {
+        return false;
+    }
     let repo_c = repo.canonicalize().unwrap_or_else(|_| repo.to_path_buf());
-    canon == repo_c || canon == cwd || cwd.starts_with(canon)
+    canon == repo_c
 }
 
 fn has_locked_blocker(entry: &ProtoPlanEntry) -> bool {
-    entry.blockers.iter().any(|b| b == "locked") || entry.label.contains(" locked ")
+    if entry.blockers.iter().any(|b| b == "locked") {
+        return true;
+    }
+    label_blockers(&entry.label).contains(&"locked")
+}
+
+fn label_blockers(label: &str) -> Vec<&str> {
+    let Some(rest) = label.split("blockers=").nth(1) else {
+        return Vec::new();
+    };
+    let csv = rest.split(' ').next().unwrap_or("");
+    if csv.is_empty() || csv == "-" {
+        return Vec::new();
+    }
+    csv.split(',').filter(|s| !s.is_empty()).collect()
 }
 
 fn plan_is_expired(plan: &ProtoPlan, now: SystemTime) -> bool {
@@ -497,5 +524,169 @@ mod tests {
         assert_eq!(report.succeeded, 0);
         assert!(report.skipped >= 1);
         assert!(repo.join("keep").exists());
+    }
+
+    #[test]
+    fn identity_change_skips_without_deleting() {
+        let dir = tempfile::tempdir().unwrap();
+        let wt = dir.path().join("wt");
+        std::fs::create_dir_all(&wt).unwrap();
+        std::fs::write(wt.join("f"), b"x").unwrap();
+        let identity = crate::safety::capture_plan_entry_identity(&wt).unwrap();
+        let later = SystemTime::now() + Duration::from_secs(120);
+        std::fs::File::open(&wt)
+            .unwrap()
+            .set_times(std::fs::FileTimes::new().set_modified(later))
+            .unwrap();
+        let plan = ProtoPlan {
+            schema_version: SCHEMA_VERSION,
+            created_at: SystemTime::now(),
+            ttl_secs: 900,
+            entries: vec![ProtoPlanEntry {
+                id: "i".into(),
+                path: wt.clone(),
+                label: format!(
+                    "repo:/tmp/repo linked git detached blockers=- {}",
+                    wt.display()
+                ),
+                size: 1,
+                rule_id: "worktree:linked".into(),
+                skip_reason: None,
+                dev: identity.dev,
+                ino: identity.ino,
+                mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+                blockers: vec![],
+            }],
+            coverage_note: None,
+        };
+        let report = apply_with(&plan, &NoopGit, dir.path().to_path_buf()).unwrap();
+        assert_eq!(report.succeeded, 0);
+        assert!(report.skipped >= 1);
+        assert!(wt.join("f").exists());
+    }
+
+    struct UnlockGit {
+        prune_calls: Mutex<u32>,
+        unlock_calls: Mutex<u32>,
+    }
+
+    impl GitProbe for UnlockGit {
+        fn worktree_list(&self, _repo: &Path) -> Result<String, String> {
+            Ok(String::new())
+        }
+        fn status_porcelain(&self, _w: &Path, _i: bool) -> Result<String, String> {
+            Ok(String::new())
+        }
+        fn log_unpushed(&self, _w: &Path) -> Result<String, String> {
+            Ok(String::new())
+        }
+        fn last_commit_unix(&self, _w: &Path) -> Result<Option<i64>, String> {
+            Ok(None)
+        }
+        fn rev_parse_toplevel(&self, cwd: &Path) -> Result<PathBuf, String> {
+            Ok(cwd.to_path_buf())
+        }
+        fn prune(&self, _repo: &Path) -> Result<(), String> {
+            *self.prune_calls.lock().unwrap() += 1;
+            if *self.unlock_calls.lock().unwrap() == 0 {
+                Err("locked".into())
+            } else {
+                Ok(())
+            }
+        }
+        fn unlock(&self, _repo: &Path, _w: &Path) -> Result<(), String> {
+            *self.unlock_calls.lock().unwrap() += 1;
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn locked_unlocks_then_prunes() {
+        let _guard = crate::test_env::lock();
+        let dir = tempfile::tempdir().unwrap();
+        let repo = dir.path().join("repo");
+        let wt = dir.path().join("wt");
+        std::fs::create_dir_all(&repo).unwrap();
+        std::fs::create_dir_all(&wt).unwrap();
+        std::fs::write(wt.join("f"), b"x").unwrap();
+        let identity = crate::safety::capture_plan_entry_identity(&wt).unwrap();
+        let trash_dir = dir.path().join("trash");
+        std::fs::create_dir_all(&trash_dir).unwrap();
+        std::env::set_var("MOLE_TEST_TRASH_DIR", &trash_dir);
+        let git = UnlockGit {
+            prune_calls: Mutex::new(0),
+            unlock_calls: Mutex::new(0),
+        };
+        let plan = ProtoPlan {
+            schema_version: SCHEMA_VERSION,
+            created_at: SystemTime::now(),
+            ttl_secs: 900,
+            entries: vec![ProtoPlanEntry {
+                id: "l".into(),
+                path: wt.clone(),
+                label: format!(
+                    "repo:{} linked git detached blockers=locked {}",
+                    repo.display(),
+                    wt.display()
+                ),
+                size: 1,
+                rule_id: "worktree:linked".into(),
+                skip_reason: None,
+                dev: identity.dev,
+                ino: identity.ino,
+                mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+                blockers: vec![],
+            }],
+            coverage_note: None,
+        };
+        let report = apply_with(&plan, &git, dir.path().to_path_buf()).unwrap();
+        std::env::remove_var("MOLE_TEST_TRASH_DIR");
+        assert_eq!(report.succeeded, 1);
+        assert_eq!(*git.unlock_calls.lock().unwrap(), 1);
+        assert!(*git.prune_calls.lock().unwrap() >= 2);
+        assert!(!wt.exists());
+    }
+
+    #[test]
+    fn orphan_independent_clone_trashes_without_treating_as_primary() {
+        let _guard = crate::test_env::lock();
+        let dir = tempfile::tempdir().unwrap();
+        let clone = dir.path().join("solo");
+        std::fs::create_dir_all(clone.join(".git")).unwrap();
+        std::fs::write(clone.join("README"), b"x").unwrap();
+        let identity = crate::safety::capture_plan_entry_identity(&clone).unwrap();
+        let trash_dir = dir.path().join("trash");
+        std::fs::create_dir_all(&trash_dir).unwrap();
+        std::env::set_var("MOLE_TEST_TRASH_DIR", &trash_dir);
+        let git = RecordingGit {
+            prune_calls: Mutex::new(0),
+        };
+        let plan = ProtoPlan {
+            schema_version: SCHEMA_VERSION,
+            created_at: SystemTime::now(),
+            ttl_secs: 900,
+            entries: vec![ProtoPlanEntry {
+                id: "o".into(),
+                path: clone.clone(),
+                label: format!(
+                    "repo:{} orphan-dir git detached blockers=- {}",
+                    clone.display(),
+                    clone.display()
+                ),
+                size: 1,
+                rule_id: "worktree:orphan-dir".into(),
+                skip_reason: None,
+                dev: identity.dev,
+                ino: identity.ino,
+                mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+                blockers: vec![],
+            }],
+            coverage_note: None,
+        };
+        let report = apply_with(&plan, &git, dir.path().to_path_buf()).unwrap();
+        std::env::remove_var("MOLE_TEST_TRASH_DIR");
+        assert_eq!(report.succeeded, 1);
+        assert_eq!(*git.prune_calls.lock().unwrap(), 0);
+        assert!(!clone.exists());
     }
 }

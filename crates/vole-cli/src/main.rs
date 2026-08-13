@@ -262,18 +262,25 @@ enum Command {
     /// confirm, then trash. With `--plan` / `--json`, or when not a TTY:
     /// emit a plan only.
     Worktree {
+        /// Emit candidates only; do not delete (default when not a TTY; on a TTY skips interactive UI).
         #[arg(long, conflicts_with = "apply")]
         plan: bool,
+        /// Same as `--plan`.
         #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
         dry_run: bool,
+        /// Apply entries from a plan file (TTL + TOCTOU revalidation required).
         #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
         apply: Option<PathBuf>,
+        /// Permanently delete instead of moving to Trash (`--apply` or after interactive confirm).
         #[arg(long)]
         permanent: bool,
+        /// Print JSON instead of human-readable text.
         #[arg(long)]
         json: bool,
+        /// Stream NDJSON events to stdout.
         #[arg(long = "json-stream")]
         json_stream: bool,
+        /// Write plan JSON to a file.
         #[arg(long, conflicts_with = "apply")]
         plan_out: Option<PathBuf>,
     },

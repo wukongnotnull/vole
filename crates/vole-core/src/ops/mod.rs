@@ -17,6 +17,8 @@ mod touchid;
 mod uninstall_apply;
 mod uninstall_plan;
 mod update;
+mod worktree_apply;
+mod worktree_plan;
 
 use crate::vole_proto::StreamEvent;
 use crossbeam_channel::Sender;
@@ -87,6 +89,16 @@ pub use uninstall_plan::{
 pub use update::{
     run_update, verify_sha256, CurlUpdateTransport, ExecVersionProbe, FakeUpdateTransport,
     UpdateError, UpdateOptions, UpdateOutcome, UpdateTransport, VersionProbe,
+};
+pub use worktree_apply::{
+    apply_worktree_plan, apply_worktree_proto_plan, WorktreeApplyContext, WorktreeApplyError,
+    WorktreeApplyOptions,
+};
+pub use worktree_plan::{
+    build_worktree_plan, format_worktree_label, parse_repo_from_label, parse_worktree_porcelain,
+    sort_worktree_records, source_for_path, GitProbe, LiveGitProbe, WorktreeHead, WorktreeKind,
+    WorktreePlanError, WorktreePlanOptions, WorktreeRecord, WorktreeSource,
+    DEFAULT_WORKTREE_TTL_SECS,
 };
 
 #[derive(Debug, Error)]

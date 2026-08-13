@@ -752,6 +752,7 @@ mod tests {
             dev: identity.dev,
             ino: identity.ino,
             mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+            blockers: Vec::new(),
         };
         let plan = ProtoPlan {
             schema_version: SCHEMA_VERSION,
@@ -813,6 +814,7 @@ mod tests {
             dev: identity.dev,
             ino: identity.ino,
             mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+            blockers: Vec::new(),
         };
         let plan = ProtoPlan {
             schema_version: SCHEMA_VERSION,
@@ -873,6 +875,7 @@ mod tests {
             dev: identity.dev,
             ino: identity.ino,
             mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+            blockers: Vec::new(),
         };
         let plan = ProtoPlan {
             schema_version: SCHEMA_VERSION,
@@ -930,6 +933,7 @@ mod tests {
             dev: identity.dev,
             ino: identity.ino,
             mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+            blockers: Vec::new(),
         };
         let plan = ProtoPlan {
             schema_version: SCHEMA_VERSION,
@@ -989,6 +993,7 @@ mod tests {
             dev: identity.dev,
             ino: identity.ino,
             mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+            blockers: Vec::new(),
         };
         let plan = ProtoPlan {
             schema_version: SCHEMA_VERSION,
@@ -1058,6 +1063,7 @@ mod tests {
             dev: identity.dev,
             ino: identity.ino,
             mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+            blockers: Vec::new(),
         };
         let plan = ProtoPlan {
             schema_version: SCHEMA_VERSION,
@@ -1120,6 +1126,7 @@ mod tests {
             dev: identity.dev,
             ino: identity.ino,
             mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+            blockers: Vec::new(),
         };
         let plan = ProtoPlan {
             schema_version: SCHEMA_VERSION,
@@ -1190,6 +1197,7 @@ mod tests {
                     dev: id_app.dev,
                     ino: id_app.ino,
                     mtime: UNIX_EPOCH + Duration::from_secs(id_app.mtime.max(0) as u64),
+                    blockers: Vec::new(),
                 },
                 ProtoPlanEntry {
                     id: "left".into(),
@@ -1201,6 +1209,7 @@ mod tests {
                     dev: id_left.dev,
                     ino: id_left.ino,
                     mtime: UNIX_EPOCH + Duration::from_secs(id_left.mtime.max(0) as u64),
+                    blockers: Vec::new(),
                 },
             ],
             coverage_note: None,
@@ -1268,6 +1277,7 @@ mod tests {
                 dev: identity.dev,
                 ino: identity.ino,
                 mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+                blockers: Vec::new(),
             }],
             coverage_note: None,
         };
@@ -1338,6 +1348,7 @@ mod tests {
                 dev: identity.dev,
                 ino: identity.ino,
                 mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+                blockers: Vec::new(),
             }],
             coverage_note: None,
         };
@@ -1407,6 +1418,7 @@ mod tests {
                 dev: identity.dev,
                 ino: identity.ino,
                 mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+                blockers: Vec::new(),
             }],
             coverage_note: None,
         };
@@ -1463,6 +1475,7 @@ mod tests {
             dev: identity.dev,
             ino: identity.ino,
             mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+            blockers: Vec::new(),
         };
         let plan = ProtoPlan {
             schema_version: SCHEMA_VERSION,
@@ -1525,6 +1538,7 @@ mod tests {
             dev: identity.dev,
             ino: identity.ino,
             mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+            blockers: Vec::new(),
         };
         let plan = ProtoPlan {
             schema_version: SCHEMA_VERSION,
@@ -1605,6 +1619,7 @@ mod tests {
             dev: identity.dev,
             ino: identity.ino,
             mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+            blockers: Vec::new(),
         };
         let plan = ProtoPlan {
             schema_version: SCHEMA_VERSION,

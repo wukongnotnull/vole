@@ -17,6 +17,7 @@ mod tui;
 mod uninstall;
 mod update;
 mod update_banner;
+mod worktree;
 
 use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
@@ -250,6 +251,31 @@ enum Command {
         /// Max sessions / deletions to show (1..=200, default 20).
         #[arg(long, default_value_t = 20)]
         limit: u32,
+    },
+    /// List leftover Git worktrees and move selected checkouts to Trash.
+    ///
+    /// Blockers are shown; you confirm each removal. Registrations are
+    /// dropped with `git worktree prune`. Restoring from Trash does not
+    /// relink the worktree.
+    ///
+    /// On a TTY with no flags: scan, paginated select (none preselected),
+    /// confirm, then trash. With `--plan` / `--json`, or when not a TTY:
+    /// emit a plan only.
+    Worktree {
+        #[arg(long, conflicts_with = "apply")]
+        plan: bool,
+        #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
+        dry_run: bool,
+        #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
+        apply: Option<PathBuf>,
+        #[arg(long)]
+        permanent: bool,
+        #[arg(long)]
+        json: bool,
+        #[arg(long = "json-stream")]
+        json_stream: bool,
+        #[arg(long, conflicts_with = "apply")]
+        plan_out: Option<PathBuf>,
     },
     /// Remove stale project build artifacts.
     ///
@@ -488,6 +514,25 @@ fn main() {
         }
         Some(Command::History { json, limit }) => {
             std::process::exit(history_cmd::run(json, limit));
+        }
+        Some(Command::Worktree {
+            plan,
+            dry_run,
+            apply,
+            permanent,
+            json,
+            json_stream,
+            plan_out,
+        }) => {
+            let code = worktree::run_worktree(worktree::WorktreeOptions {
+                explicit_plan: plan || dry_run,
+                json,
+                json_stream,
+                plan_out,
+                apply_plan: apply,
+                permanent,
+            });
+            std::process::exit(code);
         }
         Some(Command::Purge {
             plan,

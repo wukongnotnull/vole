@@ -49,6 +49,7 @@ vole_cmds=$(
     if grep -Eqi '^\s+Touchid\b|^\s+TouchId\b' "$VOLE_MAIN"; then echo touchid; fi
     if grep -Eq '^\s+Update\b' "$VOLE_MAIN"; then echo update; fi
     if grep -Eq '^\s+Remove\b' "$VOLE_MAIN"; then echo remove; fi
+    if grep -Eq '^\s+Worktree\b' "$VOLE_MAIN"; then echo worktree; fi
   } | sort -u
 )
 
@@ -66,6 +67,12 @@ for c in "${required[@]}"; do
     gaps=$((gaps + 1))
   fi
 done
+
+if printf '%s\n' "$vole_cmds" | grep -qx worktree; then
+  echo "OK: vole-native worktree"
+else
+  echo "NOTE: vole-native worktree missing (not a Mole required gap)"
+fi
 
 if grep -Eq '^\s+Hints\b' "$VOLE_MAIN"; then
   echo "UNEXPECTED: top-level Hints command"

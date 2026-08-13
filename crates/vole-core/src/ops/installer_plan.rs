@@ -242,6 +242,7 @@ fn try_plan_entry(
         dev: identity.dev,
         ino: identity.ino,
         mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+        blockers: Vec::new(),
     })
 }
 

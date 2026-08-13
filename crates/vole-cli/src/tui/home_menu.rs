@@ -53,7 +53,7 @@ pub fn map_key(key: KeyEvent) -> Option<HomeKey> {
         KeyCode::Esc => Some(HomeKey::Quit),
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(HomeKey::Quit),
         KeyCode::Char(c) => match c {
-            '1'..='5' => Some(HomeKey::Digit(c as u8 - b'0')),
+            '1'..='6' => Some(HomeKey::Digit(c as u8 - b'0')),
             'm' | 'M' => Some(HomeKey::More),
             'v' | 'V' => Some(HomeKey::Version),
             't' | 'T' => Some(HomeKey::TouchId),
@@ -107,9 +107,9 @@ fn render_home(
     let show_update = update_message.is_some_and(|s| !s.trim().is_empty());
     let right_w = right_column_width(area.width);
     let show_vole = right_w >= VOLE_SPRITE_COLS;
-    // top + brand(5) + meta(2) + blank + [update] + items(5) + footer_gap + footer(1) + sink
+    // top + brand(5) + meta(2) + blank + [update] + items + footer_gap + footer(1) + sink
     let update_h = if show_update { 2u16 } else { 0 };
-    let items_h = 5u16;
+    let items_h = HOME_ITEMS.len() as u16;
     let footer_h = 1u16;
 
     let mut constraints = Vec::new();
@@ -262,6 +262,14 @@ mod tests {
         assert!(matches!(
             map_key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE)),
             Some(HomeKey::Quit)
+        ));
+        assert!(matches!(
+            map_key(KeyEvent::new(KeyCode::Char('6'), KeyModifiers::NONE)),
+            Some(HomeKey::Digit(6))
+        ));
+        assert!(matches!(
+            map_key(KeyEvent::new(KeyCode::Char('1'), KeyModifiers::NONE)),
+            Some(HomeKey::Digit(1))
         ));
     }
 

@@ -48,6 +48,7 @@ Run `vole` in Terminal to open the interactive home menu—arrow keys to move, E
 | **Analyze** | See which folders and large files use the most space |
 | **History** | Review past cleanups and deletions |
 | **Status** | Live CPU, memory, and disk health |
+| **Worktree** | List leftover Git worktrees and move them to Trash after confirm |
 
 Type `vole` in Terminal for an interactive home menu. About **540** cleanup rules are built in—**no extra tools** to install.
 
@@ -141,6 +142,7 @@ vole uninstall --plan
 vole optimize --plan
 vole purge --plan
 vole installer --plan
+vole worktree --plan
 
 # Apply after you review
 vole clean --apply <plan.json>
@@ -164,7 +166,7 @@ Run bare `vole` in Terminal to open the interactive home menu.
 
 | Command | Alias | What it does |
 |------|------|------|
-| `vole` | — | Interactive home (Clean / Uninstall / Optimize / Analyze / Status) |
+| `vole` | — | Interactive home (Clean / Uninstall / Optimize / Analyze / Status / Worktree) |
 | `vole clean` | — | Clean caches and leftovers |
 | `vole uninstall` | — | Uninstall apps and leftovers |
 | `vole optimize` | `optimise` | System optimization / maintenance |
@@ -172,6 +174,7 @@ Run bare `vole` in Terminal to open the interactive home menu.
 | `vole analyze` | `analyse` | Directory size analysis (starts in your home folder) |
 | `vole history` | — | Operation history and deletion log |
 | `vole purge` | — | Clear stale project build artifacts |
+| `vole worktree` | — | List leftover Git worktrees and move them to Trash after confirm |
 | `vole installer` | — | Find and clean installers |
 | `vole touchid` | — | Configure sudo Touch ID (`status` / `enable` / `disable`) |
 | `vole update` | — | Self-update (network only when you run it) |

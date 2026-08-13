@@ -285,6 +285,7 @@ mod tests {
                 dev: 0,
                 ino: 0,
                 mtime: UNIX_EPOCH,
+                blockers: Vec::new(),
             }],
             coverage_note: None,
         };

@@ -48,6 +48,7 @@
 | **분석** | 어떤 폴더·큰 파일이 공간을 쓰는지 확인 |
 | **기록** | 과거 정리·삭제 내역 확인 |
 | **상태** | CPU·메모리·디스크 건강 상태를 실시간으로 |
+| **Worktree** | 남은 Git worktree를 나열하고 확인 후 휴지통으로 이동 |
 
 터미널에 `vole`을 입력하면 대화형 홈이 열리고 방향키로 고를 수 있습니다. 약 **540**개의 정리 규칙이 내장되어 **추가 도구가 필요 없습니다**.
 
@@ -141,6 +142,7 @@ vole uninstall --plan
 vole optimize --plan
 vole purge --plan
 vole installer --plan
+vole worktree --plan
 
 # 후보를 본 뒤 적용
 vole clean --apply <plan.json>
@@ -164,7 +166,7 @@ vole --version
 
 | 명령 | 별칭 | 설명 |
 |------|------|------|
-| `vole` | — | 대화형 홈 (Clean / Uninstall / Optimize / Analyze / Status) |
+| `vole` | — | 대화형 홈 (Clean / Uninstall / Optimize / Analyze / Status / Worktree) |
 | `vole clean` | — | 캐시·잔여물 정리 |
 | `vole uninstall` | — | 앱 및 잔여물 제거 |
 | `vole optimize` | `optimise` | 시스템 최적화·유지보수 |
@@ -172,6 +174,7 @@ vole --version
 | `vole analyze` | `analyse` | 디렉터리 용량 분석 (홈 폴더부터) |
 | `vole history` | — | 작업 기록 및 삭제 로그 |
 | `vole purge` | — | 오래된 프로젝트 빌드 산출물 정리 |
+| `vole worktree` | — | 남은 Git worktree를 나열하고 확인 후 휴지통으로 이동 |
 | `vole installer` | — | 설치 파일 찾아 정리 |
 | `vole touchid` | — | sudo Touch ID 설정 (`status` / `enable` / `disable`) |
 | `vole update` | — | 자동 업데이트 (실행할 때만 네트워크) |

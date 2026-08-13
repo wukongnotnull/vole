@@ -8,7 +8,7 @@ pub struct HomeItem {
     pub description: &'static str,
 }
 
-pub const HOME_ITEMS: [HomeItem; 5] = [
+pub const HOME_ITEMS: [HomeItem; 6] = [
     HomeItem {
         title: "Clean",
         description: "Free up disk space",
@@ -29,6 +29,10 @@ pub const HOME_ITEMS: [HomeItem; 5] = [
         title: "Status",
         description: "Monitor system health",
     },
+    HomeItem {
+        title: "Worktree",
+        description: "Remove leftover git worktrees",
+    },
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,6 +42,7 @@ pub enum HomeCommand {
     Optimize,
     Analyze,
     Status,
+    Worktree,
     TouchId,
     Update,
 }
@@ -50,6 +55,7 @@ impl HomeCommand {
             Self::Optimize => &["optimize"],
             Self::Analyze => &["analyze"],
             Self::Status => &["status"],
+            Self::Worktree => &["worktree"],
             Self::TouchId => &["touchid"],
             Self::Update => &["update"],
         }
@@ -103,7 +109,8 @@ impl HomeMenuState {
             1 => HomeCommand::Uninstall,
             2 => HomeCommand::Optimize,
             3 => HomeCommand::Analyze,
-            _ => HomeCommand::Status,
+            4 => HomeCommand::Status,
+            _ => HomeCommand::Worktree,
         }
     }
 
@@ -116,13 +123,13 @@ impl HomeMenuState {
                 None
             }
             HomeKey::Down => {
-                if self.cursor + 1 < 5 {
+                if self.cursor + 1 < HOME_ITEMS.len() {
                     self.cursor += 1;
                 }
                 None
             }
             HomeKey::Enter => Some(HomeAction::Launch(Self::cmd_at(self.cursor))),
-            HomeKey::Digit(d) if (1..=5).contains(&d) => {
+            HomeKey::Digit(d) if (1..=6).contains(&d) => {
                 Some(HomeAction::Launch(Self::cmd_at((d - 1) as usize)))
             }
             HomeKey::More => Some(HomeAction::ShowHelp),
@@ -172,6 +179,9 @@ mod tests {
         assert_eq!(HOME_ITEMS[3].description, "Explore disk usage");
         assert_eq!(HOME_ITEMS[4].title, "Status");
         assert_eq!(HOME_ITEMS[4].description, "Monitor system health");
+        assert_eq!(HOME_ITEMS.len(), 6);
+        assert_eq!(HOME_ITEMS[5].title, "Worktree");
+        assert_eq!(HOME_ITEMS[5].description, "Remove leftover git worktrees");
     }
 
     #[test]
@@ -255,5 +265,30 @@ mod tests {
             Some(HomeAction::Launch(HomeCommand::TouchId))
         );
         assert_eq!(HomeCommand::TouchId.argv(), &["touchid"]);
+    }
+
+    #[test]
+    fn digit_six_launches_worktree_digits_one_to_five_unchanged() {
+        let mut st = HomeMenuState::new(HomeMenuConfig {
+            touchid_configured: true,
+            show_update: false,
+        });
+        assert_eq!(
+            st.handle_key(HomeKey::Digit(6)),
+            Some(HomeAction::Launch(HomeCommand::Worktree))
+        );
+        assert_eq!(HomeCommand::Worktree.argv(), &["worktree"]);
+        assert_eq!(
+            st.handle_key(HomeKey::Digit(5)),
+            Some(HomeAction::Launch(HomeCommand::Status))
+        );
+        for _ in 0..5 {
+            assert!(st.handle_key(HomeKey::Down).is_none());
+        }
+        assert_eq!(st.cursor(), 5);
+        assert_eq!(
+            st.handle_key(HomeKey::Digit(1)),
+            Some(HomeAction::Launch(HomeCommand::Clean))
+        );
     }
 }

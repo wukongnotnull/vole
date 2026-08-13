@@ -49,6 +49,7 @@
 | **分析**  | 看哪个文件夹、哪些大文件最占空间         |
 | **历史**  | 回看做过的清理与删除记录             |
 | **状态**  | 实时看 CPU、内存、磁盘健康情况        |
+| **Worktree** | 列出遗留 Git worktree，确认后移入废纸篓 |
 
 
 打开终端输入 `vole`，会进入交互式首页，用方向键选功能即可。内置约 **540** 条清理规则，**不必再单独安装**其他小工具。
@@ -149,6 +150,7 @@ vole uninstall --plan
 vole optimize --plan
 vole purge --plan
 vole installer --plan
+vole worktree --plan
 
 # 看过候选后再执行
 vole clean --apply <plan.json>
@@ -175,7 +177,7 @@ vole --version
 
 | 命令                 | 别名           | 说明                                                  |
 | ------------------ | ------------ | --------------------------------------------------- |
-| `vole`             | —            | 交互式首页（清理 / 卸载 / 优化 / 分析 / 状态）                       |
+| `vole`             | —            | 交互式首页（清理 / 卸载 / 优化 / 分析 / 状态 / Worktree）                       |
 | `vole clean`       | —            | 清理缓存与残留                                             |
 | `vole uninstall`   | —            | 卸载应用及残留                                             |
 | `vole optimize`    | `optimise`   | 系统优化与维护                                             |
@@ -183,6 +185,7 @@ vole --version
 | `vole analyze`     | `analyse`    | 目录体积分析（默认从个人主目录开始）                                  |
 | `vole history`     | —            | 操作历史与删除记录                                           |
 | `vole purge`       | —            | 清理陈旧项目构建物                                           |
+| `vole worktree`    | —            | 列出遗留 Git worktree，确认后移入废纸篓                       |
 | `vole installer`   | —            | 查找并清理安装包                                            |
 | `vole touchid`     | —            | 配置 sudo 的 Touch ID（`status` / `enable` / `disable`） |
 | `vole update`      | —            | 自更新（只有你主动执行才会联网）                                    |

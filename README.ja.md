@@ -48,6 +48,7 @@
 | **分析** | どのフォルダ・大きなファイルが容量を使っているかを確認 |
 | **履歴** | 過去のクリーンと削除を振り返る |
 | **ステータス** | CPU・メモリ・ディスクの健康状態をリアルタイム表示 |
+| **Worktree** | 残っている Git worktree を一覧し、確認後にゴミ箱へ移す |
 
 ターミナルで `vole` と打つと対話ホームが開き、矢印キーで選べます。約 **540** 件のクリーン規則が内蔵され、**追加ツールは不要**です。
 
@@ -141,6 +142,7 @@ vole uninstall --plan
 vole optimize --plan
 vole purge --plan
 vole installer --plan
+vole worktree --plan
 
 # 候補を見てから実行
 vole clean --apply <plan.json>
@@ -164,7 +166,7 @@ vole --version
 
 | コマンド | 別名 | 説明 |
 |------|------|------|
-| `vole` | — | 対話ホーム（Clean / Uninstall / Optimize / Analyze / Status） |
+| `vole` | — | 対話ホーム（Clean / Uninstall / Optimize / Analyze / Status / Worktree） |
 | `vole clean` | — | キャッシュと残骸をクリーン |
 | `vole uninstall` | — | アプリと残骸をアンインストール |
 | `vole optimize` | `optimise` | システム最適化・メンテ |
@@ -172,6 +174,7 @@ vole --version
 | `vole analyze` | `analyse` | ディレクトリ容量分析（ホームから開始） |
 | `vole history` | — | 操作履歴と削除ログ |
 | `vole purge` | — | 古いプロジェクトのビルド成果物を掃除 |
+| `vole worktree` | — | 残っている Git worktree を一覧し、確認後にゴミ箱へ移す |
 | `vole installer` | — | インストーラを探して掃除 |
 | `vole touchid` | — | sudo Touch ID 設定（`status` / `enable` / `disable`） |
 | `vole update` | — | 自己更新（実行したときだけネット） |

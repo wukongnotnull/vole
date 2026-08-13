@@ -60,7 +60,7 @@
 
 需要 **macOS 12 或更高**。
 
-目前已發布版本：**[v2.17.0](https://github.com/wukongnotnull/vole/releases/tag/v2.17.0)**（Developer ID 簽名並經 Apple 公證）。Apple Silicon 與 Intel 均有對應安裝包。
+目前已發布版本：**[v2.18.0](https://github.com/wukongnotnull/vole/releases/tag/v2.18.0)**（Developer ID 簽名並經 Apple 公證）。Apple Silicon 與 Intel 均有對應安裝包。
 
 ### 方式一：發給 AI 安裝
 
@@ -104,14 +104,14 @@ brew install vole
    - Intel：`…-x86_64-apple-darwin.tar.gz`
 3. 解壓後，把 `bin/vole` 放到你 PATH 裡的目錄（例如 `~/.local/bin`），並保留同包裡的 `share/vole/rules` 目錄
 
-範例（Apple Silicon / v2.17.0；請以 Release 頁實際檔名為準）：
+範例（Apple Silicon / v2.18.0；請以 Release 頁實際檔名為準）：
 
 ```bash
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v2.17.0/vole-2.17.0-aarch64-apple-darwin.tar.gz
-tar xzf vole-2.17.0-aarch64-apple-darwin.tar.gz
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v2.18.0/vole-2.18.0-aarch64-apple-darwin.tar.gz
+tar xzf vole-2.18.0-aarch64-apple-darwin.tar.gz
 mkdir -p ~/.local/bin ~/.local/share/vole
-install -m 755 vole-2.17.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-cp -R vole-2.17.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+install -m 755 vole-2.18.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+cp -R vole-2.18.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 ```
 
 若終端機提示找不到 `vole`，把下面這行寫進 `~/.zshrc` 後執行 `source ~/.zshrc`：

@@ -2,6 +2,7 @@
 #![forbid(unsafe_code)]
 
 mod clean;
+mod clean_group;
 mod history_cmd;
 mod installer;
 mod interactive;

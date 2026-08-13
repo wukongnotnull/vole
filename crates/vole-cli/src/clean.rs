@@ -124,7 +124,7 @@ fn run_interactive(opts: &CleanOptions) -> io::Result<()> {
     proto.coverage_note = Some(note);
     let hints = collect_plan_hints();
     spinner.stop();
-    print_human_plan(&plan, &base_note);
+    print_human_plan(&plan);
     print_human_hints(&hints);
 
     eprint!("Proceed with clean? [y/N] ");
@@ -217,7 +217,7 @@ fn run_plan(opts: CleanOptions) -> io::Result<()> {
     let mut proto = plan_to_proto(&plan).map_err(map_proto_error)?;
     proto.coverage_note = Some(note.clone());
     let hints = collect_plan_hints();
-    write_plan_output(&opts, &plan, &proto, &base_note, &hints)?;
+    write_plan_output(&opts, &plan, &proto, &hints)?;
     Ok(())
 }
 
@@ -336,7 +336,6 @@ fn write_plan_output(
     opts: &CleanOptions,
     plan: &Plan,
     proto: &ProtoPlan,
-    base_coverage: &str,
     hints: &CleanHints,
 ) -> io::Result<()> {
     let notices = hint_items_to_notices(&hints.items);
@@ -357,7 +356,7 @@ fn write_plan_output(
         return Ok(());
     }
 
-    print_human_plan(plan, base_coverage);
+    print_human_plan(plan);
     print_human_hints(hints);
     Ok(())
 }
@@ -399,55 +398,62 @@ fn should_use_json(force: bool) -> bool {
     !io::stdout().is_terminal()
 }
 
-fn print_human_plan(plan: &Plan, coverage: &str) {
+fn print_human_plan(plan: &Plan) {
     println!(
         "Plan: {} candidate(s), TTL {}s",
         plan.entries.len(),
         plan.ttl.as_secs()
     );
-    for entry in &plan.entries {
-        println!(
-            "  {}  {}  ({})",
-            entry.path.display(),
-            entry.label,
-            entry.rule_id
-        );
+    for line in crate::clean_group::format_grouped_plan_lines(&plan.entries) {
+        println!("{line}");
     }
-    eprintln!();
-    eprintln!("{coverage}");
+    let stderr = format_human_plan_stderr(plan);
+    if !stderr.is_empty() {
+        eprintln!();
+        eprintln!("{stderr}");
+    }
+}
+
+fn format_human_plan_stderr(plan: &Plan) -> String {
+    human_plan_notice_lines(plan).join("\n")
+}
+
+fn human_plan_notice_lines(plan: &Plan) -> Vec<&'static str> {
+    let mut lines = Vec::new();
     if plan
         .notices
         .contains(&PlanNotice::OrphanLibraryInaccessible)
     {
-        eprintln!("{ORPHAN_LIBRARY_WARN}");
+        lines.push(ORPHAN_LIBRARY_WARN);
     }
     if plan
         .notices
         .contains(&PlanNotice::SystemServicesInaccessible)
     {
-        eprintln!("{SYSTEM_SERVICES_WARN}");
+        lines.push(SYSTEM_SERVICES_WARN);
     }
     if plan
         .notices
         .contains(&PlanNotice::GroupContainersInaccessible)
     {
-        eprintln!("{GROUP_CONTAINERS_WARN}");
+        lines.push(GROUP_CONTAINERS_WARN);
     }
     if plan.notices.contains(&PlanNotice::GroupContainersTruncated) {
-        eprintln!("{GROUP_CONTAINERS_TRUNCATED_WARN}");
+        lines.push(GROUP_CONTAINERS_TRUNCATED_WARN);
     }
     if plan
         .notices
         .contains(&PlanNotice::HandoffPasteboardInaccessible)
     {
-        eprintln!("{HANDOFF_PASTEBOARD_WARN}");
+        lines.push(HANDOFF_PASTEBOARD_WARN);
     }
     if plan
         .notices
         .contains(&PlanNotice::HandoffPasteboardTruncated)
     {
-        eprintln!("{HANDOFF_PASTEBOARD_TRUNCATED_WARN}");
+        lines.push(HANDOFF_PASTEBOARD_TRUNCATED_WARN);
     }
+    lines
 }
 
 fn print_human_report(report: &Report) {
@@ -679,5 +685,28 @@ mod tests {
     #[test]
     fn clean_scan_spinner_message_matches_mole() {
         assert_eq!(clean_scan_spinner_message(), "Scanning caches...");
+    }
+
+    fn plan_with_notices(notices: Vec<PlanNotice>) -> Plan {
+        Plan {
+            generated_at: std::time::UNIX_EPOCH,
+            ttl: std::time::Duration::from_secs(900),
+            entries: vec![],
+            notices,
+        }
+    }
+
+    #[test]
+    fn human_plan_stderr_omits_coverage_changelog_keeps_permission_warn() {
+        let plan = plan_with_notices(vec![PlanNotice::HandoffPasteboardInaccessible]);
+        let stderr = format_human_plan_stderr(&plan);
+        assert!(
+            !stderr.contains("本版本启用"),
+            "changelog must not appear in human stderr: {stderr}"
+        );
+        assert!(
+            stderr.contains("handoff-pasteboard-cache"),
+            "permission skip warn must remain: {stderr}"
+        );
     }
 }

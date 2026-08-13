@@ -17,6 +17,7 @@ mod touchid;
 mod uninstall_apply;
 mod uninstall_plan;
 mod update;
+mod worktree_plan;
 
 use crate::vole_proto::StreamEvent;
 use crossbeam_channel::Sender;

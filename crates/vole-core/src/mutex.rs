@@ -71,6 +71,10 @@ pub fn try_lock_installer() -> Result<ConfigLock, MutexError> {
     try_lock_config("installer")
 }
 
+pub fn try_lock_worktree() -> Result<ConfigLock, MutexError> {
+    try_lock_config("worktree")
+}
+
 pub fn try_lock_config(name: &str) -> Result<ConfigLock, MutexError> {
     let path = cache_dir().join(format!("{}.lock", name));
     let file = try_lock_path(&path)?;
@@ -90,6 +94,19 @@ mod tests {
         std::env::set_var("HOME", dir.join("home"));
         let _a = try_lock_clean().expect("first lock");
         let b = try_lock_clean();
+        assert!(matches!(b, Err(MutexError::Rustix(_))));
+        std::env::remove_var("HOME");
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn second_worktree_lock_fails_nonblocking() {
+        let _guard = test_env::lock();
+        let dir = std::env::temp_dir().join(format!("vole-mutex-wt-{}", std::process::id()));
+        std::fs::remove_dir_all(&dir).ok();
+        std::env::set_var("HOME", dir.join("home"));
+        let _a = try_lock_worktree().expect("first lock");
+        let b = try_lock_worktree();
         assert!(matches!(b, Err(MutexError::Rustix(_))));
         std::env::remove_var("HOME");
         std::fs::remove_dir_all(&dir).ok();

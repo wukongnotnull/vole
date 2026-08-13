@@ -17,6 +17,7 @@ mod touchid;
 mod uninstall_apply;
 mod uninstall_plan;
 mod update;
+mod worktree_apply;
 mod worktree_plan;
 
 use crate::vole_proto::StreamEvent;
@@ -84,6 +85,10 @@ pub use uninstall_plan::{
     build_uninstall_plan, build_uninstall_plan_for_apps, build_uninstall_plan_for_apps_with_brew,
     build_uninstall_plan_with_brew, default_applications_dirs, scan_applications,
     UninstallPlanOptions,
+};
+pub use worktree_apply::{
+    apply_worktree_plan, apply_worktree_proto_plan, WorktreeApplyContext, WorktreeApplyError,
+    WorktreeApplyOptions,
 };
 pub use worktree_plan::{
     build_worktree_plan, format_worktree_label, parse_repo_from_label, parse_worktree_porcelain,

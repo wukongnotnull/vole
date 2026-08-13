@@ -5,8 +5,6 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-const DEFAULT_LOG: &str = "Library/Logs/mole/operations.log";
-
 pub struct OperationLogger {
     command: String,
     path: PathBuf,
@@ -16,7 +14,7 @@ pub struct OperationLogger {
 impl OperationLogger {
     pub fn new(command: &str) -> Self {
         let enabled = !oplog_disabled();
-        let path = log_path();
+        let path = crate::user_paths::operations_log_write_path();
         if enabled {
             if let Some(parent) = path.parent() {
                 let _ = fs::create_dir_all(parent);
@@ -103,13 +101,6 @@ fn mole_session_size_human(size_kb: u64) -> String {
 fn oplog_disabled() -> bool {
     std::env::var_os("MO_NO_OPLOG").is_some_and(|v| v == "1")
         || std::env::var_os("VOLE_NO_OPLOG").is_some_and(|v| v == "1")
-}
-
-fn log_path() -> PathBuf {
-    std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .map(|h| h.join(DEFAULT_LOG))
-        .unwrap_or_else(|| PathBuf::from(DEFAULT_LOG))
 }
 
 fn format_timestamp(time: SystemTime) -> String {
@@ -216,6 +207,32 @@ mod tests {
         assert!(!log.log_path().exists());
         std::env::remove_var("HOME");
         std::env::remove_var("VOLE_NO_OPLOG");
+        std::fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
+    fn writes_to_vole_logs_dir() {
+        let _guard = test_env::lock();
+        let home = std::env::temp_dir().join(format!("vole-oplog-dir-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&home);
+        std::fs::create_dir_all(home.join("h")).unwrap();
+        std::env::remove_var("VOLE_OPERATIONS_LOG");
+        std::env::remove_var("MOLE_OPERATIONS_LOG");
+        std::env::remove_var("OPERATIONS_LOG_FILE");
+        std::env::remove_var("VOLE_NO_OPLOG");
+        std::env::remove_var("MO_NO_OPLOG");
+        std::env::set_var("HOME", home.join("h"));
+        let mut log = OperationLogger::new("clean");
+        log.log("REMOVED", Path::new("/tmp/x"), Some("1KB"))
+            .unwrap();
+        let path = log.log_path();
+        assert!(
+            path.ends_with("Library/Logs/vole/operations.log"),
+            "{}",
+            path.display()
+        );
+        assert!(path.is_file());
+        std::env::remove_var("HOME");
         std::fs::remove_dir_all(&home).ok();
     }
 }

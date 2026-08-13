@@ -352,7 +352,11 @@ pub fn warn_invalid_delete_mode_once(mode: &str) {
     if INVALID_MODE_WARNED.swap(true, Ordering::SeqCst) {
         return;
     }
-    eprintln!("Error: invalid MOLE_DELETE_MODE: {mode} (expected \"permanent\" or \"trash\")");
+    eprintln!("{}", invalid_delete_mode_message(mode));
+}
+
+pub(crate) fn invalid_delete_mode_message(mode: &str) -> String {
+    format!("Error: invalid delete mode: {mode} (expected \"permanent\" or \"trash\")")
 }
 
 pub fn mole_delete_with_env_mode(
@@ -396,6 +400,17 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    #[test]
+    fn invalid_delete_mode_message_omits_mole() {
+        let msg = invalid_delete_mode_message("bogus");
+        assert!(
+            !msg.to_ascii_lowercase().contains("mole"),
+            "delete-mode error must not mention Mole: {msg}"
+        );
+        assert!(msg.contains("bogus"));
+        assert!(msg.contains("permanent"));
     }
 
     #[test]

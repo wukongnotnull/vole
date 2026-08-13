@@ -153,7 +153,7 @@ pub fn build_purge_plan(
         ttl_secs: opts.ttl_secs,
         entries,
         coverage_note: Some(
-            "purge long-tail skipped: full Mole activity classifier; \
+            "purge long-tail skipped: full activity classifier; \
 cloud sync interactive confirm (fail-closed skip uncertain ages)."
                 .into(),
         ),
@@ -508,5 +508,29 @@ mod tests {
         let dotnet_bin = proj.join("bin");
         fs::create_dir_all(&dotnet_bin).unwrap();
         assert!(!is_protected_purge_artifact(&dotnet_bin));
+    }
+
+    #[test]
+    fn purge_coverage_note_omits_mole() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path();
+        let protection = AppProtection::new();
+        let plan = build_purge_plan(
+            &protection,
+            &PurgePlanOptions {
+                home,
+                ttl_secs: 900,
+                search_roots: Some(&[]),
+                include_empty: false,
+                min_age_days: 7,
+                now: SystemTime::now(),
+            },
+        )
+        .unwrap();
+        let note = plan.coverage_note.expect("coverage_note");
+        assert!(
+            !note.to_ascii_lowercase().contains("mole"),
+            "purge coverage_note must not mention Mole: {note}"
+        );
     }
 }

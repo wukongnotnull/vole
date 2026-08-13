@@ -240,7 +240,7 @@ fn build_uninstall_plan_for_apps_with_brew_inner(
 
     let coverage_note = Some(format!(
         "vole uninstall: skipped protected={skipped_protected}, official_uninstaller={skipped_official}, filter_miss={skipped_filter}, sibling_leftovers_suppressed={sibling_notes}, brew_cask={brew_cask}, login_items={login_items}, system_leftovers={system_leftovers}. \
-Long-tail not covered (use Mole): broad /Library system leftovers (Frameworks/kext/Plug-Ins/…) beyond LaunchDaemons/Agents/PHT and exact leaves."
+Long-tail not covered: broad /Library system leftovers (Frameworks/kext/Plug-Ins/…) beyond LaunchDaemons/Agents/PHT and exact leaves."
     ));
 
     Ok(ProtoPlan {
@@ -489,6 +489,10 @@ mod tests {
         assert!(!note.contains("system LaunchDaemons"));
         assert!(note.contains("system_leftovers="));
         assert!(note.contains("Frameworks") || note.contains("Plug-Ins"));
+        assert!(
+            !note.to_ascii_lowercase().contains("mole"),
+            "uninstall coverage_note must not mention Mole: {note}"
+        );
     }
 
     #[test]

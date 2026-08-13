@@ -11,7 +11,7 @@ pub const MOLE_INVENTORY_TOTAL: u32 = 513;
 pub const ORPHAN_LIBRARY_WARN: &str = "注意：orphaned-app-data 已跳过（无法读取 ~/Library/Caches 或安装扫描失败）。若为权限问题，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole 后重试。";
 
 /// uninstall / optimize / clean apply 出现权限或保护跳过时的警告。
-pub const APPLY_PERMISSION_WARN: &str = "注意：部分条目因权限或系统保护被跳过。若涉及用户库数据，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole；系统路径可能需 sudo，请改用 Mole 或具备相应权限的环境后重试。";
+pub const APPLY_PERMISSION_WARN: &str = "注意：部分条目因权限或系统保护被跳过。若涉及用户库数据，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole；系统路径可能需 sudo，请在具备相应权限的环境后重试。";
 
 /// system services 三树皆不可读时追加；不提 FDA。
 pub const SYSTEM_SERVICES_WARN: &str = "注意：orphaned-system-services 已跳过（无法读取 /Library/LaunchDaemons、LaunchAgents 或 PrivilegedHelperTools）。当前扫描不使用 sudo（可读子集）；apply 在非交互 sudo 可用时永久删除；TTY 下无凭证时可至多一次请求管理员权限（sudo -v）后再 sudo -n，否则 NeedsPrivilege。";
@@ -23,14 +23,14 @@ pub const CONTAINER_STUBS_WARN: &str = "注意：orphaned-container-stubs 已跳
 pub const GROUP_CONTAINERS_WARN: &str = "注意：group-container-caches 已跳过（无法读取 ~/Library/Group Containers）。若为权限问题，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole 后重试。";
 
 /// 候选规模上限触发时追加（非整规则 degrade）。
-pub const GROUP_CONTAINERS_TRUNCATED_WARN: &str = "注意：group-container-caches 部分候选子树因条目过多已跳过（单树 >200 或整规则 >2000）。可用 Mole 清理或缩小范围后重试。";
+pub const GROUP_CONTAINERS_TRUNCATED_WARN: &str = "注意：group-container-caches 部分候选子树因条目过多已跳过（单树 >200 或整规则 >2000）。请缩小范围后重试。";
 
 /// Handoff pasteboard 根不可列时追加。
 pub const HANDOFF_PASTEBOARD_WARN: &str = "注意：handoff-pasteboard-cache 已跳过（无法读取 Handoff shared-pasteboard）。若为权限问题，请在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」中允许当前终端或 Vole 后重试。";
 
 /// Handoff 条目过多截断提示。
 pub const HANDOFF_PASTEBOARD_TRUNCATED_WARN: &str =
-    "注意：handoff-pasteboard-cache 因条目过多已截断（整规则 >2000）。可用 Mole 清理或稍后再试。";
+    "注意：handoff-pasteboard-cache 因条目过多已截断（整规则 >2000）。请稍后再试。";
 
 /// Time Machine 忙或状态未知时追加。
 pub const TIME_MACHINE_BUSY_WARN: &str =
@@ -44,7 +44,7 @@ pub fn enabled_rule_count(rules: &[Rule]) -> usize {
 /// plan / `--json-stream` `done` 用的覆盖说明文案。
 pub fn coverage_note(enabled_rules: usize) -> String {
     format!(
-        "本版本启用 {enabled_rules} 条清理规则（Mole v1.48.1 库存约 {MOLE_INVENTORY_TOTAL} 条）。\
+        "本版本启用 {enabled_rules} 条清理规则。\
          产品 v2 CLI（clean / uninstall / optimize）已达；用户域 orphaned app data（Caches/Logs/Saved State）、\
          Claude Desktop workspace VM orphan、Claude pending-uploads、\
          system services orphan（/Library LaunchDaemons/Agents/PHT 可读子集 plan + sudo -n apply 真删）、\
@@ -90,7 +90,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          FCP / 剪映 generated、XCTestDevices 已落地、\
          user.sh 广域 `~/Library/Caches/*` / `~/Library/Logs/*`（plan 目录递归 du + 父子重叠扣减；保护跳过子集仍 keep）。\
          桌面 SMAppService / 特权助手见 vole-macos（真机通道已验收）。\
-         如需完整清理（含 Developer 大户整树等长尾），请继续使用 Mole：https://github.com/tw93/Mole"
+         如需完整清理（含 Developer 大户整树等长尾），请关注后续版本。"
     )
 }
 
@@ -199,11 +199,26 @@ mod tests {
     }
 
     #[test]
+    fn user_facing_copy_omits_mole() {
+        let note = coverage_note(150);
+        for s in [
+            APPLY_PERMISSION_WARN,
+            GROUP_CONTAINERS_TRUNCATED_WARN,
+            HANDOFF_PASTEBOARD_TRUNCATED_WARN,
+            note.as_str(),
+        ] {
+            assert!(
+                !s.to_ascii_lowercase().contains("mole"),
+                "user-facing copy must not mention Mole: {s}"
+            );
+        }
+    }
+
+    #[test]
     fn coverage_note_mentions_mole_and_count() {
         let note = coverage_note(150);
         assert!(note.contains("150"));
-        assert!(note.contains("513"));
-        assert!(note.contains("tw93/Mole"));
+        assert!(!note.to_ascii_lowercase().contains("mole"));
         assert!(note.contains("产品 v2 CLI"));
         assert!(note.contains("Toolbox keep-N"));
         assert!(note.contains("已落地"));

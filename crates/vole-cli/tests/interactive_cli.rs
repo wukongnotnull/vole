@@ -43,6 +43,37 @@ fn top_level_help_mentions_home_menu_not_numbered_plan_list() {
 }
 
 #[test]
+fn subcommand_help_has_no_mole_mentions() {
+    for cmd in [
+        "clean",
+        "uninstall",
+        "optimize",
+        "purge",
+        "installer",
+        "analyze",
+        "status",
+        "history",
+        "touchid",
+        "update",
+        "remove",
+        "completions",
+    ] {
+        let output = Command::new(env!("CARGO_BIN_EXE_vole"))
+            .args([cmd, "--help"])
+            .output()
+            .unwrap_or_else(|_| panic!("help {cmd}"));
+        assert!(output.status.success(), "{cmd} --help failed");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let combined = format!("{stdout}{stderr}").to_lowercase();
+        assert!(
+            !combined.contains("mole"),
+            "{cmd} --help must not mention mole:\n{stdout}{stderr}"
+        );
+    }
+}
+
+#[test]
 fn top_level_help_has_no_mole_mentions() {
     let output = Command::new(env!("CARGO_BIN_EXE_vole"))
         .args(["--help"])

@@ -1,4 +1,4 @@
-//! Mole-compatible status prefs (`~/.config/mole/status_prefs`).
+//! Status prefs (`~/.config/vole/status_prefs`, with mole-path read fallback).
 
 use std::fs;
 use std::path::PathBuf;
@@ -21,13 +21,17 @@ impl Default for StatusPrefs {
     }
 }
 
-fn config_path() -> Option<PathBuf> {
-    std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config/mole/status_prefs"))
+fn write_path() -> Option<PathBuf> {
+    std::env::var_os("HOME").map(|_| vole_core::user_paths::status_prefs_write_path())
+}
+
+fn read_path() -> Option<PathBuf> {
+    std::env::var_os("HOME").map(|_| vole_core::user_paths::status_prefs_read_path())
 }
 
 fn load_prefs_map() -> std::collections::BTreeMap<String, String> {
     let mut prefs = std::collections::BTreeMap::new();
-    let Some(path) = config_path() else {
+    let Some(path) = read_path() else {
         return prefs;
     };
     let Ok(text) = fs::read_to_string(path) else {
@@ -47,7 +51,7 @@ fn load_prefs_map() -> std::collections::BTreeMap<String, String> {
 }
 
 fn save_pref(key: &str, value: &str) {
-    let Some(path) = config_path() else {
+    let Some(path) = write_path() else {
         return;
     };
     if let Some(parent) = path.parent() {
@@ -153,6 +157,41 @@ mod tests {
         assert!(loaded.cat_hidden);
         assert_eq!(loaded.cpu_cores, 8);
 
+        std::env::remove_var("HOME");
+        let _ = std::fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn status_prefs_write_to_vole_config() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let home = std::env::temp_dir().join(format!("vole-sp-path-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&home);
+        let h = home.join("h");
+        std::fs::create_dir_all(&h).unwrap();
+        std::env::set_var("HOME", &h);
+        save_cat_hidden(true);
+        assert!(h.join(".config/vole/status_prefs").is_file());
+        assert!(!h.join(".config/mole/status_prefs").exists());
+        std::env::remove_var("HOME");
+        let _ = std::fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn status_prefs_load_falls_back_to_mole() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let home = std::env::temp_dir().join(format!("vole-sp-fb-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&home);
+        let h = home.join("h");
+        std::fs::create_dir_all(h.join(".config/mole")).unwrap();
+        std::env::set_var("HOME", &h);
+        std::fs::write(
+            h.join(".config/mole/status_prefs"),
+            "cat_hidden=true\ncpu_cores=8\n",
+        )
+        .unwrap();
+        let loaded = load_status_prefs();
+        assert!(loaded.cat_hidden);
+        assert_eq!(loaded.cpu_cores, 8);
         std::env::remove_var("HOME");
         let _ = std::fs::remove_dir_all(&home);
     }

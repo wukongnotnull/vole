@@ -11,27 +11,40 @@ pub use json::{
 
 use std::path::PathBuf;
 
-/// Default operations.log path (mole-compatible env overrides).
+/// Canonical operations.log path (vole write location, or env override).
 pub fn operations_log_path() -> PathBuf {
-    if let Some(p) = std::env::var_os("MOLE_OPERATIONS_LOG") {
-        return PathBuf::from(p);
-    }
-    if let Some(p) = std::env::var_os("OPERATIONS_LOG_FILE") {
-        return PathBuf::from(p);
-    }
-    std::env::var_os("HOME")
-        .map(|h| PathBuf::from(h).join("Library/Logs/mole/operations.log"))
-        .unwrap_or_else(|| PathBuf::from("Library/Logs/mole/operations.log"))
+    crate::user_paths::operations_log_write_path()
 }
 
-/// Default deletions.log path (shares delete config / MOLE_DELETE_LOG).
+/// Canonical deletions.log path (vole write location, or env override).
 pub fn deletions_log_path() -> PathBuf {
-    crate::delete::deletion_log_path()
+    crate::user_paths::deletions_log_write_path()
 }
 
-/// Load from default mole log paths.
+/// Load vole logs, plus leftover Mole logs when no env override is set.
 pub fn load_default() -> HistoryReport {
-    HistoryReport::load(operations_log_path(), deletions_log_path())
+    let ops_display = operations_log_path();
+    let dels_display = deletions_log_path();
+    let ops_overridden = crate::user_paths::operations_log_env_overridden();
+    let dels_overridden = crate::user_paths::deletions_log_env_overridden();
+
+    let mut sessions = Vec::new();
+    if !ops_overridden {
+        sessions.extend(session::load_sessions(
+            &crate::user_paths::mole_logs_dir().join("operations.log"),
+        ));
+    }
+    sessions.extend(session::load_sessions(&ops_display));
+
+    let mut deletions = Vec::new();
+    if !dels_overridden {
+        deletions.extend(session::load_deletions(
+            &crate::user_paths::mole_logs_dir().join("deletions.log"),
+        ));
+    }
+    deletions.extend(session::load_deletions(&dels_display));
+
+    HistoryReport::from_parts(ops_display, dels_display, sessions, deletions)
 }
 
 /// Human-readable text aligned with mole `history_render_text` sections.
@@ -44,6 +57,68 @@ mod tests {
     use super::*;
     use std::fs;
     use std::path::PathBuf;
+
+    #[test]
+    fn operations_log_path_defaults_to_vole_when_absent() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let home = dir.path().join("h");
+        std::fs::create_dir_all(&home).unwrap();
+        let _guard = crate::test_env::lock();
+        std::env::remove_var("VOLE_OPERATIONS_LOG");
+        std::env::remove_var("MOLE_OPERATIONS_LOG");
+        std::env::remove_var("OPERATIONS_LOG_FILE");
+        std::env::set_var("HOME", &home);
+        let path = operations_log_path();
+        assert!(
+            path.ends_with("Library/Logs/vole/operations.log"),
+            "{}",
+            path.display()
+        );
+        std::env::remove_var("HOME");
+    }
+
+    #[test]
+    fn load_default_includes_mole_and_vole_sessions() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let home = dir.path().join("h");
+        let mole = home.join("Library/Logs/mole");
+        let vole = home.join("Library/Logs/vole");
+        std::fs::create_dir_all(&mole).unwrap();
+        std::fs::create_dir_all(&vole).unwrap();
+        fs::write(
+            mole.join("operations.log"),
+            "\
+# ========== clean session started at 2026-05-24 10:00:00 ==========
+[2026-05-24 10:00:01] [clean] REMOVED /tmp/mole (1KB)
+# ========== clean session ended at 2026-05-24 10:00:02, 1 items, 1KB ==========
+",
+        )
+        .unwrap();
+        fs::write(
+            vole.join("operations.log"),
+            "\
+# ========== purge session started at 2026-05-24 11:00:00 ==========
+[2026-05-24 11:00:01] [purge] REMOVED /tmp/vole (2KB)
+# ========== purge session ended at 2026-05-24 11:00:02, 1 items, 2KB ==========
+",
+        )
+        .unwrap();
+        let _guard = crate::test_env::lock();
+        std::env::remove_var("VOLE_OPERATIONS_LOG");
+        std::env::remove_var("MOLE_OPERATIONS_LOG");
+        std::env::remove_var("OPERATIONS_LOG_FILE");
+        std::env::remove_var("VOLE_DELETE_LOG");
+        std::env::remove_var("MOLE_DELETE_LOG");
+        std::env::set_var("HOME", &home);
+        let json = load_default().to_json(20);
+        assert_eq!(json.sessions[0].command, "purge");
+        assert_eq!(json.sessions[1].command, "clean");
+        assert!(json
+            .logs
+            .operations
+            .contains("Library/Logs/vole/operations.log"));
+        std::env::remove_var("HOME");
+    }
 
     #[test]
     fn history_json_empty_logs_contract() {

@@ -61,6 +61,31 @@ Requires **macOS 12+**.
 
 Current release: **[v2.16.0](https://github.com/wukongnotnull/vole/releases/tag/v2.16.0)** (Developer ID signed and notarized). Builds for Apple Silicon and Intel.
 
+### Install with an AI prompt
+
+Paste the block below into Cursor, Claude Code, Codex, ChatGPT, or any coding assistant. It will install Vole for you.
+
+```text
+Install Vole (a macOS cleanup & monitor CLI) on this Mac.
+
+Official repo: https://github.com/wukongnotnull/vole
+Requires macOS 12+. Install only — do not run clean / uninstall / optimize or any command that changes the system.
+
+Do this in order and stop at the first success:
+1. If Homebrew is available:
+   brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
+   brew install vole
+2. Otherwise download the latest notarized GitHub Release tarball for this Mac
+   (Apple Silicon: aarch64-apple-darwin; Intel: x86_64-apple-darwin).
+   Install bin/vole to ~/.local/bin and copy share/vole/rules to ~/.local/share/vole/rules.
+   If needed, add ~/.local/bin to PATH in ~/.zshrc.
+3. Do not build from source unless both of the above fail.
+
+Then run `vole --version`, and tell me the install path and version.
+```
+
+Or just say: `Install Vole from https://github.com/wukongnotnull/vole`
+
 ### Option 1: Download (recommended)
 
 1. Open the [latest Release](https://github.com/wukongnotnull/vole/releases/latest)

@@ -61,6 +61,31 @@
 
 目前已發布版本：**[v2.16.0](https://github.com/wukongnotnull/vole/releases/tag/v2.16.0)**（Developer ID 簽名並經 Apple 公證）。Apple Silicon 與 Intel 均有對應安裝包。
 
+### 發給 AI 安裝
+
+把下面這段提示詞複製發給 Cursor、Claude Code、Codex、ChatGPT 等 AI 助手，它會幫你完成安裝。
+
+```text
+請在這台 Mac 上安裝 Vole（macOS 清理與監控命令列工具）。
+
+官方倉庫：https://github.com/wukongnotnull/vole
+需要 macOS 12+。只負責安裝，不要執行 clean / uninstall / optimize 等會改動系統的命令。
+
+按順序嘗試，前一步成功就停：
+1. 若已有 Homebrew：
+   brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
+   brew install vole
+2. 否則從 GitHub Releases 下載最新公證包
+   （Apple Silicon 用 aarch64-apple-darwin，Intel 用 x86_64-apple-darwin），
+   把 bin/vole 裝到 ~/.local/bin，並把 share/vole/rules 複製到 ~/.local/share/vole/rules。
+   如需要，把 ~/.local/bin 寫入 ~/.zshrc 的 PATH。
+3. 不要從原始碼編譯，除非上面兩種方式都失敗。
+
+裝完後執行 `vole --version`，告訴我安裝路徑和版本。
+```
+
+也可以直接說：`幫我按 https://github.com/wukongnotnull/vole 的官方說明安裝 Vole`
+
 ### 方式一：下載安裝包（推薦）
 
 1. 開啟 [最新 Release](https://github.com/wukongnotnull/vole/releases/latest)

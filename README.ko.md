@@ -61,6 +61,31 @@
 
 현재 공개 버전: **[v2.16.0](https://github.com/wukongnotnull/vole/releases/tag/v2.16.0)** (Developer ID 서명 및 Apple 공증). Apple Silicon·Intel 모두 제공.
 
+### AI 프롬프트로 설치
+
+아래 블록을 Cursor, Claude Code, Codex, ChatGPT 등 AI 어시스턴트에 붙여 넣으면 대신 설치해 줍니다.
+
+```text
+이 Mac에 Vole(macOS 정리·모니터링 CLI)을 설치하세요.
+
+공식 저장소: https://github.com/wukongnotnull/vole
+macOS 12 이상이 필요합니다. 설치만 하고, clean / uninstall / optimize 등 시스템을 바꾸는 명령은 실행하지 마세요.
+
+아래 순서로 시도하고, 성공하면 멈추세요:
+1. Homebrew가 있으면:
+   brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
+   brew install vole
+2. 없으면 GitHub Releases에서 최신 공증 패키지를 받고
+   (Apple Silicon: aarch64-apple-darwin, Intel: x86_64-apple-darwin)
+   bin/vole을 ~/.local/bin에 넣고 share/vole/rules를 ~/.local/share/vole/rules로 복사하세요.
+   필요하면 ~/.zshrc PATH에 ~/.local/bin을 추가하세요.
+3. 위 두 방법이 모두 실패하기 전에는 소스에서 빌드하지 마세요.
+
+설치 후 `vole --version`을 실행하고, 설치 경로와 버전을 알려 주세요.
+```
+
+짧게는: `https://github.com/wukongnotnull/vole 공식 안내대로 Vole을 설치해 줘`
+
 ### 방법 1: 다운로드 (권장)
 
 1. [최신 Release](https://github.com/wukongnotnull/vole/releases/latest) 열기

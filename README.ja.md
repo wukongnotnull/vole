@@ -61,6 +61,31 @@
 
 現在の公開版：**[v2.16.0](https://github.com/wukongnotnull/vole/releases/tag/v2.16.0)**（Developer ID 署名＋Apple 公証）。Apple Silicon / Intel 両対応。
 
+### AI にプロンプトを送ってインストール
+
+下のブロックを Cursor、Claude Code、Codex、ChatGPT などの AI アシスタントに貼り付けてください。代わりにインストールしてくれます。
+
+```text
+この Mac に Vole（macOS 向けクリーンアップ／モニタ CLI）をインストールしてください。
+
+公式リポジトリ: https://github.com/wukongnotnull/vole
+macOS 12 以上が必要です。インストールだけ行い、clean / uninstall / optimize などシステムを変更するコマンドは実行しないでください。
+
+次の順で試し、成功したらそこで止めてください:
+1. Homebrew がある場合:
+   brew tap wukongnotnull/vole https://github.com/wukongnotnull/vole
+   brew install vole
+2. なければ GitHub Releases から最新の公証済みアーカイブをダウンロード
+   （Apple Silicon: aarch64-apple-darwin、Intel: x86_64-apple-darwin）。
+   bin/vole を ~/.local/bin に入れ、share/vole/rules を ~/.local/share/vole/rules にコピー。
+   必要なら ~/.zshrc の PATH に ~/.local/bin を追加。
+3. 上記がどちらも失敗しない限り、ソースからビルドしないでください。
+
+完了後に `vole --version` を実行し、インストール先とバージョンを教えてください。
+```
+
+短く言うなら: `https://github.com/wukongnotnull/vole の公式手順で Vole をインストールして`
+
 ### 方法 1：ダウンロード（推奨）
 
 1. [最新 Release](https://github.com/wukongnotnull/vole/releases/latest) を開く

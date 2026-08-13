@@ -87,7 +87,7 @@ pub(crate) fn gate_interactive(stdin_tty: bool, stdout_tty: bool, opts: &CleanOp
 }
 
 pub(crate) fn clean_scan_spinner_message() -> &'static str {
-    "Scanning caches..."
+    "Scanning caches, logs, leftovers..."
 }
 
 fn run_interactive(opts: &CleanOptions) -> io::Result<()> {
@@ -683,8 +683,12 @@ mod tests {
     }
 
     #[test]
-    fn clean_scan_spinner_message_matches_mole() {
-        assert_eq!(clean_scan_spinner_message(), "Scanning caches...");
+    fn clean_scan_spinner_message_covers_more_than_caches() {
+        assert_eq!(
+            clean_scan_spinner_message(),
+            "Scanning caches, logs, leftovers..."
+        );
+        assert!(!clean_scan_spinner_message().eq_ignore_ascii_case("Scanning caches..."));
     }
 
     fn plan_with_notices(notices: Vec<PlanNotice>) -> Plan {

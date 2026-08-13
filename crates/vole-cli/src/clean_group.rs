@@ -224,15 +224,21 @@ pub fn format_grouped_plan_lines(entries: &[PlanEntry]) -> Vec<String> {
 
 fn format_grouped_plan_lines_with(entries: &[PlanEntry], hyperlink: bool) -> Vec<String> {
     let mut lines = Vec::new();
-    for group in group_plan_entries(entries) {
+    let groups = group_plan_entries(entries);
+    let mut type_count = 0usize;
+    let mut total_bytes = 0u64;
+    for group in &groups {
         if !lines.is_empty() {
             lines.push(String::new());
         }
         let rows = type_dir_rows(&group.entries);
+        type_count = type_count.saturating_add(rows.len());
+        total_bytes = total_bytes.saturating_add(group.total_bytes);
         lines.push(format!(
-            "{}  ({} 类 · {})",
+            "{}  ({} {} · {})",
             group.app.title,
             rows.len(),
+            if rows.len() == 1 { "type" } else { "types" },
             units::bytes_bin(group.total_bytes)
         ));
         for row in rows {
@@ -250,7 +256,42 @@ fn format_grouped_plan_lines_with(entries: &[PlanEntry], hyperlink: bool) -> Vec
             ));
         }
     }
+    if !lines.is_empty() {
+        lines.push(String::new());
+    }
+    lines.push(format_plan_summary(
+        groups.len(),
+        type_count,
+        entries.len(),
+        total_bytes,
+        hyperlink,
+    ));
     lines
+}
+
+fn format_plan_summary(
+    group_count: usize,
+    type_count: usize,
+    item_count: usize,
+    total_bytes: u64,
+    emphasize: bool,
+) -> String {
+    let size = units::bytes_bin(total_bytes);
+    let size = if emphasize {
+        format!("\x1b[1;38;2;224;180;86m{size}\x1b[0m")
+    } else {
+        size
+    };
+    format!(
+        "{size} · {} · {} · {}",
+        english_count(group_count, "group", "groups"),
+        english_count(type_count, "type", "types"),
+        english_count(item_count, "item", "items"),
+    )
+}
+
+fn english_count(n: usize, singular: &str, plural: &str) -> String {
+    format!("{} {}", n, if n == 1 { singular } else { plural })
 }
 
 struct TypeDirRow {
@@ -716,14 +757,65 @@ mod tests {
             ),
         ];
         let lines = format_grouped_plan_lines_with(&items, false);
-        assert_eq!(lines[0], "系统缓存  (1 类 · 796 B)");
+        assert_eq!(lines[0], "系统缓存  (1 type · 796 B)");
         assert_eq!(
             lines[1],
             "  Rebuildable GPU Metal caches  /var/folders/zc/hash/C  796 B"
         );
-        assert_eq!(lines.len(), 2);
+        assert_eq!(
+            lines.last().map(String::as_str),
+            Some("796 B · 1 group · 1 type · 3 items")
+        );
         assert!(lines.iter().all(|l| !l.contains("Codeswitch")));
         assert!(lines.iter().all(|l| !l.contains("Thunder")));
+    }
+
+    #[test]
+    fn format_grouped_plan_lines_ends_with_summary() {
+        let items = [
+            entry(
+                "/Users/me/Library/Caches/Google",
+                "User app cache",
+                "user-app-cache",
+                200,
+            ),
+            entry(
+                "/private/var/folders/zc/x/C/com.google.Chrome/com.apple.metal",
+                "Rebuildable GPU Metal caches",
+                "gpu-metal-caches",
+                100,
+            ),
+            entry("/private/tmp/orphan-file", "Stale temp", "tmp", 50),
+        ];
+        let lines = format_grouped_plan_lines_with(&items, false);
+        assert_eq!(
+            lines.last().map(String::as_str),
+            Some("350 B · 3 groups · 3 types · 3 items")
+        );
+        assert!(
+            lines
+                .windows(2)
+                .any(|w| w[0].is_empty() && w[1].starts_with("350 B")),
+            "summary should be separated from the list, got {lines:?}"
+        );
+    }
+
+    #[test]
+    fn format_plan_summary_emphasizes_total_size_when_tty() {
+        let items = [entry(
+            "/Users/me/Library/Caches/Google",
+            "User app cache",
+            "user-app-cache",
+            200,
+        )];
+        let lines = format_grouped_plan_lines_with(&items, true);
+        let summary = lines.last().expect("summary");
+        assert!(
+            summary.contains("\x1b[1;38;2;224;180;86m200 B\x1b[0m"),
+            "total size should be bold gold, got {summary:?}"
+        );
+        assert!(summary.contains("1 group · 1 type · 1 item"));
+        assert!(!summary.contains("\x1b]8;;"));
     }
 
     #[test]
@@ -786,7 +878,7 @@ mod tests {
         assert_eq!(groups[0].app.id, "shared-logs");
         assert_eq!(groups[0].total_bytes, 150);
         let lines = format_grouped_plan_lines_with(&items, false);
-        assert_eq!(lines[0], "系统日志  (2 类 · 150 B)");
+        assert_eq!(lines[0], "系统日志  (2 types · 150 B)");
         assert!(lines.iter().any(|l| l.contains("/var/log")));
         assert!(lines.iter().any(|l| l.contains("/Library/Logs")));
         assert!(lines.iter().all(|l| !l.contains("DiagnosticReports")));
@@ -905,7 +997,7 @@ mod tests {
             ),
         ];
         let lines = format_grouped_plan_lines_with(&items, false);
-        assert_eq!(lines[0], "系统缓存  (1 类 · 175 B)");
+        assert_eq!(lines[0], "系统缓存  (1 type · 175 B)");
         assert_eq!(
             lines[1],
             "  Rebuildable GPU Metal caches  /var/folders/zc/hash/C  175 B"
@@ -946,13 +1038,13 @@ mod tests {
             entry("/private/tmp/orphan-file", "Stale temp", "tmp", 100),
         ];
         let lines = format_grouped_plan_lines_with(&items, false);
-        assert_eq!(lines[0], "Foo Bar  (1 类 · 2.0 KB)");
+        assert_eq!(lines[0], "Foo Bar  (1 type · 2.0 KB)");
         assert_eq!(
             lines[1],
             "  User app cache  /Users/me/Library/Caches/com.example.FooBar  2.0 KB"
         );
         assert!(lines.contains(&String::new()));
-        assert!(lines.iter().any(|l| l.starts_with("临时文件  (1 类")));
+        assert!(lines.iter().any(|l| l.starts_with("临时文件  (1 type")));
         assert!(lines.iter().any(|l| l.contains("Stale temp  /tmp  100 B")));
         assert!(lines.iter().all(|l| !l.contains("orphan-file")));
         assert!(lines.iter().all(|l| !l.contains("user-app-cache")));
@@ -1002,7 +1094,7 @@ mod tests {
         ];
         let lines = format_grouped_plan_lines_with(&items, false);
         assert!(
-            lines[0].starts_with("系统日志  (1 类"),
+            lines[0].starts_with("系统日志  (1 type"),
             "shared log bucket must be 系统日志, got {lines:?}"
         );
         let type_rows: Vec<_> = lines
@@ -1055,7 +1147,7 @@ mod tests {
         )];
         let lines = format_grouped_plan_lines_with(&items, false);
         assert!(
-            lines.iter().any(|l| l.starts_with("系统日志  (1 类")),
+            lines.iter().any(|l| l.starts_with("系统日志  (1 type")),
             "system Logs group must be 系统日志, got {lines:?}"
         );
         assert!(

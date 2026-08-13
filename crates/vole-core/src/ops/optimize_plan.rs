@@ -172,6 +172,7 @@ pub fn build_optimize_plan(
             dev,
             ino,
             mtime,
+            blockers: Vec::new(),
         });
     }
 

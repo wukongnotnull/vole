@@ -40,6 +40,8 @@ pub struct PlanEntry {
     pub ino: u64,
     #[serde(with = "serde_time")]
     pub mtime: SystemTime,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub blockers: Vec<String>,
 }
 
 /// clean plan 只读提示（hints 模块；可选追加，不 bump schema_version）。
@@ -85,10 +87,57 @@ mod tests {
                 dev: 17,
                 ino: 42,
                 mtime: UNIX_EPOCH + Duration::from_secs(1_700_000_001),
+                blockers: Vec::new(),
             }],
         };
         let json = serde_json::to_string(&plan).unwrap();
         let back: Plan = serde_json::from_str(&json).unwrap();
         assert_eq!(back, plan);
+    }
+
+    #[test]
+    fn blockers_default_omitted_and_old_json_roundtrips() {
+        let json = r#"{
+            "schema_version": 1,
+            "created_at": 1700000000,
+            "ttl_secs": 900,
+            "entries": [{
+                "id": "x",
+                "path": "/tmp/wt",
+                "label": "x",
+                "size": 0,
+                "rule_id": "worktree:linked",
+                "skip_reason": null,
+                "dev": 1,
+                "ino": 2,
+                "mtime": 1700000001
+            }]
+        }"#;
+        let plan: Plan = serde_json::from_str(json).unwrap();
+        assert!(plan.entries[0].blockers.is_empty());
+        let out = serde_json::to_string(&plan).unwrap();
+        assert!(!out.contains("blockers"));
+        assert!(!out.contains("safe"));
+        assert!(!out.contains("deletable"));
+    }
+
+    #[test]
+    fn blockers_serialize_when_nonempty() {
+        let entry = PlanEntry {
+            id: "x".into(),
+            path: PathBuf::from("/tmp/wt"),
+            label: "x".into(),
+            size: 0,
+            rule_id: "worktree:linked".into(),
+            skip_reason: None,
+            dev: 1,
+            ino: 2,
+            mtime: UNIX_EPOCH + Duration::from_secs(1),
+            blockers: vec!["dirty".into()],
+        };
+        let json = serde_json::to_string(&entry).unwrap();
+        assert!(json.contains("\"blockers\""));
+        assert!(json.contains("dirty"));
+        assert!(!json.contains("safe"));
     }
 }

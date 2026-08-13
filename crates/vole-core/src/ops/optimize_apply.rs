@@ -369,6 +369,7 @@ mod tests {
                     dev: 0,
                     ino: 0,
                     mtime: UNIX_EPOCH,
+                    blockers: Vec::new(),
                 },
                 ProtoPlanEntry {
                     id: "network_optimization-0".into(),
@@ -380,6 +381,7 @@ mod tests {
                     dev: 0,
                     ino: 0,
                     mtime: UNIX_EPOCH,
+                    blockers: Vec::new(),
                 },
             ],
             coverage_note: None,
@@ -468,6 +470,7 @@ mod tests {
                 dev: 0,
                 ino: 0,
                 mtime: UNIX_EPOCH,
+                blockers: Vec::new(),
             }],
             coverage_note: None,
         }
@@ -584,6 +587,7 @@ mod tests {
             dev: 0,
             ino: 0,
             mtime: UNIX_EPOCH,
+            blockers: Vec::new(),
         };
         ProtoPlan {
             schema_version: SCHEMA_VERSION,
@@ -755,6 +759,7 @@ mod tests {
             dev: identity.dev,
             ino: identity.ino,
             mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+            blockers: Vec::new(),
         };
         let plan = ProtoPlan {
             schema_version: SCHEMA_VERSION,

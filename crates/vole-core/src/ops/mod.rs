@@ -86,6 +86,10 @@ pub use uninstall_plan::{
     build_uninstall_plan_with_brew, default_applications_dirs, scan_applications,
     UninstallPlanOptions,
 };
+pub use update::{
+    run_update, verify_sha256, CurlUpdateTransport, ExecVersionProbe, FakeUpdateTransport,
+    UpdateError, UpdateOptions, UpdateOutcome, UpdateTransport, VersionProbe,
+};
 pub use worktree_apply::{
     apply_worktree_plan, apply_worktree_proto_plan, WorktreeApplyContext, WorktreeApplyError,
     WorktreeApplyOptions,

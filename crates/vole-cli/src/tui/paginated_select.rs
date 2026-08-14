@@ -108,17 +108,12 @@ fn render_menu(frame: &mut Frame, title: &str, state: &MenuState, theme: &Theme)
     }
 
     let header = if state.filter_text().is_empty() {
-        format!(
-            "{title}  {}/{} selected",
-            state.selected_count(),
-            state.items().len()
-        )
+        format!("{title}  {}", state.selection_summary())
     } else {
         format!(
-            "{title}  / Search: {}_  ({}/{})",
+            "{title}  / Search: {}_  ({})",
             state.filter_text(),
-            state.view_len(),
-            state.items().len()
+            state.selection_summary()
         )
     };
     frame.render_widget(

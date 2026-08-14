@@ -255,6 +255,27 @@ impl MenuState {
         self.selected.len()
     }
 
+    pub fn selected_size_kb(&self) -> u64 {
+        self.selected
+            .iter()
+            .map(|&i| self.items[i].size_kb.unwrap_or(0))
+            .sum()
+    }
+
+    pub fn total_size_kb(&self) -> u64 {
+        self.items.iter().map(|i| i.size_kb.unwrap_or(0)).sum()
+    }
+
+    pub fn selection_summary(&self) -> String {
+        format!(
+            "{}/{} selected ({} / {})",
+            self.selected_count(),
+            self.items.len(),
+            vole_core::units::bytes_bin(self.selected_size_kb().saturating_mul(1024)),
+            vole_core::units::bytes_bin(self.total_size_kb().saturating_mul(1024)),
+        )
+    }
+
     pub fn view_len(&self) -> usize {
         self.view_indices.len()
     }
@@ -626,6 +647,49 @@ mod tests {
         assert_eq!(
             st.handle_key(MenuKey::Enter),
             Some(SelectOutcome::Confirmed(vec![1]))
+        );
+    }
+
+    #[test]
+    fn selection_summary_appends_selected_and_total_size() {
+        let items = vec![
+            MenuItem {
+                label: "a".into(),
+                filter_name: None,
+                epoch: Some(1),
+                size_kb: Some(100),
+            },
+            MenuItem {
+                label: "b".into(),
+                filter_name: None,
+                epoch: Some(2),
+                size_kb: Some(924),
+            },
+        ];
+        let mut st = MenuState::new(
+            items,
+            MenuConfig {
+                sort_mode: SortMode::Name,
+                ..MenuConfig::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            st.selection_summary(),
+            format!(
+                "0/2 selected ({} / {})",
+                vole_core::units::bytes_bin(0),
+                vole_core::units::bytes_bin(1024 * 1024)
+            )
+        );
+        assert_eq!(st.handle_key(MenuKey::Space), None);
+        assert_eq!(
+            st.selection_summary(),
+            format!(
+                "1/2 selected ({} / {})",
+                vole_core::units::bytes_bin(100 * 1024),
+                vole_core::units::bytes_bin(1024 * 1024)
+            )
         );
     }
 

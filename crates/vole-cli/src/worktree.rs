@@ -53,6 +53,10 @@ fn run_worktree_inner(opts: WorktreeOptions) -> io::Result<()> {
     run_plan(opts)
 }
 
+pub(crate) fn worktree_scan_spinner_message() -> &'static str {
+    "Scanning git worktrees..."
+}
+
 /// TTY 裸调用进入交互多选的门控（可单测，不依赖真实 TTY）。
 pub(crate) fn gate_interactive(stdin_tty: bool, stdout_tty: bool, opts: &WorktreeOptions) -> bool {
     stdin_tty
@@ -65,6 +69,7 @@ pub(crate) fn gate_interactive(stdin_tty: bool, stdout_tty: bool, opts: &Worktre
 }
 
 fn run_interactive(opts: &WorktreeOptions) -> io::Result<()> {
+    let spinner = crate::tty_spinner::TtySpinner::start(worktree_scan_spinner_message());
     let home = env::var_os("HOME")
         .map(PathBuf::from)
         .ok_or_else(|| io::Error::other("HOME not set"))?;
@@ -83,9 +88,11 @@ fn run_interactive(opts: &WorktreeOptions) -> io::Result<()> {
         .map_err(|e| io::Error::other(e.to_string()))?;
 
     if plan.entries.is_empty() {
+        spinner.stop();
         eprintln!("No leftover git worktrees found.");
         return Ok(());
     }
+    spinner.stop();
 
     let selected_idxs = loop {
         let items: Vec<MenuItem> = plan.entries.iter().map(menu_item_from_entry).collect();
@@ -410,5 +417,10 @@ mod tests {
                 ..bare_opts()
             }
         ));
+    }
+
+    #[test]
+    fn worktree_scan_spinner_message_matches_plan_copy() {
+        assert_eq!(worktree_scan_spinner_message(), "Scanning git worktrees...");
     }
 }

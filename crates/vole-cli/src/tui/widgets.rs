@@ -204,36 +204,6 @@ fn wrap_prefixed(prefix: &str, body: &str, width: usize, hang: usize) -> Vec<Str
     out
 }
 
-/// Fit a paginated-select row to `width`, keeping the checkbox / size and the
-/// distinctive tail of a long path (leading `…` when truncated).
-pub fn fit_menu_row(mark: &str, label: &str, size: &str, width: usize) -> String {
-    if width == 0 {
-        return String::new();
-    }
-    let prefix = format!("{mark} ");
-    let reserved = display_width(&prefix) + display_width(size);
-    if reserved >= width {
-        return shorten_keep_tail(&format!("{prefix}{label}{size}"), width);
-    }
-    let fitted = shorten_keep_tail(label, width - reserved);
-    format!("{prefix}{fitted}{size}")
-}
-
-fn shorten_keep_tail(s: &str, max_len: usize) -> String {
-    if max_len == 0 {
-        return String::new();
-    }
-    let chars: Vec<char> = s.chars().collect();
-    if chars.len() <= max_len {
-        return s.to_string();
-    }
-    if max_len == 1 {
-        return "…".to_string();
-    }
-    let tail: String = chars[chars.len() - (max_len - 1)..].iter().collect();
-    format!("…{tail}")
-}
-
 pub fn shorten(s: &str, max_len: usize) -> String {
     if max_len == 0 {
         return String::new();
@@ -657,24 +627,6 @@ mod tests {
         );
         assert!(lines.iter().all(|l| l.chars().count() <= 36), "{joined:?}");
         assert!(lines.len() >= 3, "{joined}");
-    }
-
-    #[test]
-    fn fit_menu_row_keeps_mark_size_and_path_tail() {
-        let mark = "[ ]";
-        let label = "stale  git  detached  /Users/me/.cursor/worktrees/sns/feat-long-name";
-        let size = "  (12 KB)";
-        let wide = fit_menu_row(mark, label, size, 200);
-        assert_eq!(wide, format!("{mark} {label}{size}"));
-        assert!(!wide.contains('…'));
-
-        let narrow_w = 42;
-        let narrow = fit_menu_row(mark, label, size, narrow_w);
-        assert!(narrow.chars().count() <= narrow_w, "{narrow}");
-        assert!(narrow.starts_with("[ ] "), "{narrow}");
-        assert!(narrow.ends_with("  (12 KB)"), "{narrow}");
-        assert!(narrow.contains('…'), "{narrow}");
-        assert!(narrow.contains("feat-long-name"), "{narrow}");
     }
 
     #[test]

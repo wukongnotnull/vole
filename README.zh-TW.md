@@ -269,6 +269,7 @@ Vole 是獨立開源專案，與上述產品無隸屬或商業關係。
 ## 授權條款
 
 Vole 遵循 [GPL-3.0](LICENSE)。  
+清理規則與安全思路受到 [Mole](https://github.com/tw93/Mole) 啟發；Vole 是獨立開源專案，不隸屬於 Mole。  
 如需基於本專案做自有產品，請更換名稱以避免混淆，並註明來源於 Mole / Vole。
 
 ---

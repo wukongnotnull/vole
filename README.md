@@ -269,6 +269,7 @@ Vole is an independent open-source project and has no affiliation or commercial 
 ## License
 
 Vole is licensed under [GPL-3.0](LICENSE).  
+Rules and safety ideas were inspired by [Mole](https://github.com/tw93/Mole). Vole is an independent open-source project and is not affiliated with Mole.  
 If you fork it into your own product, please rename it to avoid confusion and credit Mole / Vole as sources.
 
 ---

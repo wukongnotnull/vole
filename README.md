@@ -60,7 +60,7 @@ For anyone comfortable with Terminal who wants a safer Mac cleaner than “delet
 
 Requires **macOS 12+**.
 
-Current release: **[v2.18.0](https://github.com/wukongnotnull/vole/releases/tag/v2.18.0)** (Developer ID signed and notarized). Builds for Apple Silicon and Intel.
+Current release: **[v2.19.0](https://github.com/wukongnotnull/vole/releases/tag/v2.19.0)** (Developer ID signed and notarized). Builds for Apple Silicon and Intel.
 
 ### Option 1: Install with an AI prompt
 
@@ -104,14 +104,14 @@ Then run `vole`. If brew fails or the version looks wrong, use the download opti
    - Intel: `…-x86_64-apple-darwin.tar.gz`
 3. Put `bin/vole` somewhere on your PATH (e.g. `~/.local/bin`) and keep the bundled `share/vole/rules` folder
 
-Example (Apple Silicon / v2.18.0; use the exact filenames from the Release page):
+Example (Apple Silicon / v2.19.0; use the exact filenames from the Release page):
 
 ```bash
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v2.18.0/vole-2.18.0-aarch64-apple-darwin.tar.gz
-tar xzf vole-2.18.0-aarch64-apple-darwin.tar.gz
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v2.19.0/vole-2.19.0-aarch64-apple-darwin.tar.gz
+tar xzf vole-2.19.0-aarch64-apple-darwin.tar.gz
 mkdir -p ~/.local/bin ~/.local/share/vole
-install -m 755 vole-2.18.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-cp -R vole-2.18.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+install -m 755 vole-2.19.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+cp -R vole-2.19.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 ```
 
 If Terminal says `vole: command not found`, add this to `~/.zshrc`, then run `source ~/.zshrc`:

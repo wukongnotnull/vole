@@ -16,6 +16,7 @@ use crate::terminal::TerminalGuard;
 
 use super::design::{inset_content, menu_footer_line, DesignSystem, Theme, FOOTER_GAP, TOP_PAD};
 use super::menu_state::{MenuConfig, MenuItem, MenuKey, MenuState, SelectOutcome};
+use super::widgets::wrap_menu_block;
 
 /// Drain pending keyboard input until `timeout` elapses (mole #726).
 pub fn drain_pending_input(timeout: Duration) {
@@ -39,6 +40,9 @@ pub fn run_paginated_select(
     let mut state = MenuState::new(items, cfg).map_err(|e| io::Error::other(e.to_string()))?;
     let theme = DesignSystem::resolve().theme;
     loop {
+        if let Ok((cols, rows)) = crossterm::terminal::size() {
+            state.set_term_size(cols, rows);
+        }
         term.draw(|f| render_menu(f, title, &state, &theme))?;
         if !event::poll(Duration::from_millis(50))? {
             continue;
@@ -125,6 +129,7 @@ fn render_menu(frame: &mut Frame, title: &str, state: &MenuState, theme: &Theme)
 
     let page = state.visible_page();
     let cursor_row = state.cursor_in_page();
+    let list_w = chunks[idx].width as usize;
     let items: Vec<ListItem> = page
         .iter()
         .enumerate()
@@ -139,13 +144,19 @@ fn render_menu(frame: &mut Frame, title: &str, state: &MenuState, theme: &Theme)
                 .size_kb
                 .map(|kb| format!("  ({kb} KB)"))
                 .unwrap_or_default();
-            let content = format!("{mark} {}{size}", item.label);
+            let label_lines: Vec<&str> = item.label.split('\n').collect();
+            let block = wrap_menu_block(mark, &label_lines, &size, list_w);
             let style = if row == cursor_row {
                 theme.selected
             } else {
                 theme.normal
             };
-            ListItem::new(Span::styled(content, style))
+            ListItem::new(
+                block
+                    .into_iter()
+                    .map(|line| Line::from(Span::styled(line, style)))
+                    .collect::<Vec<_>>(),
+            )
         })
         .collect();
 

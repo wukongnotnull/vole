@@ -153,6 +153,87 @@ pub fn format_rate_mbs(mb: f64) -> String {
     }
 }
 
+/// Render a menu record as one or more lines that stay within `width`.
+/// Long fields wrap; no text is dropped. Continuation lines are indented.
+pub fn wrap_menu_block(mark: &str, lines: &[&str], size: &str, width: usize) -> Vec<String> {
+    if width == 0 {
+        return vec![String::new()];
+    }
+    let mut out = Vec::new();
+    for (i, line) in lines.iter().enumerate() {
+        let (prefix, body) = if i == 0 {
+            (format!("{mark} "), format!("{line}{size}"))
+        } else {
+            ("    ".to_string(), (*line).to_string())
+        };
+        out.extend(wrap_prefixed(&prefix, &body, width, 4));
+    }
+    if out.is_empty() {
+        out.push(format!("{mark} {size}"));
+    }
+    out
+}
+
+fn wrap_prefixed(prefix: &str, body: &str, width: usize, hang: usize) -> Vec<String> {
+    let prefix_w = display_width(prefix);
+    let hang_n = hang.min(width.saturating_sub(1));
+    let hang_pad = " ".repeat(hang_n);
+    let chars: Vec<char> = body.chars().collect();
+    if chars.is_empty() {
+        return vec![prefix.to_string()];
+    }
+    let first_budget = width.saturating_sub(prefix_w).max(1);
+    if chars.len() <= first_budget {
+        return vec![format!("{prefix}{body}")];
+    }
+    let mut out = Vec::new();
+    out.push(format!(
+        "{prefix}{}",
+        chars[..first_budget].iter().collect::<String>()
+    ));
+    let cont_w = width.saturating_sub(hang_n).max(1);
+    let mut i = first_budget;
+    while i < chars.len() {
+        let end = (i + cont_w).min(chars.len());
+        out.push(format!(
+            "{hang_pad}{}",
+            chars[i..end].iter().collect::<String>()
+        ));
+        i = end;
+    }
+    out
+}
+
+/// Fit a paginated-select row to `width`, keeping the checkbox / size and the
+/// distinctive tail of a long path (leading `…` when truncated).
+pub fn fit_menu_row(mark: &str, label: &str, size: &str, width: usize) -> String {
+    if width == 0 {
+        return String::new();
+    }
+    let prefix = format!("{mark} ");
+    let reserved = display_width(&prefix) + display_width(size);
+    if reserved >= width {
+        return shorten_keep_tail(&format!("{prefix}{label}{size}"), width);
+    }
+    let fitted = shorten_keep_tail(label, width - reserved);
+    format!("{prefix}{fitted}{size}")
+}
+
+fn shorten_keep_tail(s: &str, max_len: usize) -> String {
+    if max_len == 0 {
+        return String::new();
+    }
+    let chars: Vec<char> = s.chars().collect();
+    if chars.len() <= max_len {
+        return s.to_string();
+    }
+    if max_len == 1 {
+        return "…".to_string();
+    }
+    let tail: String = chars[chars.len() - (max_len - 1)..].iter().collect();
+    format!("…{tail}")
+}
+
 pub fn shorten(s: &str, max_len: usize) -> String {
     if max_len == 0 {
         return String::new();
@@ -545,6 +626,55 @@ mod tests {
         assert!(root.contains("Esc/Q Quit"));
         let top = analyze_footer(AnalyzeFooterMode::Top { selected_count: 0 });
         assert!(top.contains("↑↓←"));
+    }
+
+    #[test]
+    fn wrap_menu_block_keeps_all_text_and_stays_within_width() {
+        let lines = wrap_menu_block(
+            "[ ]",
+            &[
+                "stale  cursor  detached",
+                "repo  ~/src/sns",
+                "path  ~/.cursor/worktrees/sns/feat-long-name",
+            ],
+            "  (12 KB)",
+            36,
+        );
+        let joined = lines.join("\n");
+        let compact: String = lines
+            .concat()
+            .chars()
+            .filter(|c| !c.is_whitespace())
+            .collect();
+        assert!(compact.contains("stalecursordetached"), "{joined}");
+        assert!(compact.contains("feat-long-name"), "{joined}");
+        assert!(compact.contains("~/src/sns"), "{joined}");
+        assert!(compact.contains("(12KB)"), "{joined}");
+        assert!(lines[0].starts_with("[ ] "), "{joined}");
+        assert!(
+            lines.iter().skip(1).all(|l| l.starts_with("    ")),
+            "{joined}"
+        );
+        assert!(lines.iter().all(|l| l.chars().count() <= 36), "{joined:?}");
+        assert!(lines.len() >= 3, "{joined}");
+    }
+
+    #[test]
+    fn fit_menu_row_keeps_mark_size_and_path_tail() {
+        let mark = "[ ]";
+        let label = "stale  git  detached  /Users/me/.cursor/worktrees/sns/feat-long-name";
+        let size = "  (12 KB)";
+        let wide = fit_menu_row(mark, label, size, 200);
+        assert_eq!(wide, format!("{mark} {label}{size}"));
+        assert!(!wide.contains('…'));
+
+        let narrow_w = 42;
+        let narrow = fit_menu_row(mark, label, size, narrow_w);
+        assert!(narrow.chars().count() <= narrow_w, "{narrow}");
+        assert!(narrow.starts_with("[ ] "), "{narrow}");
+        assert!(narrow.ends_with("  (12 KB)"), "{narrow}");
+        assert!(narrow.contains('…'), "{narrow}");
+        assert!(narrow.contains("feat-long-name"), "{narrow}");
     }
 
     #[test]

@@ -10,8 +10,8 @@ use crossbeam_channel::unbounded;
 use vole_core::mutex::{try_lock_worktree, MutexError};
 use vole_core::ops::{
     apply_worktree_plan, build_worktree_plan, coverage_with_apply_permission_hint,
-    report_has_permission_skips, LiveGitProbe, WorktreeApplyError, WorktreeApplyOptions,
-    WorktreePlanOptions, APPLY_PERMISSION_WARN, DEFAULT_WORKTREE_TTL_SECS,
+    parse_repo_from_label, report_has_permission_skips, LiveGitProbe, WorktreeApplyError,
+    WorktreeApplyOptions, WorktreePlanOptions, APPLY_PERMISSION_WARN, DEFAULT_WORKTREE_TTL_SECS,
 };
 use vole_core::protection::AppProtection;
 use vole_core::units;
@@ -242,21 +242,56 @@ fn run_apply(opts: &WorktreeOptions, plan_path: &Path) -> io::Result<()> {
 
 fn menu_item_from_entry(entry: &PlanEntry) -> MenuItem {
     let path_str = entry.path.display().to_string();
-    let label = if entry.blockers.is_empty() {
-        format!("{}  {}", entry.label, path_str)
-    } else {
-        format!(
-            "{}  [{}]  {}",
-            entry.label,
-            entry.blockers.join(","),
-            path_str
-        )
-    };
+    let home = env::var_os("HOME").map(PathBuf::from);
     MenuItem {
-        label,
+        label: format_worktree_menu_label(entry, home.as_deref()),
         filter_name: Some(path_str),
         epoch: mtime_epoch(entry.mtime),
         size_kb: Some(entry.size / 1024),
+    }
+}
+
+pub(crate) fn format_worktree_menu_label(entry: &PlanEntry, home: Option<&Path>) -> String {
+    let kind = entry
+        .rule_id
+        .strip_prefix("worktree:")
+        .unwrap_or(entry.rule_id.as_str());
+    let (source, head) = source_and_head_from_label(&entry.label);
+    let repo = parse_repo_from_label(&entry.label)
+        .map(|p| display_home_path(&p, home))
+        .unwrap_or_else(|| "-".into());
+    let path = display_home_path(&entry.path, home);
+    let blockers = if entry.blockers.is_empty() {
+        "-".to_string()
+    } else {
+        entry.blockers.join(",")
+    };
+    format!("{kind}  {source}  {head}\nrepo  {repo}\npath  {path}\nblockers  {blockers}")
+}
+
+fn source_and_head_from_label(label: &str) -> (String, String) {
+    for marker in [" linked ", " stale ", " orphan-dir "] {
+        if let Some(idx) = label.find(marker) {
+            let rest = &label[idx + marker.len()..];
+            let mut parts = rest.splitn(3, ' ');
+            let source = parts.next().unwrap_or("git").to_string();
+            let head = parts.next().unwrap_or("detached").to_string();
+            return (source, head);
+        }
+    }
+    ("git".into(), "detached".into())
+}
+
+fn display_home_path(path: &Path, home: Option<&Path>) -> String {
+    let raw = path.display().to_string();
+    let Some(home) = home else {
+        return raw;
+    };
+    let home = home.to_string_lossy();
+    if raw.starts_with(home.as_ref()) {
+        raw.replacen(home.as_ref(), "~", 1)
+    } else {
+        raw
     }
 }
 
@@ -422,5 +457,48 @@ mod tests {
     #[test]
     fn worktree_scan_spinner_message_matches_plan_copy() {
         assert_eq!(worktree_scan_spinner_message(), "Scanning git worktrees...");
+    }
+
+    fn sample_entry(label: &str, path: &str, rule_id: &str, blockers: Vec<String>) -> PlanEntry {
+        PlanEntry {
+            id: "w".into(),
+            path: PathBuf::from(path),
+            label: label.into(),
+            size: 0,
+            rule_id: rule_id.into(),
+            skip_reason: None,
+            dev: 0,
+            ino: 0,
+            mtime: UNIX_EPOCH,
+            blockers,
+        }
+    }
+
+    #[test]
+    fn worktree_menu_label_is_multiline_and_complete() {
+        let home = "/Users/me";
+        let path = "/Users/me/.cursor/worktrees/sns/feat-long-name";
+        let entry = sample_entry(
+            &format!("repo:/Users/me/src/sns stale cursor detached blockers=- {path}"),
+            path,
+            "worktree:stale",
+            vec![],
+        );
+        let line = format_worktree_menu_label(&entry, Some(Path::new(home)));
+        assert_eq!(
+            line,
+            "stale  cursor  detached\nrepo  ~/src/sns\npath  ~/.cursor/worktrees/sns/feat-long-name\nblockers  -"
+        );
+
+        let blocked = sample_entry(
+            &format!("repo:/Users/me/src/sns linked git branch:feat blockers=dirty {path}"),
+            path,
+            "worktree:linked",
+            vec!["dirty".into()],
+        );
+        assert_eq!(
+            format_worktree_menu_label(&blocked, Some(Path::new(home))),
+            "linked  git  branch:feat\nrepo  ~/src/sns\npath  ~/.cursor/worktrees/sns/feat-long-name\nblockers  dirty"
+        );
     }
 }

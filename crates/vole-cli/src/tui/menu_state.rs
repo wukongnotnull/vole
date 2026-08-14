@@ -6,6 +6,8 @@ use std::collections::HashSet;
 use std::env;
 use std::fmt;
 
+use super::widgets::wrap_menu_block;
+
 #[derive(Debug, Clone)]
 pub struct MenuItem {
     pub label: String,
@@ -50,6 +52,7 @@ pub struct MenuConfig {
     pub ignore_initial_enter: bool,
     pub preselected: Vec<usize>,
     pub term_height: u16,
+    pub term_width: u16,
 }
 
 impl Default for MenuConfig {
@@ -60,6 +63,7 @@ impl Default for MenuConfig {
             ignore_initial_enter: false,
             preselected: Vec::new(),
             term_height: 24,
+            term_width: 80,
         }
     }
 }
@@ -88,6 +92,7 @@ pub struct MenuState {
     sort_reverse: bool,
     ignore_initial_enter: bool,
     term_height: u16,
+    term_width: u16,
 }
 
 impl MenuState {
@@ -118,6 +123,7 @@ impl MenuState {
             sort_reverse: cfg.sort_reverse,
             ignore_initial_enter: cfg.ignore_initial_enter,
             term_height: cfg.term_height,
+            term_width: cfg.term_width,
         };
         state.rebuild_view();
         Ok(state)
@@ -215,9 +221,17 @@ impl MenuState {
     }
 
     pub fn visible_page(&self) -> &[usize] {
-        let per = Self::items_per_page(self.term_height);
-        let end = (self.top + per).min(self.view_indices.len());
+        let end = self.page_end();
         &self.view_indices[self.top..end]
+    }
+
+    pub fn set_term_size(&mut self, width: u16, height: u16) {
+        if width == self.term_width && height == self.term_height {
+            return;
+        }
+        self.term_width = width.max(1);
+        self.term_height = height.max(1);
+        self.ensure_cursor_visible();
     }
 
     pub fn items(&self) -> &[MenuItem] {
@@ -336,16 +350,49 @@ impl MenuState {
         }
     }
 
+    fn page_end(&self) -> usize {
+        if self.view_indices.is_empty() {
+            return 0;
+        }
+        let avail = Self::items_per_page(self.term_height);
+        let mut used = 0usize;
+        let mut end = self.top;
+        let mut count = 0usize;
+        while end < self.view_indices.len() && count < 50 {
+            let h = self.visual_height(self.view_indices[end]);
+            if count > 0 && used.saturating_add(h) > avail {
+                break;
+            }
+            used = used.saturating_add(h);
+            end += 1;
+            count += 1;
+        }
+        end.max(self.top + 1).min(self.view_indices.len())
+    }
+
+    fn visual_height(&self, orig_idx: usize) -> usize {
+        let item = &self.items[orig_idx];
+        let size = item
+            .size_kb
+            .map(|kb| format!("  ({kb} KB)"))
+            .unwrap_or_default();
+        let lines: Vec<&str> = item.label.split('\n').collect();
+        wrap_menu_block("[ ]", &lines, &size, self.term_width as usize)
+            .len()
+            .max(1)
+    }
+
     fn ensure_cursor_visible(&mut self) {
-        let per = Self::items_per_page(self.term_height);
+        if self.view_indices.is_empty() {
+            self.top = 0;
+            return;
+        }
         if self.cursor < self.top {
             self.top = self.cursor;
-        } else if self.cursor >= self.top + per {
-            self.top = self.cursor + 1 - per;
+            return;
         }
-        let max_top = self.view_indices.len().saturating_sub(per);
-        if self.top > max_top {
-            self.top = max_top;
+        while self.cursor >= self.page_end() && self.top < self.cursor {
+            self.top += 1;
         }
     }
 
@@ -405,6 +452,33 @@ mod tests {
         assert_eq!(MenuState::items_per_page(3), 1);
         assert_eq!(MenuState::items_per_page(20), 15); // 20-5
         assert_eq!(MenuState::items_per_page(200), 50);
+    }
+
+    #[test]
+    fn multiline_items_fill_page_by_row_height() {
+        let items: Vec<MenuItem> = (0..10)
+            .map(|i| MenuItem {
+                label: format!("item{i}\nrepo  /a\npath  /b\nblockers  -"),
+                filter_name: None,
+                epoch: Some(i),
+                size_kb: Some(1),
+            })
+            .collect();
+        let st = MenuState::new(
+            items,
+            MenuConfig {
+                term_height: 20,
+                term_width: 80,
+                ..MenuConfig::default()
+            },
+        )
+        .unwrap();
+        let page = st.visible_page();
+        assert!(
+            (1..=4).contains(&page.len()),
+            "expected a few multi-line records, got {}",
+            page.len()
+        );
     }
 
     #[test]

@@ -266,7 +266,21 @@ fn format_grouped_plan_lines_with(entries: &[PlanEntry], hyperlink: bool) -> Vec
         total_bytes,
         hyperlink,
     ));
+    lines.push(String::new());
+    lines.extend(
+        plan_summary_note_lines()
+            .iter()
+            .map(|line| (*line).to_string()),
+    );
     lines
+}
+
+/// Explains the highlighted total: what it is, and how to act on it.
+pub(crate) fn plan_summary_note_lines() -> &'static [&'static str] {
+    &[
+        "上面的体积是可清理候选加总（缓存、日志、残留等），不是已经腾出的空间。",
+        "先回看上方分组；确认后默认进废纸篓，删错可从废纸篓还原。",
+    ]
 }
 
 fn format_plan_summary(
@@ -762,9 +776,11 @@ mod tests {
             lines[1],
             "  Rebuildable GPU Metal caches  /var/folders/zc/hash/C  796 B"
         );
-        assert_eq!(
-            lines.last().map(String::as_str),
-            Some("796 B · 1 group · 1 type · 3 items")
+        assert!(
+            lines
+                .iter()
+                .any(|l| l == "796 B · 1 group · 1 type · 3 items"),
+            "missing summary, got {lines:?}"
         );
         assert!(lines.iter().all(|l| !l.contains("Codeswitch")));
         assert!(lines.iter().all(|l| !l.contains("Thunder")));
@@ -788,15 +804,30 @@ mod tests {
             entry("/private/tmp/orphan-file", "Stale temp", "tmp", 50),
         ];
         let lines = format_grouped_plan_lines_with(&items, false);
+        let summary = "350 B · 3 groups · 3 types · 3 items";
+        let summary_idx = lines.iter().position(|l| l == summary).expect("summary");
+        assert!(
+            summary_idx > 0 && lines[summary_idx - 1].is_empty(),
+            "summary should be separated from the list, got {lines:?}"
+        );
+        assert_eq!(lines[summary_idx + 1], "");
         assert_eq!(
-            lines.last().map(String::as_str),
-            Some("350 B · 3 groups · 3 types · 3 items")
+            &lines[summary_idx + 2..summary_idx + 4],
+            plan_summary_note_lines()
+        );
+    }
+
+    #[test]
+    fn plan_summary_note_explains_total_and_next_step() {
+        let note = plan_summary_note_lines();
+        assert_eq!(note.len(), 2);
+        assert!(
+            note[0].contains("可清理候选") && note[0].contains("不是已经腾出的空间"),
+            "must say what the total is, got {note:?}"
         );
         assert!(
-            lines
-                .windows(2)
-                .any(|w| w[0].is_empty() && w[1].starts_with("350 B")),
-            "summary should be separated from the list, got {lines:?}"
+            note[1].contains("废纸篓") && note[1].contains("回看上方分组"),
+            "must say how to handle it, got {note:?}"
         );
     }
 
@@ -809,12 +840,14 @@ mod tests {
             200,
         )];
         let lines = format_grouped_plan_lines_with(&items, true);
-        let summary = lines.last().expect("summary");
+        let summary = lines
+            .iter()
+            .find(|l| l.contains("1 group · 1 type · 1 item"))
+            .expect("summary");
         assert!(
             summary.contains("\x1b[1;38;2;224;180;86m200 B\x1b[0m"),
             "total size should be bold gold, got {summary:?}"
         );
-        assert!(summary.contains("1 group · 1 type · 1 item"));
         assert!(!summary.contains("\x1b]8;;"));
     }
 

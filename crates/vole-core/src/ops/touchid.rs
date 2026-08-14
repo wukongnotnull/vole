@@ -3,7 +3,7 @@
 use crate::delete::test_no_auth;
 use serde::Serialize;
 use std::fs;
-use std::io::{self, Write};
+use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
@@ -46,7 +46,8 @@ impl PamInstall for FakePamInstall {
     }
 }
 
-/// 生产：仅 `sudo -n`；`VOLE_TEST_NO_AUTH` 下拒绝写入。
+/// 生产：TTY 下交互 `sudo`（可用 Touch ID）；非 TTY 仅 `sudo -n`。
+/// `VOLE_TEST_NO_AUTH` 下拒绝写入。
 pub struct LivePamInstall;
 
 fn live_pam_blocked() -> bool {
@@ -63,32 +64,35 @@ fn live_pam_blocked() -> bool {
     false
 }
 
+fn sudo_privileged(args: &[&str]) -> io::Result<std::process::ExitStatus> {
+    let mut cmd = std::process::Command::new("sudo");
+    if !io::stdin().is_terminal() || !io::stderr().is_terminal() {
+        cmd.arg("-n");
+    }
+    cmd.args(args).status()
+}
+
 impl PamInstall for LivePamInstall {
     fn install_file(&self, src: &Path, dst: &Path) -> io::Result<()> {
         if live_pam_blocked() {
             return Err(io::Error::other("VOLE_TEST_NO_AUTH: refusing pam install"));
         }
-        let status = std::process::Command::new("sudo")
-            .args([
-                "-n",
-                "install",
-                "-m",
-                "444",
-                "-o",
-                "root",
-                "-g",
-                "wheel",
-                src.to_str().ok_or_else(|| io::Error::other("src utf8"))?,
-                dst.to_str().ok_or_else(|| io::Error::other("dst utf8"))?,
-            ])
-            .status()?;
+        let status = sudo_privileged(&[
+            "install",
+            "-m",
+            "444",
+            "-o",
+            "root",
+            "-g",
+            "wheel",
+            src.to_str().ok_or_else(|| io::Error::other("src utf8"))?,
+            dst.to_str().ok_or_else(|| io::Error::other("dst utf8"))?,
+        ])?;
         if status.success() {
             let _ = fs::remove_file(src);
             Ok(())
         } else {
-            Err(io::Error::other(format!(
-                "sudo -n install failed: {status}"
-            )))
+            Err(io::Error::other(format!("sudo install failed: {status}")))
         }
     }
 
@@ -96,18 +100,15 @@ impl PamInstall for LivePamInstall {
         if live_pam_blocked() {
             return Err(io::Error::other("VOLE_TEST_NO_AUTH: refusing pam copy"));
         }
-        let status = std::process::Command::new("sudo")
-            .args([
-                "-n",
-                "cp",
-                src.to_str().ok_or_else(|| io::Error::other("src utf8"))?,
-                dst.to_str().ok_or_else(|| io::Error::other("dst utf8"))?,
-            ])
-            .status()?;
+        let status = sudo_privileged(&[
+            "cp",
+            src.to_str().ok_or_else(|| io::Error::other("src utf8"))?,
+            dst.to_str().ok_or_else(|| io::Error::other("dst utf8"))?,
+        ])?;
         if status.success() {
             Ok(())
         } else {
-            Err(io::Error::other(format!("sudo -n cp failed: {status}")))
+            Err(io::Error::other(format!("sudo cp failed: {status}")))
         }
     }
 }
@@ -404,11 +405,16 @@ fn remove_tid_from_file(path: &Path, installer: &dyn PamInstall) -> Result<(), T
 }
 
 fn install_string(dst: &Path, body: &str, installer: &dyn PamInstall) -> Result<(), TouchIdError> {
-    let parent = dst
-        .parent()
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| PathBuf::from("."));
-    let tmp = parent.join(format!(".vole-touchid-{}.tmp", std::process::id()));
+    // Stage in a user-writable temp dir. `/etc/pam.d` is root-owned; writing
+    // the sidecar next to the destination fails with EACCES before sudo runs.
+    let tmp = std::env::temp_dir().join(format!(
+        ".vole-touchid-{}-{}.tmp",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
     {
         let mut f = fs::File::create(&tmp)?;
         f.write_all(body.as_bytes())?;
@@ -483,6 +489,30 @@ mod tests {
         let body = fs::read_to_string(&local).unwrap();
         assert!(body.contains("pam_tid.so"));
         assert!(is_touchid_configured(&paths));
+    }
+
+    #[test]
+    fn disable_succeeds_when_pam_dir_is_not_writable() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().unwrap();
+        let pam = dir.path().join("pam.d");
+        fs::create_dir(&pam).unwrap();
+        let sudo = pam.join("sudo");
+        let local = pam.join("sudo_local");
+        fs::write(&sudo, "sudo_local\n").unwrap();
+        fs::write(&local, format!("# hdr\n{PAM_TID_LINE}\n")).unwrap();
+        let paths = TouchIdPaths {
+            sudo,
+            sudo_local: local.clone(),
+        };
+
+        fs::set_permissions(&pam, fs::Permissions::from_mode(0o555)).unwrap();
+        let result = disable_touchid(&paths, &FakePamInstall, false);
+        let _ = fs::set_permissions(&pam, fs::Permissions::from_mode(0o755));
+        let out = result.expect("staging must not require a writable PAM directory");
+        assert!(matches!(out, TouchIdOutcome::Disabled));
+        assert!(!fs::read_to_string(&local).unwrap().contains("pam_tid.so"));
     }
 
     #[test]

@@ -27,6 +27,10 @@ gh pr merge <N> --merge --delete-branch
 - 在 CI 未全绿、有冲突、或存在阻塞评论时强行合并
 - 跳过 `gh pr checks` 校验
 
+## 合并成功后
+
+按 `cleanup-merged-branches.mdc` 立刻清理已合入的本地/远程分支与多余 worktree。
+
 ## 失败时
 
 冲突或红 CI：不合并，用中文简要汇报状态与下一步（修冲突 / 等 CI / 处理评论）。

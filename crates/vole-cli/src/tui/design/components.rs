@@ -85,7 +85,7 @@ pub fn menu_footer_line(theme: &Theme) -> Line<'static> {
     spans.push(footer_sep(theme));
     spans.extend(key_hint(theme, "B", "Back"));
     spans.push(footer_sep(theme));
-    spans.extend(key_hint(theme, "Q", "Cancel"));
+    spans.extend(key_hint(theme, "Q", "Quit"));
     Line::from(spans)
 }
 
@@ -132,5 +132,7 @@ mod tests {
         assert!(text.contains("Back"), "{text}");
         assert!(text.contains("Space"), "{text}");
         assert!(text.contains("Q"), "{text}");
+        assert!(text.contains("Quit"), "{text}");
+        assert!(!text.contains("Cancel"), "{text}");
     }
 }

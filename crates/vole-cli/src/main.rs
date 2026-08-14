@@ -91,13 +91,10 @@ enum Command {
     /// With `--plan` / `--json`, or when not a TTY: emit a plan only.
     Clean {
         /// Emit candidates only; do not delete (default when not a TTY; on a TTY skips confirm).
-        #[arg(long, conflicts_with = "apply")]
+        #[arg(long, alias = "dry-run", short = 'n', conflicts_with = "apply")]
         plan: bool,
-        /// Same as `--plan`.
-        #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
-        dry_run: bool,
         /// Apply entries from a plan file (TTL + TOCTOU revalidation required).
-        #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
+        #[arg(long, value_name = "PLAN", conflicts_with_all = ["plan", "plan_out"])]
         apply: Option<PathBuf>,
         /// Permanently delete instead of moving to Trash (`--apply` or after interactive confirm).
         #[arg(long)]
@@ -144,13 +141,10 @@ enum Command {
     /// With `--plan` / `--json`, or when not a TTY: emit a plan only.
     Uninstall {
         /// Emit candidates only; do not delete (default when not a TTY; on a TTY skips interactive UI).
-        #[arg(long, conflicts_with = "apply")]
+        #[arg(long, alias = "dry-run", short = 'n', conflicts_with = "apply")]
         plan: bool,
-        /// Same as `--plan`.
-        #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
-        dry_run: bool,
         /// Apply entries from a plan file.
-        #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
+        #[arg(long, value_name = "PLAN", conflicts_with_all = ["plan", "plan_out"])]
         apply: Option<PathBuf>,
         /// Permanently delete instead of moving to Trash (`--apply` or interactive uninstall).
         #[arg(long)]
@@ -175,13 +169,10 @@ enum Command {
     #[command(visible_alias = "optimise")]
     Optimize {
         /// Emit candidates only; do not change the system (default when not a TTY; on a TTY skips confirm).
-        #[arg(long, conflicts_with = "apply")]
+        #[arg(long, alias = "dry-run", short = 'n', conflicts_with = "apply")]
         plan: bool,
-        /// Same as `--plan`.
-        #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
-        dry_run: bool,
         /// Apply entries from a plan file.
-        #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
+        #[arg(long, value_name = "PLAN", conflicts_with_all = ["plan", "plan_out"])]
         apply: Option<PathBuf>,
         /// Permanently delete instead of Trash (`--apply` or after confirm; delete-class entries only).
         #[arg(long)]
@@ -201,27 +192,27 @@ enum Command {
         /// TTY paginated multi-select for the optimize-task whitelist; scripts use --whitelist-*.
         #[arg(
             long,
-            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "plan", "dry_run", "task"]
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "plan", "task"]
         )]
         whitelist: bool,
         /// Add a task id to the optimize whitelist (non-interactive).
         #[arg(
             long = "whitelist-add",
             value_name = "TASK_ID",
-            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist", "plan", "dry_run", "task"]
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist", "plan", "task"]
         )]
         whitelist_add: Option<String>,
         /// Remove a task id from the optimize whitelist (non-interactive).
         #[arg(
             long = "whitelist-remove",
             value_name = "TASK_ID",
-            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist", "plan", "dry_run", "task"]
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist", "plan", "task"]
         )]
         whitelist_remove: Option<String>,
         /// List the current optimize-task whitelist (non-interactive).
         #[arg(
             long = "whitelist-list",
-            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist", "plan", "dry_run", "task"]
+            conflicts_with_all = ["apply", "plan_out", "json_stream", "permanent", "whitelist", "plan", "task"]
         )]
         whitelist_list: bool,
     },
@@ -263,13 +254,10 @@ enum Command {
     /// emit a plan only.
     Worktree {
         /// Emit candidates only; do not delete (default when not a TTY; on a TTY skips interactive UI).
-        #[arg(long, conflicts_with = "apply")]
+        #[arg(long, alias = "dry-run", short = 'n', conflicts_with = "apply")]
         plan: bool,
-        /// Same as `--plan`.
-        #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
-        dry_run: bool,
         /// Apply entries from a plan file (TTL + TOCTOU revalidation required).
-        #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
+        #[arg(long, value_name = "PLAN", conflicts_with_all = ["plan", "plan_out"])]
         apply: Option<PathBuf>,
         /// Permanently delete instead of moving to Trash (`--apply` or after interactive confirm).
         #[arg(long)]
@@ -290,13 +278,10 @@ enum Command {
     /// With `--plan` / `--json`, or when not a TTY: emit a plan only.
     Purge {
         /// Emit candidates only; do not delete (default when not a TTY; on a TTY skips interactive UI).
-        #[arg(long, conflicts_with = "apply")]
+        #[arg(long, alias = "dry-run", short = 'n', conflicts_with = "apply")]
         plan: bool,
-        /// Same as `--plan`.
-        #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
-        dry_run: bool,
         /// Apply entries from a plan file.
-        #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
+        #[arg(long, value_name = "PLAN", conflicts_with_all = ["plan", "plan_out"])]
         apply: Option<PathBuf>,
         /// Permanently delete instead of moving to Trash (`--apply` or interactive purge).
         #[arg(long)]
@@ -320,13 +305,10 @@ enum Command {
     /// With `--plan` / `--json`, or when not a TTY: emit a plan only.
     Installer {
         /// Emit candidates only; do not delete (default when not a TTY; on a TTY skips interactive UI).
-        #[arg(long, conflicts_with = "apply")]
+        #[arg(long, alias = "dry-run", short = 'n', conflicts_with = "apply")]
         plan: bool,
-        /// Same as `--plan`.
-        #[arg(long = "dry-run", short = 'n', conflicts_with = "apply")]
-        dry_run: bool,
         /// Apply entries from a plan file.
-        #[arg(long, value_name = "PLAN", conflicts_with_all = ["dry_run", "plan_out"])]
+        #[arg(long, value_name = "PLAN", conflicts_with_all = ["plan", "plan_out"])]
         apply: Option<PathBuf>,
         /// Permanently delete instead of moving to Trash (`--apply` or interactive cleanup).
         #[arg(long)]
@@ -346,11 +328,8 @@ enum Command {
         /// `status` | `enable` | `disable`; omit for interactive toggle.
         action: Option<String>,
         /// Preview PAM changes without writing files.
-        #[arg(long)]
+        #[arg(long, alias = "dry-run", short = 'n')]
         plan: bool,
-        /// Same as `--plan`.
-        #[arg(long = "dry-run", short = 'n')]
-        dry_run: bool,
         /// Print JSON.
         #[arg(long)]
         json: bool,
@@ -376,8 +355,8 @@ enum Command {
     /// Uninstall vole (binaries and local config).
     Remove {
         /// Preview items to delete; do not delete.
-        #[arg(long = "dry-run", short = 'n')]
-        dry_run: bool,
+        #[arg(long, alias = "dry-run", short = 'n')]
+        plan: bool,
         /// Skip interactive confirmation.
         #[arg(long, short = 'y')]
         yes: bool,
@@ -432,7 +411,6 @@ fn main() {
         None => std::process::exit(interactive::run()),
         Some(Command::Clean {
             plan,
-            dry_run,
             apply,
             permanent,
             json,
@@ -444,7 +422,7 @@ fn main() {
             whitelist_list,
         }) => {
             let code = clean::run_clean(clean::CleanOptions {
-                explicit_plan: plan || dry_run,
+                explicit_plan: plan,
                 json,
                 json_stream,
                 plan_out,
@@ -459,7 +437,6 @@ fn main() {
         }
         Some(Command::Uninstall {
             plan,
-            dry_run,
             apply,
             permanent,
             json,
@@ -468,7 +445,7 @@ fn main() {
             target,
         }) => {
             let code = uninstall::run_uninstall(uninstall::UninstallOptions {
-                explicit_plan: plan || dry_run,
+                explicit_plan: plan,
                 json,
                 json_stream,
                 plan_out,
@@ -480,7 +457,6 @@ fn main() {
         }
         Some(Command::Optimize {
             plan,
-            dry_run,
             apply,
             permanent,
             json,
@@ -493,7 +469,7 @@ fn main() {
             whitelist_list,
         }) => {
             let code = optimize::run_optimize(optimize::OptimizeOptions {
-                explicit_plan: plan || dry_run,
+                explicit_plan: plan,
                 json,
                 json_stream,
                 plan_out,
@@ -524,7 +500,6 @@ fn main() {
         }
         Some(Command::Worktree {
             plan,
-            dry_run,
             apply,
             permanent,
             json,
@@ -532,7 +507,7 @@ fn main() {
             plan_out,
         }) => {
             let code = worktree::run_worktree(worktree::WorktreeOptions {
-                explicit_plan: plan || dry_run,
+                explicit_plan: plan,
                 json,
                 json_stream,
                 plan_out,
@@ -543,7 +518,6 @@ fn main() {
         }
         Some(Command::Purge {
             plan,
-            dry_run,
             apply,
             permanent,
             json,
@@ -552,7 +526,7 @@ fn main() {
             include_empty,
         }) => {
             let code = purge::run_purge(purge::PurgeOptions {
-                explicit_plan: plan || dry_run,
+                explicit_plan: plan,
                 json,
                 json_stream,
                 plan_out,
@@ -564,7 +538,6 @@ fn main() {
         }
         Some(Command::Installer {
             plan,
-            dry_run,
             apply,
             permanent,
             json,
@@ -572,7 +545,7 @@ fn main() {
             plan_out,
         }) => {
             let code = installer::run_installer(installer::InstallerOptions {
-                explicit_plan: plan || dry_run,
+                explicit_plan: plan,
                 json,
                 json_stream,
                 plan_out,
@@ -581,18 +554,8 @@ fn main() {
             });
             std::process::exit(code);
         }
-        Some(Command::Touchid {
-            action,
-            plan,
-            dry_run,
-            json,
-        }) => {
-            let code = touchid::run_touchid(touchid::TouchidOptions {
-                action,
-                dry_run: dry_run || plan,
-                plan,
-                json,
-            });
+        Some(Command::Touchid { action, plan, json }) => {
+            let code = touchid::run_touchid(touchid::TouchidOptions { action, plan, json });
             std::process::exit(code);
         }
         Some(Command::Update {
@@ -612,13 +575,13 @@ fn main() {
             std::process::exit(code);
         }
         Some(Command::Remove {
-            dry_run,
+            plan,
             yes,
             json,
             purge_oplog,
         }) => {
             let code = remove::run_remove_cli(remove::RemoveCliOptions {
-                dry_run,
+                dry_run: plan,
                 yes,
                 json,
                 purge_oplog,

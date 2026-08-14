@@ -151,7 +151,7 @@ vole uninstall --apply <plan.json>
 # Other common
 vole touchid status            # sudo Touch ID status
 vole update                    # upgrade to a newer release
-vole remove --dry-run          # uninstall Vole itself (preview)
+vole remove --plan             # uninstall Vole itself (preview)
 vole --help
 vole --version
 ```

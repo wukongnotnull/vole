@@ -151,7 +151,7 @@ vole uninstall --apply <plan.json>
 # その他よく使う
 vole touchid status            # sudo Touch ID 状態
 vole update                    # 新しい版へ更新
-vole remove --dry-run          # Vole 自身の削除プレビュー
+vole remove --plan             # Vole 自身の削除プレビュー
 vole --help
 vole --version
 ```

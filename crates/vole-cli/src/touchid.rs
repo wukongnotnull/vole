@@ -10,7 +10,6 @@ use vole_core::ops::{
 
 pub struct TouchidOptions {
     pub action: Option<String>,
-    pub dry_run: bool,
     pub plan: bool,
     pub json: bool,
 }
@@ -27,7 +26,7 @@ pub fn run_touchid(opts: TouchidOptions) -> i32 {
 
 fn run_touchid_inner(opts: TouchidOptions) -> io::Result<i32> {
     let paths = resolve_touchid_paths();
-    let preview = opts.plan || opts.dry_run;
+    let preview = opts.plan;
 
     match opts.action.as_deref() {
         None if preview => {

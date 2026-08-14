@@ -151,7 +151,7 @@ vole uninstall --apply <plan.json>
 # 其他常用
 vole touchid status            # 查看 sudo Touch ID
 vole update                    # 升級到新版本
-vole remove --dry-run          # 解除安裝 Vole 自身（僅預覽）
+vole remove --plan             # 解除安裝 Vole 自身（僅預覽）
 vole --help
 vole --version
 ```

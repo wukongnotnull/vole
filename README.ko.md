@@ -151,7 +151,7 @@ vole uninstall --apply <plan.json>
 # 기타 자주 씀
 vole touchid status            # sudo Touch ID 상태
 vole update                    # 새 버전으로 업그레이드
-vole remove --dry-run          # Vole 자체 제거 미리보기
+vole remove --plan             # Vole 자체 제거 미리보기
 vole --help
 vole --version
 ```

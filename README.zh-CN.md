@@ -159,7 +159,7 @@ vole uninstall --apply <plan.json>
 # 其他常用
 vole touchid status            # 查看 sudo Touch ID
 vole update                    # 升级到新版本
-vole remove --dry-run          # 卸载 Vole 自身（仅预览）
+vole remove --plan             # 卸载 Vole 自身（仅预览）
 vole --help
 vole --version
 ```

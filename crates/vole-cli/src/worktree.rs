@@ -21,7 +21,7 @@ use crate::signals;
 use crate::tui::{run_paginated_select, MenuItem, MenuState, SelectOutcome};
 
 pub struct WorktreeOptions {
-    /// `--plan` / `--dry-run` / `-n`：强制走自动化 plan 路径。
+    /// `--plan`（隐藏别名 `--dry-run` / `-n`）：强制走自动化 plan 路径。
     pub explicit_plan: bool,
     pub json: bool,
     pub json_stream: bool,

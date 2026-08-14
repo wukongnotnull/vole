@@ -10,6 +10,7 @@ use vole_core::ops::{
 };
 
 pub struct RemoveCliOptions {
+    /// `--plan`（隐藏别名 `--dry-run` / `-n`）。
     pub dry_run: bool,
     pub yes: bool,
     pub json: bool,

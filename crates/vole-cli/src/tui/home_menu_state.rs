@@ -78,7 +78,7 @@ pub enum HomeKey {
     Down,
     Enter,
     Digit(u8),
-    More,
+    Help,
     Version,
     TouchId,
     Update,
@@ -142,7 +142,7 @@ impl HomeMenuState {
             HomeKey::Digit(d) if (1..=6).contains(&d) => {
                 Some(HomeAction::Launch(Self::cmd_at((d - 1) as usize)))
             }
-            HomeKey::More => Some(HomeAction::ShowHelp),
+            HomeKey::Help => Some(HomeAction::ShowHelp),
             HomeKey::Version => Some(HomeAction::ShowVersion),
             HomeKey::TouchId => Some(HomeAction::Launch(HomeCommand::TouchId)),
             HomeKey::Update if self.cfg.show_update => {
@@ -162,7 +162,7 @@ impl HomeMenuState {
     }
 
     pub fn controls_line(&self) -> String {
-        let mut s = String::from("↑↓  |  Enter  |  M More");
+        let mut s = String::from("↑↓  |  Enter  |  H Helper");
         if self.footer_shows_touchid() {
             s.push_str("  |  T TouchID");
         } else if self.footer_shows_update() {
@@ -230,12 +230,12 @@ mod tests {
     }
 
     #[test]
-    fn m_v_q_and_conditional_u() {
+    fn h_v_q_and_conditional_u() {
         let mut st = HomeMenuState::new(HomeMenuConfig {
             touchid_configured: true,
             show_update: false,
         });
-        assert_eq!(st.handle_key(HomeKey::More), Some(HomeAction::ShowHelp));
+        assert_eq!(st.handle_key(HomeKey::Help), Some(HomeAction::ShowHelp));
         assert_eq!(
             st.handle_key(HomeKey::Version),
             Some(HomeAction::ShowVersion)
@@ -262,6 +262,8 @@ mod tests {
         assert!(a.footer_shows_touchid());
         assert!(!a.footer_shows_update()); // mole: T 优先，U 不进 footer
         let line = a.controls_line();
+        assert!(line.contains("H Helper"));
+        assert!(!line.contains("M More"));
         assert!(line.contains("T TouchID"));
         assert!(!line.contains("U Update"));
         assert!(!line.contains("V Version"));

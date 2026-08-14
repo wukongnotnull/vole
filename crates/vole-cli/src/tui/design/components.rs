@@ -59,7 +59,7 @@ pub fn home_controls_line(theme: &Theme, show_touchid: bool, show_update: bool) 
     spans.push(footer_sep(theme));
     spans.extend(key_hint(theme, "Enter", ""));
     spans.push(footer_sep(theme));
-    spans.extend(key_hint(theme, "M", "More"));
+    spans.extend(key_hint(theme, "H", "Helper"));
     if show_touchid {
         spans.push(footer_sep(theme));
         spans.extend(key_hint(theme, "T", "TouchID"));
@@ -108,6 +108,9 @@ mod tests {
         let theme = Theme::new();
         let with_t = home_controls_line(&theme, true, false);
         let text: String = with_t.spans.iter().map(|s| s.content.as_ref()).collect();
+        assert!(text.contains("H"));
+        assert!(text.contains("Helper"));
+        assert!(!text.contains("More"));
         assert!(text.contains("T"));
         assert!(text.contains("TouchID"));
         assert!(!text.contains("Update"));

@@ -79,7 +79,7 @@ pub fn map_key(key: KeyEvent) -> Option<HomeKey> {
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(HomeKey::Quit),
         KeyCode::Char(c) => match c {
             '1'..='6' => Some(HomeKey::Digit(c as u8 - b'0')),
-            'm' | 'M' => Some(HomeKey::More),
+            'h' | 'H' => Some(HomeKey::Help),
             'v' | 'V' => Some(HomeKey::Version),
             't' | 'T' => Some(HomeKey::TouchId),
             'u' | 'U' => Some(HomeKey::Update),
@@ -325,6 +325,14 @@ mod tests {
             map_key(KeyEvent::new(KeyCode::Char('1'), KeyModifiers::NONE)),
             Some(HomeKey::Digit(1))
         ));
+        assert!(matches!(
+            map_key(KeyEvent::new(KeyCode::Char('h'), KeyModifiers::NONE)),
+            Some(HomeKey::Help)
+        ));
+        assert!(
+            map_key(KeyEvent::new(KeyCode::Char('m'), KeyModifiers::NONE)).is_none(),
+            "M More was replaced by H Helper"
+        );
     }
 
     #[test]

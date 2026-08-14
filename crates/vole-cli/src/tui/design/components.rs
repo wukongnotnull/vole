@@ -60,8 +60,6 @@ pub fn home_controls_line(theme: &Theme, show_touchid: bool, show_update: bool) 
     spans.extend(key_hint(theme, "Enter", ""));
     spans.push(footer_sep(theme));
     spans.extend(key_hint(theme, "M", "More"));
-    spans.push(footer_sep(theme));
-    spans.extend(key_hint(theme, "V", "Version"));
     if show_touchid {
         spans.push(footer_sep(theme));
         spans.extend(key_hint(theme, "T", "TouchID"));
@@ -113,10 +111,12 @@ mod tests {
         assert!(text.contains("T"));
         assert!(text.contains("TouchID"));
         assert!(!text.contains("Update"));
+        assert!(!text.contains("Version"), "{text}");
         let with_u = home_controls_line(&theme, false, true);
         let text: String = with_u.spans.iter().map(|s| s.content.as_ref()).collect();
         assert!(text.contains("U"));
         assert!(text.contains("Update"));
+        assert!(!text.contains("Version"), "{text}");
     }
 
     #[test]

@@ -47,6 +47,29 @@ pub fn brand_ascii_lines() -> [&'static str; 5] {
     ]
 }
 
+pub fn brand_version_label() -> String {
+    format!("v{}", env!("CARGO_PKG_VERSION"))
+}
+
+/// Brand ASCII rows; version sits at the bottom-right of the last line.
+pub fn brand_display_lines(version: &str) -> [String; 5] {
+    let ascii = brand_ascii_lines();
+    [
+        ascii[0].to_string(),
+        ascii[1].to_string(),
+        ascii[2].to_string(),
+        ascii[3].to_string(),
+        format!("{}  {version}", ascii[4]),
+    ]
+}
+
+fn brand_left_cols() -> u16 {
+    let last = brand_display_lines(&brand_version_label())[4]
+        .chars()
+        .count() as u16;
+    last.max(BRAND_ASCII_COLS)
+}
+
 pub fn map_key(key: KeyEvent) -> Option<HomeKey> {
     match key.code {
         KeyCode::Up => Some(HomeKey::Up),
@@ -95,7 +118,7 @@ pub fn run_home_menu(opts: HomeMenuRunOpts) -> io::Result<HomeAction> {
 }
 
 fn right_column_width(total: u16) -> u16 {
-    total.saturating_sub(BRAND_ASCII_COLS.saturating_add(BRAND_GUTTER))
+    total.saturating_sub(brand_left_cols().saturating_add(BRAND_GUTTER))
 }
 
 fn render_home(
@@ -201,10 +224,22 @@ fn render_brand_row(
     anim_frame: u64,
     show_vole: bool,
 ) {
-    let ascii = brand_ascii_lines();
-    let brand_lines: Vec<Line> = ascii
+    let version = brand_version_label();
+    let display = brand_display_lines(&version);
+    let brand_lines: Vec<Line> = display
         .iter()
-        .map(|line| Line::from(Span::styled(*line, theme.ok)))
+        .enumerate()
+        .map(|(i, line)| {
+            if i == 4 {
+                let ascii = brand_ascii_lines()[4];
+                Line::from(vec![
+                    Span::styled(ascii.to_string(), theme.ok),
+                    Span::styled(format!("  {version}"), theme.subtle),
+                ])
+            } else {
+                Line::from(Span::styled(line.clone(), theme.ok))
+            }
+        })
         .collect();
 
     if !show_vole {
@@ -215,7 +250,7 @@ fn render_brand_row(
     let cols = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(BRAND_ASCII_COLS),
+            Constraint::Length(brand_left_cols()),
             Constraint::Length(BRAND_GUTTER),
             Constraint::Min(VOLE_SPRITE_COLS),
         ])
@@ -254,6 +289,25 @@ mod tests {
     }
 
     #[test]
+    fn brand_version_sits_at_bottom_right_of_ascii() {
+        let version = brand_version_label();
+        assert_eq!(version, format!("v{}", env!("CARGO_PKG_VERSION")));
+        let ascii = brand_ascii_lines();
+        let lines = brand_display_lines(&version);
+        let last = ascii.len() - 1;
+        for (i, row) in ascii.iter().enumerate().take(last) {
+            assert_eq!(lines[i], *row);
+        }
+        assert!(lines[last].starts_with(ascii[last]), "{}", lines[last]);
+        assert!(lines[last].ends_with(&version), "{}", lines[last]);
+        assert!(
+            lines[last].contains(&format!("{}  {version}", ascii[last])),
+            "{}",
+            lines[last]
+        );
+    }
+
+    #[test]
     fn map_key_basics() {
         assert!(matches!(
             map_key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE)),
@@ -275,9 +329,9 @@ mod tests {
 
     #[test]
     fn right_column_hides_vole_when_too_narrow() {
-        assert_eq!(right_column_width(BRAND_ASCII_COLS + BRAND_GUTTER), 0);
+        assert_eq!(right_column_width(brand_left_cols() + BRAND_GUTTER), 0);
         assert!(
-            right_column_width(BRAND_ASCII_COLS + BRAND_GUTTER + VOLE_SPRITE_COLS)
+            right_column_width(brand_left_cols() + BRAND_GUTTER + VOLE_SPRITE_COLS)
                 >= VOLE_SPRITE_COLS
         );
     }

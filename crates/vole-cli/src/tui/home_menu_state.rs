@@ -162,7 +162,7 @@ impl HomeMenuState {
     }
 
     pub fn controls_line(&self) -> String {
-        let mut s = String::from("↑↓  |  Enter  |  M More  |  V Version");
+        let mut s = String::from("↑↓  |  Enter  |  M More");
         if self.footer_shows_touchid() {
             s.push_str("  |  T TouchID");
         } else if self.footer_shows_update() {
@@ -264,6 +264,8 @@ mod tests {
         let line = a.controls_line();
         assert!(line.contains("T TouchID"));
         assert!(!line.contains("U Update"));
+        assert!(!line.contains("V Version"));
+        assert!(!line.contains("Version"));
 
         let b = HomeMenuState::new(HomeMenuConfig {
             touchid_configured: true,
@@ -274,6 +276,8 @@ mod tests {
         let line = b.controls_line();
         assert!(!line.contains("T TouchID"));
         assert!(line.contains("U Update"));
+        assert!(!line.contains("V Version"));
+        assert!(!line.contains("Version"));
     }
 
     #[test]

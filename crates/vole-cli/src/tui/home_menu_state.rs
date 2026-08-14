@@ -8,6 +8,16 @@ pub struct HomeItem {
     pub description: &'static str,
 }
 
+pub fn format_home_item_line(index: usize, selected: bool, item: &HomeItem) -> String {
+    let marker = if selected { "> " } else { "  " };
+    format!(
+        "{marker}{n}. {title:<12}{desc}",
+        n = index + 1,
+        title = item.title,
+        desc = item.description
+    )
+}
+
 pub const HOME_ITEMS: [HomeItem; 6] = [
     HomeItem {
         title: "Clean",
@@ -166,6 +176,18 @@ impl HomeMenuState {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn home_item_lines_show_1_based_numbers() {
+        assert_eq!(
+            format_home_item_line(0, true, &HOME_ITEMS[0]),
+            "> 1. Clean       Free up disk space"
+        );
+        assert_eq!(
+            format_home_item_line(5, false, &HOME_ITEMS[5]),
+            "  6. Worktree    Remove leftover git worktrees"
+        );
+    }
 
     #[test]
     fn home_items_match_mole_copy() {

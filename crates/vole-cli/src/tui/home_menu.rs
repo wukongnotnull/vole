@@ -15,7 +15,9 @@ use ratatui::{Frame, Terminal};
 use crate::terminal::TerminalGuard;
 
 use super::design::{home_controls_line, inset_content, DesignSystem, Theme, FOOTER_GAP, TOP_PAD};
-use super::home_menu_state::{HomeAction, HomeKey, HomeMenuConfig, HomeMenuState, HOME_ITEMS};
+use super::home_menu_state::{
+    format_home_item_line, HomeAction, HomeKey, HomeMenuConfig, HomeMenuState, HOME_ITEMS,
+};
 use super::paginated_select::drain_pending_input;
 use super::status_cat::render_mole_frame;
 
@@ -164,15 +166,13 @@ fn render_home(
         .iter()
         .enumerate()
         .map(|(i, item)| {
-            let marker = if i == cursor { "> " } else { "  " };
-            let title = format!("{:<12}", item.title);
             let style = if i == cursor {
                 theme.selected
             } else {
                 theme.normal
             };
             Line::from(Span::styled(
-                format!("{marker}{title}{desc}", desc = item.description),
+                format_home_item_line(i, i == cursor, item),
                 style,
             ))
         })

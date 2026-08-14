@@ -60,7 +60,7 @@
 
 **macOS 12 이상** 필요.
 
-현재 공개 버전: **[v2.18.0](https://github.com/wukongnotnull/vole/releases/tag/v2.18.0)** (Developer ID 서명 및 Apple 공증). Apple Silicon·Intel 모두 제공.
+현재 공개 버전: **[v2.19.0](https://github.com/wukongnotnull/vole/releases/tag/v2.19.0)** (Developer ID 서명 및 Apple 공증). Apple Silicon·Intel 모두 제공.
 
 ### 방법 1: AI 프롬프트로 설치
 
@@ -104,14 +104,14 @@ brew install vole
    - Intel: `…-x86_64-apple-darwin.tar.gz`
 3. `bin/vole`을 PATH에 두고(예: `~/.local/bin`), 함께 들어 있는 `share/vole/rules`도 유지
 
-예 (Apple Silicon / v2.18.0; 파일명은 Release 페이지 기준):
+예 (Apple Silicon / v2.19.0; 파일명은 Release 페이지 기준):
 
 ```bash
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v2.18.0/vole-2.18.0-aarch64-apple-darwin.tar.gz
-tar xzf vole-2.18.0-aarch64-apple-darwin.tar.gz
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v2.19.0/vole-2.19.0-aarch64-apple-darwin.tar.gz
+tar xzf vole-2.19.0-aarch64-apple-darwin.tar.gz
 mkdir -p ~/.local/bin ~/.local/share/vole
-install -m 755 vole-2.18.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-cp -R vole-2.18.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+install -m 755 vole-2.19.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+cp -R vole-2.19.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 ```
 
 `vole: command not found`가 나오면 `~/.zshrc`에 다음을 넣고 `source ~/.zshrc`:

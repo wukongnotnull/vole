@@ -1,0 +1,28 @@
+---
+description: 合并 main 前必须先做 code review，不可因简单或 CI 绿而跳过
+alwaysApply: true
+---
+
+# 合并前必须 code review
+
+对本仓（vole）以及关联仓（vole-macos）：**每次合并进 main 之前**必须完成 code review。CI 全绿、`pr-auto-merge-when-ci-green.mdc` 都不能替代 review。
+
+## 必须做
+
+1. 合并前按 `requesting-code-review` 审完该 PR 的 `base...head`（通常 `origin/main...HEAD`）。
+2. 在当次对话写出 Strengths / Issues / Assessment；**Ready to merge = Yes** 才能合。
+3. Critical / Important 未修完 → **禁止合并**。
+4. 再按 `pr-auto-merge-when-ci-green.mdc` 校验 CI 与 MERGEABLE，然后 `gh pr merge --merge --delete-branch`。
+
+## 禁止
+
+- 以「只改文档 / 只改规则 / 太简单 / CI 已经绿了」跳过 review
+- 未看完 diff 就写 LGTM 或直接 merge
+- 带着未解决的 Changes requested / 未 resolve 的 blocking review 合并
+
+## 示例
+
+```text
+❌ BAD：CI 绿 → 直接 gh pr merge
+✅ GOOD：review（无未修 Critical/Important）→ CI 绿 → merge → 按 cleanup-merged-branches 清理
+```

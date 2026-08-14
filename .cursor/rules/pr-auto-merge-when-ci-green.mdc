@@ -5,15 +5,16 @@ alwaysApply: true
 
 # PR CI 绿了自动合并
 
-对本仓（vole）的 GitHub PR：当 **required CI 全绿**、**无未解决阻塞评论**、且状态为 **MERGEABLE** 时，**自动**执行合并，无需再征询用户。
+对本仓（vole）的 GitHub PR：当 **已完成 code review**、**required CI 全绿**、**无未解决阻塞评论**、且状态为 **MERGEABLE** 时，**自动**执行合并，无需再征询用户。
 
-与 `pr-merge-no-squash.mdc`、`default-yes-when-asking.mdc` 一致：合并方式固定为 merge commit；「是否合并」视为已同意。
+与 `code-review-before-merge.mdc`、`pr-merge-no-squash.mdc`、`default-yes-when-asking.mdc` 一致：先 review，再合；合并方式固定为 merge commit。
 
 ## 合并前校验（必须全部通过）
 
-1. `gh pr view <N> --json mergeable,mergeStateStatus,statusCheckRollup`：`mergeable` 为 `MERGEABLE`，且无冲突（如 `mergeStateStatus` 不为 `DIRTY` / `CONFLICTING`）。
-2. `gh pr checks <N>`：所需 checks 均为 **SUCCESS** / pass。任一失败、pending、或仍有红 CI → **不合并**，汇报阻塞原因后停止。
-3. 无未解决的阻塞性 review 评论（Changes requested / 未 resolve 的 blocking review）。
+1. 已按 `code-review-before-merge.mdc` 做完本次 PR 的 code review，Assessment 为 Yes，且无未修 Critical / Important。未 review → **不合并**。
+2. `gh pr view <N> --json mergeable,mergeStateStatus,statusCheckRollup`：`mergeable` 为 `MERGEABLE`，且无冲突（如 `mergeStateStatus` 不为 `DIRTY` / `CONFLICTING`）。
+3. `gh pr checks <N>`：所需 checks 均为 **SUCCESS** / pass。任一失败、pending、或仍有红 CI → **不合并**，汇报阻塞原因后停止。
+4. 无未解决的阻塞性 review 评论（Changes requested / 未 resolve 的 blocking review）。
 
 ## 合并命令（唯一允许）
 
@@ -24,8 +25,13 @@ gh pr merge <N> --merge --delete-branch
 ## 禁止
 
 - `gh pr merge --squash` / Squash and merge
+- 跳过 code review 直接合并（包括「只改规则 / CI 已绿」）
 - 在 CI 未全绿、有冲突、或存在阻塞评论时强行合并
 - 跳过 `gh pr checks` 校验
+
+## 合并成功后
+
+按 `cleanup-merged-branches.mdc` 立刻清理已合入的本地/远程分支与多余 worktree。
 
 ## 失败时
 

@@ -1,0 +1,29 @@
+---
+description: 合并成功后清理已合入的本地/远程分支与多余 worktree
+alwaysApply: true
+---
+
+# 合并后清理多余分支
+
+对本仓（vole）以及关联仓（vole-macos）：**每次 PR 合并成功后**，立刻清理已不再需要的分支，不要留到下次。
+
+## 必须做
+
+1. `gh pr merge --merge --delete-branch` 后，确认远程功能分支已删；若仍在，`git push origin --delete <branch>`。
+2. 删本地同名分支：`git branch -d <branch>`（仅已合入；未合入不删）。
+3. 若该分支被 worktree 占用：工作区干净时先 `git worktree remove <path>`，再删分支。
+4. `git fetch --prune`，清掉已删远程的 tracking ref。
+5. 顺带扫一眼 `git branch --merged main` 与 `git branch -r --merged main`：无未关 PR、已合入 `main` 的残留一并删。
+
+## 禁止
+
+- 删除 `main` / `origin/main`
+- 删除未合入、有未关 PR、或工作区有未提交改动的分支 / worktree
+- `git branch -D` / `--force` 除非确认无独立提交且用户当次明确要求
+
+## 示例
+
+```text
+❌ BAD：merge #145 后留下 origin/chore/pin-formula-2.18.0 和 .worktrees/feat-worktree-cmd
+✅ GOOD：merge 成功 → remove worktree → branch -d → push --delete → fetch --prune
+```

@@ -27,7 +27,7 @@ alwaysApply: true
 4. **每完成一个 task 即自动 commit。** 用户已多次明确要求任务级别粒度提交，无需反复确认。
 5. **避免无响应卡顿，主动汇报进度。** 如遇长操作或后台处理，需主动简述进度，防止用户因状态不明而疑惑。
 6. **全程中文交互。** 包括询问、提示、总结，始终默认中文，契合用户期望。
-7. **合并 main 前须 code review 并 CI 通过。** 用户坚持流程节点校验，必须严格执行流程检查，不可跳过。
+7. **合并 main 前须 code review 并 CI 通过。** 见 `code-review-before-merge.mdc`：未 review 不得合并；「太简单 / CI 已绿」不能跳过。
 8. **默认为 inline 工作流。** Subagent-Driven 与 inline 选择时，总是优先 inline。
 
 此规则确保体验流畅、高效、少干扰且符合用户长期习惯。

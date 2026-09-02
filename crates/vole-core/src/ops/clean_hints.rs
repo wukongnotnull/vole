@@ -100,8 +100,11 @@ pub struct LiveCommandExists;
 
 impl CommandExists for LiveCommandExists {
     fn exists(&self, name: &str) -> bool {
-        std::process::Command::new("command")
-            .args(["-v", name])
+        if name.is_empty() || name.contains('/') || name.contains('\0') {
+            return false;
+        }
+        Command::new("/bin/sh")
+            .args(["-c", "command -v \"$1\"", "_", name])
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -1174,6 +1177,38 @@ mod tests {
     }
 
     #[test]
+    fn live_command_exists_uses_shell_builtin_not_path_command() {
+        let _guard = crate::test_env::lock();
+        let dir = tempfile::tempdir().unwrap();
+        let fake = dir.path().join("command");
+        fs::write(&fake, "#!/bin/sh\nexit 1\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perm = fs::metadata(&fake).unwrap().permissions();
+            perm.set_mode(0o755);
+            fs::set_permissions(&fake, perm).unwrap();
+        }
+        let old_path = std::env::var_os("PATH");
+        let mut path = dir.path().as_os_str().to_os_string();
+        path.push(":");
+        if let Some(rest) = &old_path {
+            path.push(rest);
+        }
+        std::env::set_var("PATH", &path);
+        let found = LiveCommandExists.exists("sh");
+        match old_path {
+            Some(p) => std::env::set_var("PATH", p),
+            None => std::env::remove_var("PATH"),
+        }
+        assert!(
+            found,
+            "must resolve via sh -c 'command -v' or which, not PATH command"
+        );
+        assert!(!LiveCommandExists.exists("definitely-not-a-vole-binary-xyz"));
+    }
+
+    #[test]
     fn quick_hint_targets_exclude_bin_and_vendor() {
         let names = quick_hint_target_names();
         assert!(names.contains(&"node_modules"));
@@ -1608,32 +1643,23 @@ mod tests {
         }
     }
 
-    fn orphan_opts<'a>(
-        home: &'a Path,
-        cmd: Arc<dyn CommandExists>,
-        size_kb: u64,
-        age_days: u64,
-        budget: Duration,
-        gui: &str,
-        plugins: &str,
-        whitelist: &'a [String],
-    ) -> CleanHintsOptions<'a> {
+    fn orphan_opts(home: &Path) -> CleanHintsOptions<'_> {
         CleanHintsOptions {
             home,
             search_roots: Some(&[]),
-            budget,
+            budget: Duration::from_secs(15),
             list_timeout: Duration::from_millis(100),
             du_timeout: Duration::from_millis(800),
             size_probe: Some(Arc::new(FixedSize {
-                kb: Mutex::new(size_kb),
+                kb: Mutex::new(100),
             })),
             bundle_exists: Some(Arc::new(NoBundles)),
-            command_exists: Some(cmd),
-            gui_app_texts: Some(gui.to_string()),
-            claude_plugin_tokens: Some(plugins.to_string()),
-            whitelist_patterns: whitelist,
+            command_exists: Some(Arc::new(MissingCommands)),
+            gui_app_texts: Some(String::new()),
+            claude_plugin_tokens: Some(String::new()),
+            whitelist_patterns: &[],
             now: SystemTime::now(),
-            orphan_age_days: age_days,
+            orphan_age_days: 60,
         }
     }
 
@@ -1650,16 +1676,7 @@ mod tests {
             fs::create_dir_all(&p).unwrap();
             touch_old(&p);
         }
-        let hints = collect_clean_hints(&orphan_opts(
-            home.path(),
-            Arc::new(MissingCommands),
-            100,
-            60,
-            Duration::from_secs(15),
-            "",
-            "",
-            &[],
-        ));
+        let hints = collect_clean_hints(&orphan_opts(home.path()));
         assert!(!hints
             .items
             .iter()
@@ -1673,16 +1690,7 @@ mod tests {
         fs::create_dir_all(&p).unwrap();
         fs::write(p.join("x"), b"x").unwrap();
         touch_old(&p);
-        let hints = collect_clean_hints(&orphan_opts(
-            home.path(),
-            Arc::new(MissingCommands),
-            100,
-            60,
-            Duration::from_secs(15),
-            "",
-            "",
-            &[],
-        ));
+        let hints = collect_clean_hints(&orphan_opts(home.path()));
         let item = hints
             .items
             .iter()
@@ -1710,16 +1718,7 @@ mod tests {
                 None
             }
         }
-        let mut opts = orphan_opts(
-            home.path(),
-            Arc::new(MissingCommands),
-            0,
-            60,
-            Duration::from_secs(15),
-            "",
-            "",
-            &[],
-        );
+        let mut opts = orphan_opts(home.path());
         opts.size_probe = Some(Arc::new(ZeroSize));
         let empty_hints = collect_clean_hints(&opts);
         assert!(!empty_hints
@@ -1751,67 +1750,30 @@ mod tests {
             }
         }
         let whitelist = vec![home.path().join(".kept").display().to_string()];
-        let with_bin = collect_clean_hints(&orphan_opts(
-            home.path(),
-            Arc::new(HasCommands),
-            100,
-            60,
-            Duration::from_secs(15),
-            "",
-            "",
-            &[],
-        ));
+        let mut with_bin = orphan_opts(home.path());
+        with_bin.command_exists = Some(Arc::new(HasCommands));
+        let with_bin = collect_clean_hints(&with_bin);
         assert!(!with_bin.items.iter().any(|h| h.summary.contains(".hasbin")));
 
-        let gui = collect_clean_hints(&orphan_opts(
-            home.path(),
-            Arc::new(MissingCommands),
-            100,
-            60,
-            Duration::from_secs(15),
-            "GuiOwned App",
-            "",
-            &[],
-        ));
+        let mut gui = orphan_opts(home.path());
+        gui.gui_app_texts = Some("GuiOwned App".into());
+        let gui = collect_clean_hints(&gui);
         assert!(!gui.items.iter().any(|h| h.summary.contains(".guiowned")));
 
-        let plugin = collect_clean_hints(&orphan_opts(
-            home.path(),
-            Arc::new(MissingCommands),
-            100,
-            60,
-            Duration::from_secs(15),
-            "",
-            "safety-net",
-            &[],
-        ));
+        let mut plugin = orphan_opts(home.path());
+        plugin.claude_plugin_tokens = Some("safety-net".into());
+        let plugin = collect_clean_hints(&plugin);
         assert!(!plugin
             .items
             .iter()
             .any(|h| h.summary.contains("safety-net")));
 
-        let listed = collect_clean_hints(&orphan_opts(
-            home.path(),
-            Arc::new(MissingCommands),
-            100,
-            60,
-            Duration::from_secs(15),
-            "",
-            "",
-            &whitelist,
-        ));
+        let mut listed = orphan_opts(home.path());
+        listed.whitelist_patterns = &whitelist;
+        let listed = collect_clean_hints(&listed);
         assert!(!listed.items.iter().any(|h| h.summary.contains(".kept")));
 
-        let young = collect_clean_hints(&orphan_opts(
-            home.path(),
-            Arc::new(MissingCommands),
-            100,
-            60,
-            Duration::from_secs(15),
-            "",
-            "",
-            &[],
-        ));
+        let young = collect_clean_hints(&orphan_opts(home.path()));
         assert!(!young.items.iter().any(|h| h.summary.contains(".young")));
     }
 
@@ -1820,16 +1782,9 @@ mod tests {
         let home = tempfile::tempdir().unwrap();
         fs::create_dir_all(home.path().join(".fooapp")).unwrap();
         touch_old(&home.path().join(".fooapp"));
-        let hints = collect_clean_hints(&orphan_opts(
-            home.path(),
-            Arc::new(MissingCommands),
-            100,
-            60,
-            Duration::ZERO,
-            "",
-            "",
-            &[],
-        ));
+        let mut opts = orphan_opts(home.path());
+        opts.budget = Duration::ZERO;
+        let hints = collect_clean_hints(&opts);
         assert!(hints.orphan_dotdirs_scan_skipped);
         let rows: Vec<_> = hints
             .items

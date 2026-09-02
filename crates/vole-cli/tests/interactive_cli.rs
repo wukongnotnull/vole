@@ -58,6 +58,7 @@ fn subcommand_help_has_no_mole_mentions() {
         "remove",
         "completions",
         "worktree",
+        "agent",
     ] {
         let output = Command::new(env!("CARGO_BIN_EXE_vole"))
             .args([cmd, "--help"])
@@ -138,6 +139,7 @@ fn top_level_help_includes_subcommand_options() {
         "Usage: vole history",
         "Usage: vole completions",
         "Usage: vole worktree",
+        "Usage: vole agent",
     ] {
         assert!(
             stdout.contains(needle),

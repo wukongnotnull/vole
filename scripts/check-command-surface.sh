@@ -50,6 +50,7 @@ vole_cmds=$(
     if grep -Eq '^\s+Update\b' "$VOLE_MAIN"; then echo update; fi
     if grep -Eq '^\s+Remove\b' "$VOLE_MAIN"; then echo remove; fi
     if grep -Eq '^\s+Worktree\b' "$VOLE_MAIN"; then echo worktree; fi
+    if grep -Eq '^\s+Agent\b' "$VOLE_MAIN"; then echo agent; fi
   } | sort -u
 )
 
@@ -72,6 +73,12 @@ if printf '%s\n' "$vole_cmds" | grep -qx worktree; then
   echo "OK: vole-native worktree"
 else
   echo "NOTE: vole-native worktree missing (not a Mole required gap)"
+fi
+
+if printf '%s\n' "$vole_cmds" | grep -qx agent; then
+  echo "OK: vole-native agent"
+else
+  echo "NOTE: vole-native agent missing (not a Mole required gap)"
 fi
 
 if grep -Eq '^\s+Hints\b' "$VOLE_MAIN"; then

@@ -78,7 +78,7 @@ pub fn map_key(key: KeyEvent) -> Option<HomeKey> {
         KeyCode::Esc => Some(HomeKey::Quit),
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(HomeKey::Quit),
         KeyCode::Char(c) => match c {
-            '1'..='6' => Some(HomeKey::Digit(c as u8 - b'0')),
+            '1'..='7' => Some(HomeKey::Digit(c as u8 - b'0')),
             'h' | 'H' => Some(HomeKey::Help),
             'v' | 'V' => Some(HomeKey::Version),
             't' | 'T' => Some(HomeKey::TouchId),
@@ -320,6 +320,10 @@ mod tests {
         assert!(matches!(
             map_key(KeyEvent::new(KeyCode::Char('6'), KeyModifiers::NONE)),
             Some(HomeKey::Digit(6))
+        ));
+        assert!(matches!(
+            map_key(KeyEvent::new(KeyCode::Char('7'), KeyModifiers::NONE)),
+            Some(HomeKey::Digit(7))
         ));
         assert!(matches!(
             map_key(KeyEvent::new(KeyCode::Char('1'), KeyModifiers::NONE)),

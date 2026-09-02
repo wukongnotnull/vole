@@ -417,14 +417,24 @@ fn same_path(a: &Path, b: &Path) -> bool {
     a == b
 }
 
-fn looks_like_git_checkout(path: &Path) -> bool {
+pub fn looks_like_git_checkout(path: &Path) -> bool {
     let git = path.join(".git");
     git.is_dir() || git.is_file()
 }
 
-fn discover_git_repos(roots: &[PathBuf]) -> Vec<PathBuf> {
+pub fn discover_git_repos(roots: &[PathBuf]) -> Vec<PathBuf> {
+    discover_git_repos_with_deadline(roots, None)
+}
+
+pub(crate) fn discover_git_repos_with_deadline(
+    roots: &[PathBuf],
+    deadline: Option<Instant>,
+) -> Vec<PathBuf> {
     let mut repos = BTreeSet::new();
     for root in roots {
+        if deadline.is_some_and(|d| Instant::now() >= d) {
+            break;
+        }
         if !root.is_dir() {
             continue;
         }
@@ -443,6 +453,9 @@ fn discover_git_repos(roots: &[PathBuf]) -> Vec<PathBuf> {
                 });
             })
         {
+            if deadline.is_some_and(|d| Instant::now() >= d) {
+                break;
+            }
             let Ok(ent) = ent else {
                 continue;
             };
@@ -466,7 +479,7 @@ fn has_purge_component(path: &Path) -> bool {
     })
 }
 
-fn agent_checkout_dirs(home: &Path, repos: &[PathBuf]) -> Vec<PathBuf> {
+pub(crate) fn agent_checkout_dirs(home: &Path, repos: &[PathBuf]) -> Vec<PathBuf> {
     let mut dirs = Vec::new();
     push_checkout_children(&home.join(".codex/worktrees"), &mut dirs);
     push_checkout_children(&home.join(".claude/worktrees"), &mut dirs);
@@ -475,6 +488,52 @@ fn agent_checkout_dirs(home: &Path, repos: &[PathBuf]) -> Vec<PathBuf> {
         push_checkout_children(&repo.join(".claude/worktrees"), &mut dirs);
     }
     dirs
+}
+
+pub fn collect_worktree_claimed_paths(
+    home: &Path,
+    cwd: &Path,
+    git: &dyn GitProbe,
+    search_roots: Option<&[PathBuf]>,
+) -> BTreeSet<PathBuf> {
+    let mut roots: Vec<PathBuf> = match search_roots {
+        Some(r) => r.to_vec(),
+        None => super::purge_plan::resolve_search_roots(home),
+    };
+    let mut claimed = BTreeSet::new();
+    if let Ok(top) = git.rev_parse_toplevel(cwd) {
+        if !roots.iter().any(|r| same_path(r, &top)) {
+            roots.push(top.clone());
+        }
+    }
+    let repos = discover_git_repos(&roots);
+    claimed.extend(claimed_paths_for_repos(home, git, &repos));
+    claimed
+}
+
+pub(crate) fn claimed_paths_for_repos(
+    home: &Path,
+    git: &dyn GitProbe,
+    repos: &[PathBuf],
+) -> BTreeSet<PathBuf> {
+    let mut claimed = BTreeSet::new();
+    for repo in repos {
+        let Ok(text) = git.worktree_list(repo) else {
+            continue;
+        };
+        for (idx, wt) in parse_worktree_porcelain(&text).into_iter().enumerate() {
+            if idx == 0 {
+                continue;
+            }
+            if wt.path.exists() {
+                claimed.insert(wt.path.canonicalize().unwrap_or(wt.path));
+            }
+        }
+    }
+    for child in agent_checkout_dirs(home, repos) {
+        claimed.insert(child.canonicalize().unwrap_or(child));
+    }
+    claimed
 }
 
 fn push_checkout_children(container: &Path, dirs: &mut Vec<PathBuf>) {

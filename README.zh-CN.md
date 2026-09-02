@@ -69,7 +69,7 @@
 
 当前已发布版本：**[v2.19.1](https://github.com/wukongnotnull/vole/releases/tag/v2.19.1)**（Developer ID 签名并经 Apple 公证）。Apple Silicon 与 Intel 均有对应安装包。
 
-产品话术里的「v3」指 CLI 代际。包版本继续 2.x MINOR（当前 **2.19.1**），不会因为「v3」发 `3.0.0`。请用本仓 tap 安装，我们不会把 vole 送进 Homebrew core。下一份 MINOR 由已合入的用户可见行为触发，是否打 tag **另问**。
+产品话术里的「v3」指 CLI 代际。包版本继续 2.x MINOR（当前 **2.19.1**），不是 3.0.0，也不会因为「v3」发 3.0.0。请用本仓 tap 安装，我们不会把 vole 送进 Homebrew core。下一份 MINOR 由已合入的用户可见行为触发，是否打 tag **另问**。
 
 ### 方式一：发给 AI 安装
 

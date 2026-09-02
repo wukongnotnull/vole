@@ -1,6 +1,7 @@
 //! vole 命令行入口。
 #![forbid(unsafe_code)]
 
+mod agent;
 mod clean;
 mod clean_group;
 mod history_cmd;
@@ -272,6 +273,31 @@ enum Command {
         #[arg(long, conflicts_with = "apply")]
         plan_out: Option<PathBuf>,
     },
+    /// List leftover agent containers, sessions, and caches; move selected items to Trash.
+    ///
+    /// Blockers are shown; you confirm each removal. This is not a git
+    /// checkout cleaner (`vole worktree` owns checkouts).
+    ///
+    /// On a TTY with no flags: scan, paginated select (none preselected),
+    /// confirm, then trash. With `--plan` / `--json`, or when not a TTY:
+    /// emit a plan only.
+    Agent {
+        /// Emit candidates only; do not delete (default when not a TTY; on a TTY skips interactive UI).
+        #[arg(long, alias = "dry-run", short = 'n', conflicts_with = "apply")]
+        plan: bool,
+        /// Apply entries from a plan file (TTL + TOCTOU revalidation required).
+        #[arg(long, value_name = "PLAN", conflicts_with_all = ["plan", "plan_out"])]
+        apply: Option<PathBuf>,
+        /// Permanently delete instead of moving to Trash (`--apply` or after interactive confirm).
+        #[arg(long)]
+        permanent: bool,
+        #[arg(long)]
+        json: bool,
+        #[arg(long = "json-stream")]
+        json_stream: bool,
+        #[arg(long, conflicts_with = "apply")]
+        plan_out: Option<PathBuf>,
+    },
     /// Remove stale project build artifacts.
     ///
     /// On a TTY with no flags: paginated select, confirm, then purge.
@@ -507,6 +533,24 @@ fn main() {
             plan_out,
         }) => {
             let code = worktree::run_worktree(worktree::WorktreeOptions {
+                explicit_plan: plan,
+                json,
+                json_stream,
+                plan_out,
+                apply_plan: apply,
+                permanent,
+            });
+            std::process::exit(code);
+        }
+        Some(Command::Agent {
+            plan,
+            apply,
+            permanent,
+            json,
+            json_stream,
+            plan_out,
+        }) => {
+            let code = agent::run_agent(agent::AgentOptions {
                 explicit_plan: plan,
                 json,
                 json_stream,

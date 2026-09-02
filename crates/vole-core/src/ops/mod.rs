@@ -1,5 +1,7 @@
 //! 编排骨架：进度事件经 channel 发出，供 CLI/TUI/sidecar 消费。
 
+mod agent_apply;
+mod agent_plan;
 mod apply_plan;
 mod clean_hints;
 mod coverage;
@@ -29,6 +31,15 @@ use crate::cancel::{CancelToken, Cancelled};
 use crate::orphan::{orphan_deps_for_runtime, OrphanDeps};
 use crate::rules::{PgrepProcessProbe, ProcessProbe, StrategyBuildError};
 
+pub use agent_apply::{
+    apply_agent_plan, apply_agent_proto_plan, AgentApplyContext, AgentApplyError, AgentApplyOptions,
+};
+pub use agent_plan::{
+    agent_id, build_agent_plan, expand_allowlist, format_agent_label, is_cwd_excluded,
+    is_never_candidate, named_relatives, rule_id_for, sort_agent_records, AgentKind,
+    AgentPlanError, AgentPlanOptions, AgentRecord, AgentSource, DEFAULT_AGENT_PER_ROOT_SECS,
+    DEFAULT_AGENT_SCAN_BUDGET_SECS, DEFAULT_AGENT_TTL_SECS,
+};
 pub use apply_plan::{
     apply_plan, apply_proto_plan, ApplyPlanContext, ApplyPlanError, ApplyPlanOptions,
 };
@@ -95,7 +106,8 @@ pub use worktree_apply::{
     WorktreeApplyOptions,
 };
 pub use worktree_plan::{
-    build_worktree_plan, format_worktree_label, parse_repo_from_label, parse_worktree_porcelain,
+    build_worktree_plan, collect_worktree_claimed_paths, discover_git_repos, format_worktree_label,
+    looks_like_git_checkout, parse_repo_from_label, parse_worktree_porcelain,
     sort_worktree_records, source_for_path, GitProbe, LiveGitProbe, WorktreeHead, WorktreeKind,
     WorktreePlanError, WorktreePlanOptions, WorktreeRecord, WorktreeSource,
     DEFAULT_WORKTREE_TTL_SECS,

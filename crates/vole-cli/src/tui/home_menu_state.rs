@@ -18,7 +18,7 @@ pub fn format_home_item_line(index: usize, selected: bool, item: &HomeItem) -> S
     )
 }
 
-pub const HOME_ITEMS: [HomeItem; 6] = [
+pub const HOME_ITEMS: [HomeItem; 7] = [
     HomeItem {
         title: "Clean",
         description: "Free up disk space",
@@ -43,6 +43,10 @@ pub const HOME_ITEMS: [HomeItem; 6] = [
         title: "Worktree",
         description: "Remove leftover git worktrees",
     },
+    HomeItem {
+        title: "Agent",
+        description: "Remove leftover agent data",
+    },
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,6 +57,7 @@ pub enum HomeCommand {
     Analyze,
     Status,
     Worktree,
+    Agent,
     TouchId,
     Update,
 }
@@ -66,6 +71,7 @@ impl HomeCommand {
             Self::Analyze => &["analyze"],
             Self::Status => &["status"],
             Self::Worktree => &["worktree"],
+            Self::Agent => &["agent"],
             Self::TouchId => &["touchid"],
             Self::Update => &["update"],
         }
@@ -120,7 +126,8 @@ impl HomeMenuState {
             2 => HomeCommand::Optimize,
             3 => HomeCommand::Analyze,
             4 => HomeCommand::Status,
-            _ => HomeCommand::Worktree,
+            5 => HomeCommand::Worktree,
+            _ => HomeCommand::Agent,
         }
     }
 
@@ -139,7 +146,7 @@ impl HomeMenuState {
                 None
             }
             HomeKey::Enter => Some(HomeAction::Launch(Self::cmd_at(self.cursor))),
-            HomeKey::Digit(d) if (1..=6).contains(&d) => {
+            HomeKey::Digit(d) if (1..=7).contains(&d) => {
                 Some(HomeAction::Launch(Self::cmd_at((d - 1) as usize)))
             }
             HomeKey::Help => Some(HomeAction::ShowHelp),
@@ -187,6 +194,10 @@ mod tests {
             format_home_item_line(5, false, &HOME_ITEMS[5]),
             "  6. Worktree    Remove leftover git worktrees"
         );
+        assert_eq!(
+            format_home_item_line(6, false, &HOME_ITEMS[6]),
+            "  7. Agent       Remove leftover agent data"
+        );
     }
 
     #[test]
@@ -201,9 +212,11 @@ mod tests {
         assert_eq!(HOME_ITEMS[3].description, "Explore disk usage");
         assert_eq!(HOME_ITEMS[4].title, "Status");
         assert_eq!(HOME_ITEMS[4].description, "Monitor system health");
-        assert_eq!(HOME_ITEMS.len(), 6);
+        assert_eq!(HOME_ITEMS.len(), 7);
         assert_eq!(HOME_ITEMS[5].title, "Worktree");
         assert_eq!(HOME_ITEMS[5].description, "Remove leftover git worktrees");
+        assert_eq!(HOME_ITEMS[6].title, "Agent");
+        assert_eq!(HOME_ITEMS[6].description, "Remove leftover agent data");
     }
 
     #[test]
@@ -317,6 +330,35 @@ mod tests {
         assert_eq!(
             st.handle_key(HomeKey::Digit(1)),
             Some(HomeAction::Launch(HomeCommand::Clean))
+        );
+    }
+
+    #[test]
+    fn digit_seven_launches_agent_digits_one_to_six_unchanged() {
+        let mut st = HomeMenuState::new(HomeMenuConfig {
+            touchid_configured: true,
+            show_update: false,
+        });
+        assert_eq!(
+            st.handle_key(HomeKey::Digit(7)),
+            Some(HomeAction::Launch(HomeCommand::Agent))
+        );
+        assert_eq!(HomeCommand::Agent.argv(), &["agent"]);
+        assert_eq!(
+            st.handle_key(HomeKey::Digit(6)),
+            Some(HomeAction::Launch(HomeCommand::Worktree))
+        );
+        assert_eq!(
+            st.handle_key(HomeKey::Digit(1)),
+            Some(HomeAction::Launch(HomeCommand::Clean))
+        );
+        for _ in 0..6 {
+            assert!(st.handle_key(HomeKey::Down).is_none());
+        }
+        assert_eq!(st.cursor(), 6);
+        assert_eq!(
+            st.handle_key(HomeKey::Enter),
+            Some(HomeAction::Launch(HomeCommand::Agent))
         );
     }
 }

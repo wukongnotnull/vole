@@ -14,6 +14,7 @@ const PLAN_COMMANDS: &[&str] = &[
     "installer",
     "touchid",
     "remove",
+    "agent",
 ];
 
 #[test]

@@ -417,7 +417,7 @@ fn same_path(a: &Path, b: &Path) -> bool {
     a == b
 }
 
-fn looks_like_git_checkout(path: &Path) -> bool {
+pub fn looks_like_git_checkout(path: &Path) -> bool {
     let git = path.join(".git");
     git.is_dir() || git.is_file()
 }

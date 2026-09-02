@@ -1,5 +1,6 @@
 //! 编排骨架：进度事件经 channel 发出，供 CLI/TUI/sidecar 消费。
 
+mod agent_apply;
 mod agent_plan;
 mod apply_plan;
 mod clean_hints;
@@ -30,6 +31,9 @@ use crate::cancel::{CancelToken, Cancelled};
 use crate::orphan::{orphan_deps_for_runtime, OrphanDeps};
 use crate::rules::{PgrepProcessProbe, ProcessProbe, StrategyBuildError};
 
+pub use agent_apply::{
+    apply_agent_plan, apply_agent_proto_plan, AgentApplyContext, AgentApplyError, AgentApplyOptions,
+};
 pub use agent_plan::{
     agent_id, build_agent_plan, expand_allowlist, format_agent_label, is_cwd_excluded,
     is_never_candidate, named_relatives, rule_id_for, sort_agent_records, AgentKind,

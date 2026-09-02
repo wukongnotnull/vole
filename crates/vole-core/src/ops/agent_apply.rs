@@ -201,10 +201,7 @@ pub fn apply_agent_proto_plan(
 }
 
 fn is_agent_rule(rule_id: &str) -> bool {
-    matches!(
-        rule_id,
-        "agent:container" | "agent:session" | "agent:cache"
-    )
+    matches!(rule_id, "agent:container" | "agent:session" | "agent:cache")
 }
 
 fn is_hard_excluded(canon: &Path, cwd: &Path) -> bool {

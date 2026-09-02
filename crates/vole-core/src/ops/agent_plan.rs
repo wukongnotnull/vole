@@ -353,7 +353,8 @@ pub fn build_agent_plan(
             if !seen.insert(canon.clone()) {
                 continue;
             }
-            let (size, age_unix, blockers) = measure_candidate(&canon, opts, deadline, root_deadline);
+            let (size, age_unix, blockers) =
+                measure_candidate(&canon, opts, deadline, root_deadline);
             if Instant::now() >= deadline || Instant::now() >= root_deadline {
                 timed_out = true;
                 break;
@@ -601,11 +602,7 @@ mod tests {
             .iter()
             .any(|e| e.path.to_string_lossy().contains("worktrees")));
         assert!(!plan.entries.iter().any(|e| e.path == cwd));
-        assert!(plan
-            .coverage_note
-            .as_deref()
-            .unwrap()
-            .contains("worktree"));
+        assert!(plan.coverage_note.as_deref().unwrap().contains("worktree"));
     }
 
     #[test]

@@ -107,9 +107,10 @@ pub use worktree_apply::{
 };
 pub use worktree_plan::{
     build_worktree_plan, collect_worktree_claimed_paths, discover_git_repos, format_worktree_label,
-    looks_like_git_checkout, parse_repo_from_label, parse_worktree_porcelain, sort_worktree_records,
-    source_for_path, GitProbe, LiveGitProbe, WorktreeHead, WorktreeKind, WorktreePlanError,
-    WorktreePlanOptions, WorktreeRecord, WorktreeSource, DEFAULT_WORKTREE_TTL_SECS,
+    looks_like_git_checkout, parse_repo_from_label, parse_worktree_porcelain,
+    sort_worktree_records, source_for_path, GitProbe, LiveGitProbe, WorktreeHead, WorktreeKind,
+    WorktreePlanError, WorktreePlanOptions, WorktreeRecord, WorktreeSource,
+    DEFAULT_WORKTREE_TTL_SECS,
 };
 
 #[derive(Debug, Error)]

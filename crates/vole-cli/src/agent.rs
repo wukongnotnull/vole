@@ -10,9 +10,9 @@ use crossbeam_channel::unbounded;
 use vole_core::mutex::{try_lock_agent, MutexError};
 use vole_core::ops::{
     apply_agent_plan, build_agent_plan, coverage_with_apply_permission_hint,
-    report_has_permission_skips, AgentApplyError, AgentApplyOptions, AgentPlanOptions, LiveGitProbe,
-    APPLY_PERMISSION_WARN, DEFAULT_AGENT_PER_ROOT_SECS, DEFAULT_AGENT_SCAN_BUDGET_SECS,
-    DEFAULT_AGENT_TTL_SECS,
+    report_has_permission_skips, AgentApplyError, AgentApplyOptions, AgentPlanOptions,
+    LiveGitProbe, APPLY_PERMISSION_WARN, DEFAULT_AGENT_PER_ROOT_SECS,
+    DEFAULT_AGENT_SCAN_BUDGET_SECS, DEFAULT_AGENT_TTL_SECS,
 };
 use vole_core::protection::AppProtection;
 use vole_core::units;
@@ -69,11 +69,7 @@ pub(crate) fn gate_interactive(stdin_tty: bool, stdout_tty: bool, opts: &AgentOp
         && opts.apply_plan.is_none()
 }
 
-fn plan_options<'a>(
-    home: &'a Path,
-    cwd: &'a Path,
-    git: &'a LiveGitProbe,
-) -> AgentPlanOptions<'a> {
+fn plan_options<'a>(home: &'a Path, cwd: &'a Path, git: &'a LiveGitProbe) -> AgentPlanOptions<'a> {
     let budget_secs = env::var("VOLE_TIMEOUT_AGENT_SCAN_SEC")
         .ok()
         .and_then(|s| s.parse().ok())
@@ -100,7 +96,8 @@ fn run_interactive(opts: &AgentOptions) -> io::Result<()> {
     let protection = AppProtection::new();
     let git = LiveGitProbe;
     let plan_opts = plan_options(&home, &cwd, &git);
-    let plan = build_agent_plan(&protection, &plan_opts).map_err(|e| io::Error::other(e.to_string()))?;
+    let plan =
+        build_agent_plan(&protection, &plan_opts).map_err(|e| io::Error::other(e.to_string()))?;
 
     if plan.entries.is_empty() {
         spinner.stop();
@@ -129,7 +126,10 @@ fn run_interactive(opts: &AgentOptions) -> io::Result<()> {
         }
     };
 
-    eprintln!("Selected {} agent leftover(s) for removal:", selected_idxs.len());
+    eprintln!(
+        "Selected {} agent leftover(s) for removal:",
+        selected_idxs.len()
+    );
     for &i in &selected_idxs {
         let entry = &plan.entries[i];
         eprintln!("  - {} ({})", entry.label, entry.path.display());
@@ -152,7 +152,8 @@ fn run_interactive(opts: &AgentOptions) -> io::Result<()> {
     let apply_opts = AgentApplyOptions {
         permanent: opts.permanent,
     };
-    let report = apply_agent_plan(&apply_plan, &protection, apply_opts, None).map_err(map_apply_error)?;
+    let report =
+        apply_agent_plan(&apply_plan, &protection, apply_opts, None).map_err(map_apply_error)?;
     print_human_report(&report);
     Ok(())
 }
@@ -181,7 +182,8 @@ fn run_plan(opts: AgentOptions) -> io::Result<()> {
         None
     };
 
-    let plan = build_agent_plan(&protection, &plan_opts).map_err(|e| io::Error::other(e.to_string()))?;
+    let plan =
+        build_agent_plan(&protection, &plan_opts).map_err(|e| io::Error::other(e.to_string()))?;
 
     if let Some((event_tx, writer)) = stream_tx {
         let _ = event_tx.send(StreamEvent::Done {

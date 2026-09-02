@@ -93,6 +93,11 @@ fn set_mtime(path: &Path, mtime: &str) -> io::Result<()> {
 }
 
 fn parse_fixture_mtime(value: &str) -> Option<SystemTime> {
+    if let Some(rest) = value.strip_prefix("now-") {
+        let days: u64 = rest.strip_suffix('d')?.parse().ok()?;
+        return SystemTime::now()
+            .checked_sub(std::time::Duration::from_secs(days.saturating_mul(86_400)));
+    }
     let (date, time) = value.split_once('T')?;
     let (year, month, day) = parse_ymd(date)?;
     let (hour, minute) = parse_hm(time)?;
@@ -148,6 +153,33 @@ fn datetime_to_system_time(
 
 fn is_leap_year(year: i32) -> bool {
     (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+}
+
+#[cfg(test)]
+mod parse_mtime {
+    use super::*;
+    use std::time::Duration;
+
+    #[test]
+    fn parse_fixture_mtime_supports_now_minus_days() {
+        let five = parse_fixture_mtime("now-5d").expect("now-5d");
+        let ninety = parse_fixture_mtime("now-90d").expect("now-90d");
+        let now = SystemTime::now();
+        let five_age = now.duration_since(five).expect("five in past");
+        let ninety_age = now.duration_since(ninety).expect("ninety in past");
+        assert!(
+            five_age >= Duration::from_secs(5 * 86_400 - 2)
+                && five_age < Duration::from_secs(5 * 86_400 + 2),
+            "now-5d age {five_age:?}"
+        );
+        assert!(
+            ninety_age >= Duration::from_secs(90 * 86_400 - 2)
+                && ninety_age < Duration::from_secs(90 * 86_400 + 2),
+            "now-90d age {ninety_age:?}"
+        );
+        assert!(parse_fixture_mtime("2026-05-01T12:00").is_some());
+        assert!(parse_fixture_mtime("not-a-date").is_none());
+    }
 }
 
 #[cfg(test)]
@@ -207,6 +239,20 @@ mod verify_clean_fixtures {
                 CleanFixture::load(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
             verify_fixture(&fx, &rules);
         }
+    }
+
+    #[test]
+    fn codex_desktop_stale_staging_fixture_keeps_fresh_dir() {
+        let _guard = test_env::lock();
+        let rules = load_rules_from_dir(rules_dir()).expect("load data/rules");
+        let staging: Vec<_> = rules
+            .into_iter()
+            .filter(|r| r.id == "codex-desktop-stale-update-staging")
+            .collect();
+        assert_eq!(staging.len(), 1);
+        let path = fixtures_dir().join("codex_desktop_stale_staging_selects_old_dir.json");
+        let fx = CleanFixture::load(&path).expect("load fixture");
+        verify_fixture(&fx, &staging);
     }
 
     fn verify_fixture(fx: &CleanFixture, rules: &[crate::rules::Rule]) {

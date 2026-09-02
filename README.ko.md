@@ -29,12 +29,12 @@
 ## 화면 미리보기
 
 <p align="center">
-  <img src="images/tui/home.png" alt="Vole 대화형 홈" width="720" />
+  <img src="images/tui/home.png" alt="Vole 대화형 홈(6개 항목; Home 7번 출시 후 교체)" width="720" />
 </p>
 
 터미널에서 `vole`을 실행하면 대화형 홈이 열립니다. 방향키로 이동, Enter로 선택.
 
-홈 메뉴는 현재 6개입니다. Clean / Uninstall / Optimize / Analyze / Status는 Mole과 같은 문구이고, 여섯 번째 **Worktree**는 Vole 고유 항목이며 Mole 명령 공백이 아닙니다.
+홈 메뉴는 현재 6개입니다. Clean / Uninstall / Optimize / Analyze / Status는 Mole과 같은 문구이고, 여섯 번째 **Worktree**는 Vole 고유 항목이며 Mole 명령 공백이 아닙니다. 스크린샷은 여전히 6개이며, 7번 Agent가 들어간 뒤에 `images/tui/home.png`를 교체합니다.
 
 ---
 

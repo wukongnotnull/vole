@@ -29,12 +29,12 @@
 ## 介面預覽
 
 <p align="center">
-  <img src="images/tui/home.png" alt="Vole 互動式首頁" width="720" />
+  <img src="images/tui/home.png" alt="Vole 互動式首頁（六項；第 7 項 Agent 合入後再換圖）" width="720" />
 </p>
 
 終端機執行 `vole` 即可開啟互動式首頁：方向鍵移動，Enter 進入。
 
-互動首頁目前六項：前五項文案對齊 Mole（清理 / 解除安裝 / 最佳化 / 分析 / 狀態），第六項 **Worktree** 是 Vole 自己的加值入口，不是 Mole 命令面缺口。
+互動首頁目前六項：前五項文案對齊 Mole（清理 / 解除安裝 / 最佳化 / 分析 / 狀態），第六項 **Worktree** 是 Vole 自己的加值入口，不是 Mole 命令面缺口。截圖仍為六項；第 7 項 Agent 合入後再換 `images/tui/home.png`。
 
 ---
 

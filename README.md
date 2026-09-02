@@ -29,12 +29,12 @@ Preview first · Trash by default · One command and you’re ready
 ## Screenshots
 
 <p align="center">
-  <img src="images/tui/home.png" alt="Vole interactive home menu" width="720" />
+  <img src="images/tui/home.png" alt="Vole interactive home menu (six items; screenshot updates after Home item 7 ships)" width="720" />
 </p>
 
 Run `vole` in Terminal to open the interactive home menu—arrow keys to move, Enter to select.
 
-The home menu lists six items today: Mole-aligned Clean / Uninstall / Optimize / Analyze / Status, plus Vole-native **Worktree**. Worktree is an extra, not a Mole command-surface gap.
+The home menu lists six items today: Mole-aligned Clean / Uninstall / Optimize / Analyze / Status, plus Vole-native **Worktree**. Worktree is an extra, not a Mole command-surface gap. The screenshot is still the six-item menu; `images/tui/home.png` updates after Home item 7 ships.
 
 ---
 

@@ -29,12 +29,12 @@
 ## 画面プレビュー
 
 <p align="center">
-  <img src="images/tui/home.png" alt="Vole 対話ホーム" width="720" />
+  <img src="images/tui/home.png" alt="Vole 対話ホーム（6 項目。Home 第 7 項の出荷後に差し替え）" width="720" />
 </p>
 
 ターミナルで `vole` を実行すると対話ホームが開きます。矢印キーで移動、Enter で選択。
 
-ホームは現在 6 項目です。Clean / Uninstall / Optimize / Analyze / Status は Mole と同じ文言、6 番目の **Worktree** は Vole 独自の入口であり、Mole のコマンド欠落ではありません。
+ホームは現在 6 項目です。Clean / Uninstall / Optimize / Analyze / Status は Mole と同じ文言、6 番目の **Worktree** は Vole 独自の入口であり、Mole のコマンド欠落ではありません。スクリーンショットは 6 項目のままです。第 7 項 Agent が入ってから `images/tui/home.png` を差し替えます。
 
 ---
 

@@ -29,12 +29,12 @@
 ## 界面预览
 
 <p align="center">
-  <img src="images/tui/home.png" alt="Vole 交互式首页" width="720" />
+  <img src="images/tui/home.png" alt="Vole 交互式首页（六项；第 7 项 Agent 合入后再换图）" width="720" />
 </p>
 
 终端运行 `vole` 即可打开交互式首页：方向键移动，Enter 进入。
 
-交互首页目前六项：前五项文案对齐 Mole（清理 / 卸载 / 优化 / 分析 / 状态），第六项 **Worktree** 是 Vole 自己的增值入口，不是 Mole 命令面缺口。
+交互首页目前六项：前五项文案对齐 Mole（清理 / 卸载 / 优化 / 分析 / 状态），第六项 **Worktree** 是 Vole 自己的增值入口，不是 Mole 命令面缺口。截图仍为六项；第 7 项 Agent 合入后再换 `images/tui/home.png`。
 
 ---
 

@@ -29,12 +29,12 @@
 ## 画面プレビュー
 
 <p align="center">
-  <img src="images/tui/home.png" alt="Vole 対話ホーム（6 項目。Home 第 7 項の出荷後に差し替え）" width="720" />
+  <img src="images/tui/home.png" alt="Vole 対話ホーム（7 項目：Clean から Agent）" width="720" />
 </p>
 
 ターミナルで `vole` を実行すると対話ホームが開きます。矢印キーで移動、Enter で選択。
 
-ホームは現在 6 項目です。Clean / Uninstall / Optimize / Analyze / Status は Mole と同じ文言、6 番目の **Worktree** は Vole 独自の入口であり、Mole のコマンド欠落ではありません。スクリーンショットは 6 項目のままです。第 7 項 Agent が入ってから `images/tui/home.png` を差し替えます。
+ホームは現在 7 項目です。Clean / Uninstall / Optimize / Analyze / Status は Mole と同じ文言、6 番目の **Worktree** と 7 番目の **Agent**（`Remove leftover agent data`、数字キー `7`）は Vole 独自の入口であり、Mole のコマンド欠落ではありません。1–6 の意味は変わりません。
 
 ---
 
@@ -51,8 +51,7 @@
 | **履歴** | 過去のクリーンと削除を振り返る |
 | **ステータス** | CPU・メモリ・ディスクの健康状態をリアルタイム表示 |
 | **Worktree** | 残っている Git worktree を一覧し、確認後にゴミ箱へ移す |
-
-近日公開（未出荷）：`vole agent`（エージェントのコンテナ / セッション / キャッシュ残骸）。リリースノートに載るまで使えない前提です。
+| **Agent** | エージェントのコンテナ / セッション / キャッシュ残骸を確認してからゴミ箱へ |
 
 ターミナルで `vole` と打つと対話ホームが開き、矢印キーで選べます。約 **540** 件のクリーン規則が内蔵され、**追加ツールは不要**です。
 
@@ -149,6 +148,7 @@ vole optimize --plan
 vole purge --plan
 vole installer --plan
 vole worktree --plan
+vole agent --plan
 
 # 候補を見てから実行
 vole clean --apply <plan.json>
@@ -172,7 +172,7 @@ vole --version
 
 | コマンド | 別名 | 説明 |
 |------|------|------|
-| `vole` | — | 対話ホーム（Clean / Uninstall / Optimize / Analyze / Status / Worktree） |
+| `vole` | — | 対話ホーム（Clean / Uninstall / Optimize / Analyze / Status / Worktree / Agent） |
 | `vole clean` | — | キャッシュと残骸をクリーン |
 | `vole uninstall` | — | アプリと残骸をアンインストール |
 | `vole optimize` | `optimise` | システム最適化・メンテ |
@@ -181,6 +181,7 @@ vole --version
 | `vole history` | — | 操作履歴と削除ログ |
 | `vole purge` | — | 古いプロジェクトのビルド成果物を掃除 |
 | `vole worktree` | — | 残っている Git worktree を一覧し、確認後にゴミ箱へ移す |
+| `vole agent` | — | エージェント残骸を確認してからゴミ箱へ（git checkout 掃除ではない。それは worktree） |
 | `vole installer` | — | インストーラを探して掃除 |
 | `vole touchid` | — | sudo Touch ID 設定（`status` / `enable` / `disable`） |
 | `vole update` | — | 自己更新（実行したときだけネット） |

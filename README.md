@@ -29,12 +29,12 @@ Preview first · Trash by default · One command and you’re ready
 ## Screenshots
 
 <p align="center">
-  <img src="images/tui/home.png" alt="Vole interactive home menu (six items; screenshot updates after Home item 7 ships)" width="720" />
+  <img src="images/tui/home.png" alt="Vole interactive home menu (seven items: Clean through Agent)" width="720" />
 </p>
 
 Run `vole` in Terminal to open the interactive home menu—arrow keys to move, Enter to select.
 
-The home menu lists six items today: Mole-aligned Clean / Uninstall / Optimize / Analyze / Status, plus Vole-native **Worktree**. Worktree is an extra, not a Mole command-surface gap. The screenshot is still the six-item menu; `images/tui/home.png` updates after Home item 7 ships.
+The home menu lists seven items: Mole-aligned Clean / Uninstall / Optimize / Analyze / Status, plus Vole-native **Worktree** (6) and **Agent** (7, `Remove leftover agent data`, digit `7`). Items 1–6 are unchanged. Worktree and Agent are extras, not Mole command-surface gaps.
 
 ---
 
@@ -51,8 +51,7 @@ The home menu lists six items today: Mole-aligned Clean / Uninstall / Optimize /
 | **History** | Review past cleanups and deletions |
 | **Status** | Live CPU, memory, and disk health |
 | **Worktree** | List leftover Git worktrees and move them to Trash after confirm |
-
-Upcoming (not shipped yet): `vole agent` for leftover agent containers / sessions / caches. Do not run it until a release lists the command.
+| **Agent** | List leftover agent containers, sessions, and caches; confirm, then Trash |
 
 Type `vole` in Terminal for an interactive home menu. About **540** cleanup rules are built in—**no extra tools** to install.
 
@@ -149,6 +148,7 @@ vole optimize --plan
 vole purge --plan
 vole installer --plan
 vole worktree --plan
+vole agent --plan
 
 # Apply after you review
 vole clean --apply <plan.json>
@@ -172,7 +172,7 @@ Run bare `vole` in Terminal to open the interactive home menu.
 
 | Command | Alias | What it does |
 |------|------|------|
-| `vole` | — | Interactive home (Clean / Uninstall / Optimize / Analyze / Status / Worktree) |
+| `vole` | — | Interactive home (Clean / Uninstall / Optimize / Analyze / Status / Worktree / Agent) |
 | `vole clean` | — | Clean caches and leftovers |
 | `vole uninstall` | — | Uninstall apps and leftovers |
 | `vole optimize` | `optimise` | System optimization / maintenance |
@@ -181,6 +181,7 @@ Run bare `vole` in Terminal to open the interactive home menu.
 | `vole history` | — | Operation history and deletion log |
 | `vole purge` | — | Clear stale project build artifacts |
 | `vole worktree` | — | List leftover Git worktrees and move them to Trash after confirm |
+| `vole agent` | — | List leftover agent data; confirm, then Trash（not a git checkout cleaner） |
 | `vole installer` | — | Find and clean installers |
 | `vole touchid` | — | Configure sudo Touch ID (`status` / `enable` / `disable`) |
 | `vole update` | — | Self-update (network only when you run it) |

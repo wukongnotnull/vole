@@ -29,12 +29,12 @@
 ## 介面預覽
 
 <p align="center">
-  <img src="images/tui/home.png" alt="Vole 互動式首頁（六項；第 7 項 Agent 合入後再換圖）" width="720" />
+  <img src="images/tui/home.png" alt="Vole 互動式首頁（七項：清理到 Agent）" width="720" />
 </p>
 
 終端機執行 `vole` 即可開啟互動式首頁：方向鍵移動，Enter 進入。
 
-互動首頁目前六項：前五項文案對齊 Mole（清理 / 解除安裝 / 最佳化 / 分析 / 狀態），第六項 **Worktree** 是 Vole 自己的加值入口，不是 Mole 命令面缺口。截圖仍為六項；第 7 項 Agent 合入後再換 `images/tui/home.png`。
+互動首頁目前七項：前五項文案對齊 Mole（清理 / 解除安裝 / 最佳化 / 分析 / 狀態），第六項 **Worktree** 與第 7 項 **Agent**（`Remove leftover agent data`，數字鍵 `7`）是 Vole 自己的加值入口，不是 Mole 命令面缺口。1–6 含義不變。
 
 ---
 
@@ -51,8 +51,7 @@
 | **歷史** | 回看做過的清理與刪除紀錄 |
 | **狀態** | 即時看 CPU、記憶體、磁碟健康情況 |
 | **Worktree** | 列出遺留 Git worktree，確認後移入廢紙簍 |
-
-即將提供（尚未發布）：`vole agent` 用於 Agent 容器 / 工作階段 / 快取殘留。發行說明列出該命令前請勿當成已可用。
+| **Agent** | 列出 Agent 容器 / 工作階段 / 快取殘留，確認後移入廢紙簍 |
 
 打開終端機輸入 `vole`，會進入互動式首頁，用方向鍵選功能即可。內建約 **540** 條清理規則，**不必再單獨安裝**其他小工具。
 
@@ -149,6 +148,7 @@ vole optimize --plan
 vole purge --plan
 vole installer --plan
 vole worktree --plan
+vole agent --plan
 
 # 看過候選後再執行
 vole clean --apply <plan.json>
@@ -172,7 +172,7 @@ vole --version
 
 | 命令 | 別名 | 說明 |
 |------|------|------|
-| `vole` | — | 互動式首頁（清理 / 解除安裝 / 最佳化 / 分析 / 狀態 / Worktree） |
+| `vole` | — | 互動式首頁（清理 / 解除安裝 / 最佳化 / 分析 / 狀態 / Worktree / Agent） |
 | `vole clean` | — | 清理快取與殘留 |
 | `vole uninstall` | — | 解除安裝應用及殘留 |
 | `vole optimize` | `optimise` | 系統最佳化與維護 |
@@ -181,6 +181,7 @@ vole --version
 | `vole history` | — | 操作歷史與刪除紀錄 |
 | `vole purge` | — | 清理陳舊專案建置物 |
 | `vole worktree` | — | 列出遺留 Git worktree，確認後移入廢紙簍 |
+| `vole agent` | — | 列出 Agent 殘留，確認後移入廢紙簍（不是 git checkout 清理，那是 worktree） |
 | `vole installer` | — | 尋找並清理安裝套件 |
 | `vole touchid` | — | 設定 sudo 的 Touch ID（`status` / `enable` / `disable`） |
 | `vole update` | — | 自我更新（只有你主動執行才會連網） |

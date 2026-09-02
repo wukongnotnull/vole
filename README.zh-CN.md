@@ -29,12 +29,12 @@
 ## 界面预览
 
 <p align="center">
-  <img src="images/tui/home.png" alt="Vole 交互式首页（六项；第 7 项 Agent 合入后再换图）" width="720" />
+  <img src="images/tui/home.png" alt="Vole 交互式首页（七项：清理到 Agent）" width="720" />
 </p>
 
 终端运行 `vole` 即可打开交互式首页：方向键移动，Enter 进入。
 
-交互首页目前六项：前五项文案对齐 Mole（清理 / 卸载 / 优化 / 分析 / 状态），第六项 **Worktree** 是 Vole 自己的增值入口，不是 Mole 命令面缺口。截图仍为六项；第 7 项 Agent 合入后再换 `images/tui/home.png`。
+交互首页目前七项：前五项文案对齐 Mole（清理 / 卸载 / 优化 / 分析 / 状态），第六项 **Worktree** 与第 7 项 **Agent**（`Remove leftover agent data`，数字键 `7`）是 Vole 自己的增值入口，不是 Mole 命令面缺口。1–6 含义不变。
 
 ---
 
@@ -52,8 +52,7 @@
 | **历史**  | 回看做过的清理与删除记录             |
 | **状态**  | 实时看 CPU、内存、磁盘健康情况        |
 | **Worktree** | 列出遗留 Git worktree，确认后移入废纸篓 |
-
-即将提供（尚未发布）：`vole agent` 用于 Agent 容器 / 会话 / 缓存残留。在发行说明列出该命令之前请不要当作已可用。
+| **Agent** | 列出 Agent 容器 / 会话 / 缓存残留，确认后移入废纸篓 |
 
 打开终端输入 `vole`，会进入交互式首页，用方向键选功能即可。内置约 **540** 条清理规则，**不必再单独安装**其他小工具。
 
@@ -156,6 +155,7 @@ vole optimize --plan
 vole purge --plan
 vole installer --plan
 vole worktree --plan
+vole agent --plan
 
 # 看过候选后再执行
 vole clean --apply <plan.json>
@@ -182,7 +182,7 @@ vole --version
 
 | 命令                 | 别名           | 说明                                                  |
 | ------------------ | ------------ | --------------------------------------------------- |
-| `vole`             | —            | 交互式首页（清理 / 卸载 / 优化 / 分析 / 状态 / Worktree）                       |
+| `vole`             | —            | 交互式首页（清理 / 卸载 / 优化 / 分析 / 状态 / Worktree / Agent）                       |
 | `vole clean`       | —            | 清理缓存与残留                                             |
 | `vole uninstall`   | —            | 卸载应用及残留                                             |
 | `vole optimize`    | `optimise`   | 系统优化与维护                                             |
@@ -191,6 +191,7 @@ vole --version
 | `vole history`     | —            | 操作历史与删除记录                                           |
 | `vole purge`       | —            | 清理陈旧项目构建物                                           |
 | `vole worktree`    | —            | 列出遗留 Git worktree，确认后移入废纸篓                       |
+| `vole agent`       | —            | 列出 Agent 残留，确认后移入废纸篓（不是 git checkout 清理，那是 worktree） |
 | `vole installer`   | —            | 查找并清理安装包                                            |
 | `vole touchid`     | —            | 配置 sudo 的 Touch ID（`status` / `enable` / `disable`） |
 | `vole update`      | —            | 自更新（只有你主动执行才会联网）                                    |

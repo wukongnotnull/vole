@@ -5,11 +5,11 @@
   "fixture": [
     {
       "mkdir": "~/Library/Caches/com.openai.codex/org.sparkle-project.Sparkle/Installation/old-build",
-      "mtime": "2026-05-01T12:00"
+      "mtime": "now-90d"
     },
     {
       "mkdir": "~/Library/Caches/com.openai.codex/org.sparkle-project.Sparkle/Installation/fresh-build",
-      "mtime": "2026-07-29T12:00"
+      "mtime": "now-5d"
     }
   ],
   "expect_selected": [

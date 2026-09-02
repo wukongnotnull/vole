@@ -34,6 +34,8 @@ Preview first · Trash by default · One command and you’re ready
 
 Run `vole` in Terminal to open the interactive home menu—arrow keys to move, Enter to select.
 
+The home menu lists six items today: Mole-aligned Clean / Uninstall / Optimize / Analyze / Status, plus Vole-native **Worktree**. Worktree is an extra, not a Mole command-surface gap.
+
 ---
 
 ## Features
@@ -49,6 +51,8 @@ Run `vole` in Terminal to open the interactive home menu—arrow keys to move, E
 | **History** | Review past cleanups and deletions |
 | **Status** | Live CPU, memory, and disk health |
 | **Worktree** | List leftover Git worktrees and move them to Trash after confirm |
+
+Upcoming (not shipped yet): `vole agent` for leftover agent containers / sessions / caches. Do not run it until a release lists the command.
 
 Type `vole` in Terminal for an interactive home menu. About **540** cleanup rules are built in—**no extra tools** to install.
 

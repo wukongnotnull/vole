@@ -542,10 +542,11 @@ mod tests {
     #[test]
     fn status_footer_declares_cat_and_cores() {
         let f = status_footer();
-        assert!(f.contains('K') || f.contains("Vole"), "{f}");
-        assert!(f.contains('C') || f.contains("Cores"), "{f}");
-        assert!(f.contains('B') || f.contains("Back"), "{f}");
-        assert!(f.contains('Q'), "{f}");
+        assert_eq!(f, "K Vole | C Cores | B Back | Q/Esc/Ctrl+C Quit");
+        assert!(f.contains('K') && f.contains("Vole"));
+        assert!(f.contains('C') && f.contains("Cores"));
+        assert!(f.contains('B') && f.contains("Back"));
+        assert!(f.contains('Q'));
     }
 
     #[test]

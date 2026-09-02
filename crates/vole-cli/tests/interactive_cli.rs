@@ -57,6 +57,7 @@ fn subcommand_help_has_no_mole_mentions() {
         "update",
         "remove",
         "completions",
+        "worktree",
         "agent",
     ] {
         let output = Command::new(env!("CARGO_BIN_EXE_vole"))
@@ -137,11 +138,41 @@ fn top_level_help_includes_subcommand_options() {
         "Usage: vole status",
         "Usage: vole history",
         "Usage: vole completions",
+        "Usage: vole worktree",
         "Usage: vole agent",
     ] {
         assert!(
             stdout.contains(needle),
             "missing `{needle}` in top-level --help:\n{stdout}"
+        );
+    }
+}
+
+#[test]
+fn top_level_help_is_honest_about_agent_and_forbids_hints() {
+    let output = Command::new(env!("CARGO_BIN_EXE_vole"))
+        .args(["--help"])
+        .output()
+        .expect("help");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !stdout.contains("Usage: vole hints"),
+        "must not register vole hints:\n{stdout}"
+    );
+    let agent = Command::new(env!("CARGO_BIN_EXE_vole"))
+        .args(["agent", "--help"])
+        .output()
+        .expect("agent help");
+    if agent.status.success() {
+        assert!(
+            stdout.contains("Usage: vole agent"),
+            "agent is shipped so --help must list it:\n{stdout}"
+        );
+    } else {
+        assert!(
+            !stdout.contains("Usage: vole agent"),
+            "agent is not shipped; do not advertise it:\n{stdout}"
         );
     }
 }

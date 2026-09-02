@@ -138,4 +138,15 @@ mod tests {
         assert!(text.contains("Quit"), "{text}");
         assert!(!text.contains("Cancel"), "{text}");
     }
+
+    #[test]
+    fn status_footer_declares_only_wired_keys() {
+        let f = status_footer();
+        assert_eq!(f, "K Vole | C Cores | B Back | Q/Esc/Ctrl+C Quit");
+        assert!(!f.contains("Space"));
+        assert!(!f.to_ascii_lowercase().contains("safe"));
+        assert!(!f.to_ascii_lowercase().contains("deletable"));
+        assert!(!f.contains("Del"));
+        assert!(!f.contains("Whitelist"));
+    }
 }

@@ -90,6 +90,7 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          FCP / 剪映 generated、XCTestDevices 已落地、\
          user.sh 广域 `~/Library/Caches/*` / `~/Library/Logs/*`（plan 目录递归 du + 父子重叠扣减；保护跳过子集仍 keep）。\
          桌面 SMAppService / 特权助手见 vole-macos（真机通道已验收）。\
+         clean hints 长尾（LaunchAgents / orphan dotdirs）已落地、\
          vole agent（Cursor/Codex/Claude 容器/会话/缓存残留，确认后废纸篓）已落地、\
          如需完整清理（含 Developer 大户整树等长尾），请关注后续版本。"
     )
@@ -168,6 +169,14 @@ mod tests {
     fn enabled_rule_count_excludes_disabled() {
         let rules = vec![stub_rule(false), stub_rule(true), stub_rule(false)];
         assert_eq!(enabled_rule_count(&rules), 2);
+    }
+
+    #[test]
+    fn coverage_note_mentions_clean_hints_long_tail() {
+        let note = coverage_note(540);
+        assert!(note.contains("clean hints 长尾（LaunchAgents / orphan dotdirs）已落地"));
+        assert!(note.contains("已落地"));
+        assert!(!note.to_ascii_lowercase().contains("mole"));
     }
 
     #[test]

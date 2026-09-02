@@ -74,7 +74,7 @@
 이 Mac에 Vole(macOS 정리·모니터링 CLI)을 설치하세요.
 
 공식 저장소: https://github.com/wukongnotnull/vole
-macOS 12 이상이 필요합니다. 설치만 하고, clean / uninstall / optimize 등 시스템을 바꾸는 명령은 실행하지 마세요.
+macOS 12 이상이 필요합니다. 설치만 하고, clean / uninstall / optimize / purge / worktree / agent 등 시스템을 바꾸는 명령은 실행하지 마세요. Homebrew core에 vole을 제출하거나 core에서 설치하지 마세요.
 
 아래 순서로 시도하고, 성공하면 멈추세요:
 1. Homebrew가 있으면:

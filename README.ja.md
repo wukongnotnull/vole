@@ -74,7 +74,7 @@
 この Mac に Vole（macOS 向けクリーンアップ／モニタ CLI）をインストールしてください。
 
 公式リポジトリ: https://github.com/wukongnotnull/vole
-macOS 12 以上が必要です。インストールだけ行い、clean / uninstall / optimize などシステムを変更するコマンドは実行しないでください。
+macOS 12 以上が必要です。インストールだけ行い、clean / uninstall / optimize / purge / worktree / agent などシステムを変更するコマンドは実行しないでください。Homebrew core に vole を提出したり、core からインストールしたりしないでください。
 
 次の順で試し、成功したらそこで止めてください:
 1. Homebrew がある場合:

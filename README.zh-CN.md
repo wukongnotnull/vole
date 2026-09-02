@@ -77,7 +77,7 @@
 请在这台 Mac 上安装 Vole（macOS 清理与监控命令行工具）。
 
 官方仓库：https://github.com/wukongnotnull/vole
-需要 macOS 12+。只负责安装，不要运行 clean / uninstall / optimize 等会改动系统的命令。
+需要 macOS 12+。只负责安装，不要运行 clean / uninstall / optimize / purge / worktree / agent 等会改动系统的命令。不要往 Homebrew core 提交或从 core 安装 vole。
 
 按顺序尝试，前一步成功就停：
 1. 若已有 Homebrew：

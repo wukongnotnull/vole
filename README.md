@@ -74,7 +74,7 @@ Paste the block below into Cursor, Claude Code, Codex, ChatGPT, or any coding as
 Install Vole (a macOS cleanup & monitor CLI) on this Mac.
 
 Official repo: https://github.com/wukongnotnull/vole
-Requires macOS 12+. Install only — do not run clean / uninstall / optimize or any command that changes the system.
+Requires macOS 12+. Install only — do not run clean / uninstall / optimize / purge / worktree / agent or any command that changes the system. Do not submit or install a Homebrew core formula.
 
 Do this in order and stop at the first success:
 1. If Homebrew is available:

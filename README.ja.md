@@ -66,6 +66,8 @@
 
 現在の公開版：**[v2.19.1](https://github.com/wukongnotnull/vole/releases/tag/v2.19.1)**（Developer ID 署名＋Apple 公証）。Apple Silicon / Intel 両対応。
 
+製品上の「v3」は CLI 世代の呼び名です。パッケージ版は 2.x MINOR のまま（現在 **2.19.1**）で、`3.0.0` にはしません。Homebrew は本リポジトリの tap を使い、vole を Homebrew core には出しません。次の MINOR は main に入ったユーザー向け変更で決まり、tag を打つかどうかは別に確認します。
+
 ### 方法 1：AI にプロンプトを送ってインストール
 
 下のブロックを Cursor、Claude Code、Codex、ChatGPT などの AI アシスタントに貼り付けてください。代わりにインストールしてくれます。

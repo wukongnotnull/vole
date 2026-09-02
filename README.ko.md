@@ -66,6 +66,8 @@
 
 현재 공개 버전: **[v2.19.1](https://github.com/wukongnotnull/vole/releases/tag/v2.19.1)** (Developer ID 서명 및 Apple 공증). Apple Silicon·Intel 모두 제공.
 
+제품 말의 「v3」는 CLI 세대 이름입니다. 패키지 버전은 2.x MINOR(현재 **2.19.1**)를 유지하며 `3.0.0`이 아닙니다. Homebrew는 이 저장소 tap만 쓰고, vole을 Homebrew core에 올리지 않습니다. 다음 MINOR는 main에 들어간 사용자 가시 변경으로 결정되며, tag를 칠지는 따로 묻습니다.
+
 ### 방법 1: AI 프롬프트로 설치
 
 아래 블록을 Cursor, Claude Code, Codex, ChatGPT 등 AI 어시스턴트에 붙여 넣으면 대신 설치해 줍니다.

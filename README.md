@@ -66,6 +66,8 @@ Requires **macOS 12+**.
 
 Current release: **[v2.19.1](https://github.com/wukongnotnull/vole/releases/tag/v2.19.1)** (Developer ID signed and notarized). Builds for Apple Silicon and Intel.
 
+Product “v3” is a CLI generation name. Package versions stay on 2.x MINOR (now **2.19.1**), not `3.0.0`. Homebrew users stay on this repo’s tap; we do not publish vole to Homebrew core. The next MINOR is triggered by user-visible work already on `main`; whether to tag a release is asked separately.
+
 ### Option 1: Install with an AI prompt
 
 Paste the block below into Cursor, Claude Code, Codex, ChatGPT, or any coding assistant. It will install Vole for you.

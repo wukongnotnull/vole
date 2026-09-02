@@ -10,6 +10,8 @@
 #
 # Refresh stable url/sha256 after each release:
 #   bash scripts/update-homebrew-formula.sh 0.0.10
+# Do not open a homebrew-core PR from this file. Version/sha refresh is
+# `bash scripts/update-homebrew-formula.sh X.Y.Z` after a confirmed GitHub Release.
 class Vole < Formula
   desc "macOS cleanup and monitoring CLI (Mole-derived, GPL-3.0)"
   homepage "https://github.com/wukongnotnull/vole"

@@ -29,10 +29,12 @@
 ## 介面預覽
 
 <p align="center">
-  <img src="images/tui/home.png" alt="Vole 互動式首頁" width="720" />
+  <img src="images/tui/home.png" alt="Vole 互動式首頁（七項：清理到 Agent）" width="720" />
 </p>
 
 終端機執行 `vole` 即可開啟互動式首頁：方向鍵移動，Enter 進入。
+
+互動首頁目前七項：前五項文案對齊 Mole（清理 / 解除安裝 / 最佳化 / 分析 / 狀態），第六項 **Worktree** 與第 7 項 **Agent**（`Remove leftover agent data`，數字鍵 `7`）是 Vole 自己的加值入口，不是 Mole 命令面缺口。1–6 含義不變。
 
 ---
 
@@ -49,6 +51,7 @@
 | **歷史** | 回看做過的清理與刪除紀錄 |
 | **狀態** | 即時看 CPU、記憶體、磁碟健康情況 |
 | **Worktree** | 列出遺留 Git worktree，確認後移入廢紙簍 |
+| **Agent** | 列出 Agent 容器 / 工作階段 / 快取殘留，確認後移入廢紙簍 |
 
 打開終端機輸入 `vole`，會進入互動式首頁，用方向鍵選功能即可。內建約 **540** 條清理規則，**不必再單獨安裝**其他小工具。
 
@@ -62,6 +65,8 @@
 
 目前已發布版本：**[v2.19.1](https://github.com/wukongnotnull/vole/releases/tag/v2.19.1)**（Developer ID 簽名並經 Apple 公證）。Apple Silicon 與 Intel 均有對應安裝包。
 
+產品話術裡的「v3」指 CLI 代際。套件版本繼續 2.x MINOR（目前 **2.19.1**），不會因為「v3」發 `3.0.0`。請用本倉 tap 安裝，我們不會把 vole 送進 Homebrew core。下一份 MINOR 由已合入的使用者可見行為觸發，是否打 tag **另問**。
+
 ### 方式一：發給 AI 安裝
 
 把下面這段提示詞複製發給 Cursor、Claude Code、Codex、ChatGPT 等 AI 助手，它會幫你完成安裝。
@@ -70,7 +75,7 @@
 請在這台 Mac 上安裝 Vole（macOS 清理與監控命令列工具）。
 
 官方倉庫：https://github.com/wukongnotnull/vole
-需要 macOS 12+。只負責安裝，不要執行 clean / uninstall / optimize 等會改動系統的命令。
+需要 macOS 12+。只負責安裝，不要執行 clean / uninstall / optimize / purge / worktree / agent 等會改動系統的命令。不要往 Homebrew core 提交或從 core 安裝 vole。
 
 按順序嘗試，前一步成功就停：
 1. 若已有 Homebrew：
@@ -143,6 +148,7 @@ vole optimize --plan
 vole purge --plan
 vole installer --plan
 vole worktree --plan
+vole agent --plan
 
 # 看過候選後再執行
 vole clean --apply <plan.json>
@@ -166,7 +172,7 @@ vole --version
 
 | 命令 | 別名 | 說明 |
 |------|------|------|
-| `vole` | — | 互動式首頁（清理 / 解除安裝 / 最佳化 / 分析 / 狀態 / Worktree） |
+| `vole` | — | 互動式首頁（清理 / 解除安裝 / 最佳化 / 分析 / 狀態 / Worktree / Agent） |
 | `vole clean` | — | 清理快取與殘留 |
 | `vole uninstall` | — | 解除安裝應用及殘留 |
 | `vole optimize` | `optimise` | 系統最佳化與維護 |
@@ -175,6 +181,7 @@ vole --version
 | `vole history` | — | 操作歷史與刪除紀錄 |
 | `vole purge` | — | 清理陳舊專案建置物 |
 | `vole worktree` | — | 列出遺留 Git worktree，確認後移入廢紙簍 |
+| `vole agent` | — | 列出 Agent 殘留，確認後移入廢紙簍（不是 git checkout 清理，那是 worktree） |
 | `vole installer` | — | 尋找並清理安裝套件 |
 | `vole touchid` | — | 設定 sudo 的 Touch ID（`status` / `enable` / `disable`） |
 | `vole update` | — | 自我更新（只有你主動執行才會連網） |

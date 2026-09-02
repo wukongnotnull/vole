@@ -29,10 +29,12 @@ Preview first · Trash by default · One command and you’re ready
 ## Screenshots
 
 <p align="center">
-  <img src="images/tui/home.png" alt="Vole interactive home menu" width="720" />
+  <img src="images/tui/home.png" alt="Vole interactive home menu (seven items: Clean through Agent)" width="720" />
 </p>
 
 Run `vole` in Terminal to open the interactive home menu—arrow keys to move, Enter to select.
+
+The home menu lists seven items: Mole-aligned Clean / Uninstall / Optimize / Analyze / Status, plus Vole-native **Worktree** (6) and **Agent** (7, `Remove leftover agent data`, digit `7`). Items 1–6 are unchanged. Worktree and Agent are extras, not Mole command-surface gaps.
 
 ---
 
@@ -49,6 +51,7 @@ Run `vole` in Terminal to open the interactive home menu—arrow keys to move, E
 | **History** | Review past cleanups and deletions |
 | **Status** | Live CPU, memory, and disk health |
 | **Worktree** | List leftover Git worktrees and move them to Trash after confirm |
+| **Agent** | List leftover agent containers, sessions, and caches; confirm, then Trash |
 
 Type `vole` in Terminal for an interactive home menu. About **540** cleanup rules are built in—**no extra tools** to install.
 
@@ -62,6 +65,8 @@ Requires **macOS 12+**.
 
 Current release: **[v2.19.1](https://github.com/wukongnotnull/vole/releases/tag/v2.19.1)** (Developer ID signed and notarized). Builds for Apple Silicon and Intel.
 
+Product “v3” is a CLI generation name. Package versions stay on 2.x MINOR (now **2.19.1**), not 3.0.0. Homebrew users stay on this repo’s tap; we do not publish vole to Homebrew core. The next MINOR is triggered by user-visible work already on `main`; whether to tag a release is asked separately.
+
 ### Option 1: Install with an AI prompt
 
 Paste the block below into Cursor, Claude Code, Codex, ChatGPT, or any coding assistant. It will install Vole for you.
@@ -70,7 +75,7 @@ Paste the block below into Cursor, Claude Code, Codex, ChatGPT, or any coding as
 Install Vole (a macOS cleanup & monitor CLI) on this Mac.
 
 Official repo: https://github.com/wukongnotnull/vole
-Requires macOS 12+. Install only — do not run clean / uninstall / optimize or any command that changes the system.
+Requires macOS 12+. Install only — do not run clean / uninstall / optimize / purge / worktree / agent or any command that changes the system. Do not submit or install a Homebrew core formula.
 
 Do this in order and stop at the first success:
 1. If Homebrew is available:
@@ -143,6 +148,7 @@ vole optimize --plan
 vole purge --plan
 vole installer --plan
 vole worktree --plan
+vole agent --plan
 
 # Apply after you review
 vole clean --apply <plan.json>
@@ -166,7 +172,7 @@ Run bare `vole` in Terminal to open the interactive home menu.
 
 | Command | Alias | What it does |
 |------|------|------|
-| `vole` | — | Interactive home (Clean / Uninstall / Optimize / Analyze / Status / Worktree) |
+| `vole` | — | Interactive home (Clean / Uninstall / Optimize / Analyze / Status / Worktree / Agent) |
 | `vole clean` | — | Clean caches and leftovers |
 | `vole uninstall` | — | Uninstall apps and leftovers |
 | `vole optimize` | `optimise` | System optimization / maintenance |
@@ -175,6 +181,7 @@ Run bare `vole` in Terminal to open the interactive home menu.
 | `vole history` | — | Operation history and deletion log |
 | `vole purge` | — | Clear stale project build artifacts |
 | `vole worktree` | — | List leftover Git worktrees and move them to Trash after confirm |
+| `vole agent` | — | List leftover agent data; confirm, then Trash（not a git checkout cleaner） |
 | `vole installer` | — | Find and clean installers |
 | `vole touchid` | — | Configure sudo Touch ID (`status` / `enable` / `disable`) |
 | `vole update` | — | Self-update (network only when you run it) |

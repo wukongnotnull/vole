@@ -29,10 +29,12 @@
 ## 画面プレビュー
 
 <p align="center">
-  <img src="images/tui/home.png" alt="Vole 対話ホーム" width="720" />
+  <img src="images/tui/home.png" alt="Vole 対話ホーム（7 項目：Clean から Agent）" width="720" />
 </p>
 
 ターミナルで `vole` を実行すると対話ホームが開きます。矢印キーで移動、Enter で選択。
+
+ホームは現在 7 項目です。Clean / Uninstall / Optimize / Analyze / Status は Mole と同じ文言、6 番目の **Worktree** と 7 番目の **Agent**（`Remove leftover agent data`、数字キー `7`）は Vole 独自の入口であり、Mole のコマンド欠落ではありません。1–6 の意味は変わりません。
 
 ---
 
@@ -49,6 +51,7 @@
 | **履歴** | 過去のクリーンと削除を振り返る |
 | **ステータス** | CPU・メモリ・ディスクの健康状態をリアルタイム表示 |
 | **Worktree** | 残っている Git worktree を一覧し、確認後にゴミ箱へ移す |
+| **Agent** | エージェントのコンテナ / セッション / キャッシュ残骸を確認してからゴミ箱へ |
 
 ターミナルで `vole` と打つと対話ホームが開き、矢印キーで選べます。約 **540** 件のクリーン規則が内蔵され、**追加ツールは不要**です。
 
@@ -62,6 +65,8 @@
 
 現在の公開版：**[v2.19.1](https://github.com/wukongnotnull/vole/releases/tag/v2.19.1)**（Developer ID 署名＋Apple 公証）。Apple Silicon / Intel 両対応。
 
+製品上の「v3」は CLI 世代の呼び名です。パッケージ版は 2.x MINOR のまま（現在 **2.19.1**）で、`3.0.0` にはしません。Homebrew は本リポジトリの tap を使い、vole を Homebrew core には出しません。次の MINOR は main に入ったユーザー向け変更で決まり、tag を打つかどうかは別に確認します。
+
 ### 方法 1：AI にプロンプトを送ってインストール
 
 下のブロックを Cursor、Claude Code、Codex、ChatGPT などの AI アシスタントに貼り付けてください。代わりにインストールしてくれます。
@@ -70,7 +75,7 @@
 この Mac に Vole（macOS 向けクリーンアップ／モニタ CLI）をインストールしてください。
 
 公式リポジトリ: https://github.com/wukongnotnull/vole
-macOS 12 以上が必要です。インストールだけ行い、clean / uninstall / optimize などシステムを変更するコマンドは実行しないでください。
+macOS 12 以上が必要です。インストールだけ行い、clean / uninstall / optimize / purge / worktree / agent などシステムを変更するコマンドは実行しないでください。Homebrew core に vole を提出したり、core からインストールしたりしないでください。
 
 次の順で試し、成功したらそこで止めてください:
 1. Homebrew がある場合:
@@ -143,6 +148,7 @@ vole optimize --plan
 vole purge --plan
 vole installer --plan
 vole worktree --plan
+vole agent --plan
 
 # 候補を見てから実行
 vole clean --apply <plan.json>
@@ -166,7 +172,7 @@ vole --version
 
 | コマンド | 別名 | 説明 |
 |------|------|------|
-| `vole` | — | 対話ホーム（Clean / Uninstall / Optimize / Analyze / Status / Worktree） |
+| `vole` | — | 対話ホーム（Clean / Uninstall / Optimize / Analyze / Status / Worktree / Agent） |
 | `vole clean` | — | キャッシュと残骸をクリーン |
 | `vole uninstall` | — | アプリと残骸をアンインストール |
 | `vole optimize` | `optimise` | システム最適化・メンテ |
@@ -175,6 +181,7 @@ vole --version
 | `vole history` | — | 操作履歴と削除ログ |
 | `vole purge` | — | 古いプロジェクトのビルド成果物を掃除 |
 | `vole worktree` | — | 残っている Git worktree を一覧し、確認後にゴミ箱へ移す |
+| `vole agent` | — | エージェント残骸を確認してからゴミ箱へ（git checkout 掃除ではない。それは worktree） |
 | `vole installer` | — | インストーラを探して掃除 |
 | `vole touchid` | — | sudo Touch ID 設定（`status` / `enable` / `disable`） |
 | `vole update` | — | 自己更新（実行したときだけネット） |

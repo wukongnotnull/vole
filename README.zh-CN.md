@@ -29,10 +29,12 @@
 ## 界面预览
 
 <p align="center">
-  <img src="images/tui/home.png" alt="Vole 交互式首页" width="720" />
+  <img src="images/tui/home.png" alt="Vole 交互式首页（七项：清理到 Agent）" width="720" />
 </p>
 
 终端运行 `vole` 即可打开交互式首页：方向键移动，Enter 进入。
+
+交互首页目前七项：前五项文案对齐 Mole（清理 / 卸载 / 优化 / 分析 / 状态），第六项 **Worktree** 与第 7 项 **Agent**（`Remove leftover agent data`，数字键 `7`）是 Vole 自己的增值入口，不是 Mole 命令面缺口。1–6 含义不变。
 
 ---
 
@@ -50,7 +52,7 @@
 | **历史**  | 回看做过的清理与删除记录             |
 | **状态**  | 实时看 CPU、内存、磁盘健康情况        |
 | **Worktree** | 列出遗留 Git worktree，确认后移入废纸篓 |
-
+| **Agent** | 列出 Agent 容器 / 会话 / 缓存残留，确认后移入废纸篓 |
 
 打开终端输入 `vole`，会进入交互式首页，用方向键选功能即可。内置约 **540** 条清理规则，**不必再单独安装**其他小工具。
 
@@ -66,6 +68,8 @@
 
 当前已发布版本：**[v2.19.1](https://github.com/wukongnotnull/vole/releases/tag/v2.19.1)**（Developer ID 签名并经 Apple 公证）。Apple Silicon 与 Intel 均有对应安装包。
 
+产品话术里的「v3」指 CLI 代际。包版本继续 2.x MINOR（当前 **2.19.1**），不是 3.0.0，也不会因为「v3」发 3.0.0。请用本仓 tap 安装，我们不会把 vole 送进 Homebrew core。下一份 MINOR 由已合入的用户可见行为触发，是否打 tag **另问**。
+
 ### 方式一：发给 AI 安装
 
 把下面这段提示词复制发给 Cursor、Claude Code、Codex、ChatGPT 等 AI 助手，它会帮你完成安装。
@@ -74,7 +78,7 @@
 请在这台 Mac 上安装 Vole（macOS 清理与监控命令行工具）。
 
 官方仓库：https://github.com/wukongnotnull/vole
-需要 macOS 12+。只负责安装，不要运行 clean / uninstall / optimize 等会改动系统的命令。
+需要 macOS 12+。只负责安装，不要运行 clean / uninstall / optimize / purge / worktree / agent 等会改动系统的命令。不要往 Homebrew core 提交或从 core 安装 vole。
 
 按顺序尝试，前一步成功就停：
 1. 若已有 Homebrew：
@@ -151,6 +155,7 @@ vole optimize --plan
 vole purge --plan
 vole installer --plan
 vole worktree --plan
+vole agent --plan
 
 # 看过候选后再执行
 vole clean --apply <plan.json>
@@ -177,7 +182,7 @@ vole --version
 
 | 命令                 | 别名           | 说明                                                  |
 | ------------------ | ------------ | --------------------------------------------------- |
-| `vole`             | —            | 交互式首页（清理 / 卸载 / 优化 / 分析 / 状态 / Worktree）                       |
+| `vole`             | —            | 交互式首页（清理 / 卸载 / 优化 / 分析 / 状态 / Worktree / Agent）                       |
 | `vole clean`       | —            | 清理缓存与残留                                             |
 | `vole uninstall`   | —            | 卸载应用及残留                                             |
 | `vole optimize`    | `optimise`   | 系统优化与维护                                             |
@@ -186,6 +191,7 @@ vole --version
 | `vole history`     | —            | 操作历史与删除记录                                           |
 | `vole purge`       | —            | 清理陈旧项目构建物                                           |
 | `vole worktree`    | —            | 列出遗留 Git worktree，确认后移入废纸篓                       |
+| `vole agent`       | —            | 列出 Agent 残留，确认后移入废纸篓（不是 git checkout 清理，那是 worktree） |
 | `vole installer`   | —            | 查找并清理安装包                                            |
 | `vole touchid`     | —            | 配置 sudo 的 Touch ID（`status` / `enable` / `disable`） |
 | `vole update`      | —            | 自更新（只有你主动执行才会联网）                                    |

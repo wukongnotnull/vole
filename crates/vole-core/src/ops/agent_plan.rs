@@ -6,10 +6,8 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use thiserror::Error;
 
-use super::clean_hints::PathSizeKb;
-use super::worktree_plan::{
-    collect_worktree_claimed_paths, discover_git_repos, looks_like_git_checkout, GitProbe,
-};
+use super::clean_hints::{DuPathSize, PathSizeKb};
+use super::worktree_plan::{looks_like_git_checkout, GitProbe};
 use crate::protection::AppProtection;
 use crate::safety::{capture_plan_entry_identity, validate_path_for_deletion};
 use crate::vole_proto::{Plan as ProtoPlan, PlanEntry as ProtoPlanEntry, SCHEMA_VERSION};
@@ -53,13 +51,13 @@ pub fn rule_id_for(kind: AgentKind) -> &'static str {
 
 pub fn source_for_path(home: &Path, path: &Path) -> AgentSource {
     let p = path.to_string_lossy();
-    if path.starts_with(&home.join(".codex")) {
+    if path.starts_with(home.join(".codex")) {
         return AgentSource::Codex;
     }
-    if path.starts_with(&home.join(".claude")) || p.contains("/.claude/") {
+    if path.starts_with(home.join(".claude")) || p.contains("/.claude/") {
         return AgentSource::Claude;
     }
-    if path.starts_with(&home.join(".cursor")) || p.contains("/.cursor/") {
+    if path.starts_with(home.join(".cursor")) || p.contains("/.cursor/") {
         return AgentSource::Cursor;
     }
     AgentSource::Repo
@@ -288,6 +286,16 @@ pub struct AgentPlanOptions<'a> {
     pub size_probe: Option<Arc<dyn PathSizeKb>>,
 }
 
+fn empty_agent_plan(opts: &AgentPlanOptions<'_>) -> ProtoPlan {
+    ProtoPlan {
+        schema_version: SCHEMA_VERSION,
+        created_at: opts.now,
+        ttl_secs: opts.ttl_secs,
+        entries: Vec::new(),
+        coverage_note: Some(COVERAGE_NOTE.to_string()),
+    }
+}
+
 pub fn build_agent_plan(
     protection: &AppProtection,
     opts: &AgentPlanOptions<'_>,
@@ -297,17 +305,37 @@ pub fn build_agent_plan(
     }
 
     let deadline = Instant::now() + opts.budget;
-    let claimed = collect_worktree_claimed_paths(opts.home, opts.cwd, opts.git, opts.search_roots);
+    if Instant::now() >= deadline {
+        return Ok(empty_agent_plan(opts));
+    }
+
     let cwd_canon = opts
         .cwd
         .canonicalize()
         .unwrap_or_else(|_| opts.cwd.to_path_buf());
 
-    let search = match opts.search_roots {
+    let mut discover_roots = match opts.search_roots {
         Some(r) => r.to_vec(),
         None => super::purge_plan::resolve_search_roots(opts.home),
     };
-    let repos = discover_git_repos(&search);
+    if let Ok(top) = opts.git.rev_parse_toplevel(opts.cwd) {
+        if !discover_roots.iter().any(|r| {
+            r.canonicalize().unwrap_or_else(|_| r.clone())
+                == top.canonicalize().unwrap_or_else(|_| top.clone())
+        }) {
+            discover_roots.push(top);
+        }
+    }
+
+    if Instant::now() >= deadline {
+        return Ok(empty_agent_plan(opts));
+    }
+    let repos =
+        super::worktree_plan::discover_git_repos_with_deadline(&discover_roots, Some(deadline));
+    if Instant::now() >= deadline {
+        return Ok(empty_agent_plan(opts));
+    }
+    let claimed = super::worktree_plan::claimed_paths_for_repos(opts.home, opts.git, &repos);
 
     let mut scan_roots = vec![
         opts.home.join(".cursor"),
@@ -416,7 +444,9 @@ fn measure_candidate(
     let size = if Instant::now() >= deadline || Instant::now() >= root_deadline {
         push_status_unknown(&mut blockers);
         0
-    } else if let Some(probe) = &opts.size_probe {
+    } else {
+        let default_probe = DuPathSize;
+        let probe = opts.size_probe.as_deref().unwrap_or(&default_probe);
         let timeout = opts.per_root.min(DU_TIMEOUT);
         match probe.size_kb(path, timeout) {
             Some(kb) => kb.saturating_mul(1024),
@@ -425,8 +455,6 @@ fn measure_candidate(
                 0
             }
         }
-    } else {
-        0
     };
 
     (size, age_unix, blockers)
@@ -628,5 +656,41 @@ mod tests {
         };
         let plan = build_agent_plan(&AppProtection::new(), &opts).unwrap();
         assert!(plan.entries.is_empty());
+    }
+
+    #[test]
+    fn none_size_probe_still_measures_with_timed_du() {
+        use crate::ops::worktree_plan::LiveGitProbe;
+        use crate::protection::AppProtection;
+        use std::time::{Duration, SystemTime};
+
+        let home = tempfile::tempdir().unwrap();
+        let cache = home.path().join(".cursor/Cache");
+        std::fs::create_dir_all(&cache).unwrap();
+        std::fs::write(cache.join("blob"), vec![0u8; 8192]).unwrap();
+        let cwd = home.path().join("cwd");
+        std::fs::create_dir_all(&cwd).unwrap();
+        let opts = AgentPlanOptions {
+            home: home.path(),
+            cwd: &cwd,
+            ttl_secs: 900,
+            now: SystemTime::now(),
+            search_roots: Some(&[]),
+            budget: Duration::from_secs(15),
+            per_root: Duration::from_secs(2),
+            git: &LiveGitProbe,
+            size_probe: None,
+        };
+        let plan = build_agent_plan(&AppProtection::new(), &opts).unwrap();
+        let entry = plan
+            .entries
+            .iter()
+            .find(|e| e.rule_id == "agent:cache" && e.path.ends_with("Cache"))
+            .expect("cache entry");
+        assert!(
+            entry.size > 0,
+            "None size_probe must still run timed du, got {}",
+            entry.size
+        );
     }
 }

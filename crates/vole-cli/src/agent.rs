@@ -10,7 +10,7 @@ use crossbeam_channel::unbounded;
 use vole_core::mutex::{try_lock_agent, MutexError};
 use vole_core::ops::{
     apply_agent_plan, build_agent_plan, coverage_with_apply_permission_hint,
-    report_has_permission_skips, AgentApplyError, AgentApplyOptions, AgentPlanOptions,
+    report_has_permission_skips, AgentApplyError, AgentApplyOptions, AgentPlanOptions, DuPathSize,
     LiveGitProbe, APPLY_PERMISSION_WARN, DEFAULT_AGENT_PER_ROOT_SECS,
     DEFAULT_AGENT_SCAN_BUDGET_SECS, DEFAULT_AGENT_TTL_SECS,
 };
@@ -83,7 +83,7 @@ fn plan_options<'a>(home: &'a Path, cwd: &'a Path, git: &'a LiveGitProbe) -> Age
         budget: Duration::from_secs(budget_secs),
         per_root: Duration::from_secs(DEFAULT_AGENT_PER_ROOT_SECS),
         git,
-        size_probe: None,
+        size_probe: Some(std::sync::Arc::new(DuPathSize)),
     }
 }
 

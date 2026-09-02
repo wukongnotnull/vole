@@ -423,8 +423,18 @@ pub fn looks_like_git_checkout(path: &Path) -> bool {
 }
 
 pub fn discover_git_repos(roots: &[PathBuf]) -> Vec<PathBuf> {
+    discover_git_repos_with_deadline(roots, None)
+}
+
+pub(crate) fn discover_git_repos_with_deadline(
+    roots: &[PathBuf],
+    deadline: Option<Instant>,
+) -> Vec<PathBuf> {
     let mut repos = BTreeSet::new();
     for root in roots {
+        if deadline.is_some_and(|d| Instant::now() >= d) {
+            break;
+        }
         if !root.is_dir() {
             continue;
         }
@@ -443,6 +453,9 @@ pub fn discover_git_repos(roots: &[PathBuf]) -> Vec<PathBuf> {
                 });
             })
         {
+            if deadline.is_some_and(|d| Instant::now() >= d) {
+                break;
+            }
             let Ok(ent) = ent else {
                 continue;
             };
@@ -494,7 +507,17 @@ pub fn collect_worktree_claimed_paths(
         }
     }
     let repos = discover_git_repos(&roots);
-    for repo in &repos {
+    claimed.extend(claimed_paths_for_repos(home, git, &repos));
+    claimed
+}
+
+pub(crate) fn claimed_paths_for_repos(
+    home: &Path,
+    git: &dyn GitProbe,
+    repos: &[PathBuf],
+) -> BTreeSet<PathBuf> {
+    let mut claimed = BTreeSet::new();
+    for repo in repos {
         let Ok(text) = git.worktree_list(repo) else {
             continue;
         };
@@ -507,7 +530,7 @@ pub fn collect_worktree_claimed_paths(
             }
         }
     }
-    for child in agent_checkout_dirs(home, &repos) {
+    for child in agent_checkout_dirs(home, repos) {
         claimed.insert(child.canonicalize().unwrap_or(child));
     }
     claimed

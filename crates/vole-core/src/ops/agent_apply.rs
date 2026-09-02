@@ -11,7 +11,9 @@ use crate::delete::{
 };
 use crate::oplog::OperationLogger;
 use crate::ops::agent_plan::is_cwd_excluded;
-use crate::ops::worktree_plan::looks_like_git_checkout;
+use crate::ops::worktree_plan::{
+    collect_worktree_claimed_paths, looks_like_git_checkout, GitProbe, LiveGitProbe,
+};
 use crate::protection::AppProtection;
 use crate::safety::{
     verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity, ValidationError,
@@ -44,6 +46,9 @@ pub struct AgentApplyContext<'a> {
     pub on_event: Option<&'a dyn Fn(StreamEvent)>,
     pub now: SystemTime,
     pub cwd: PathBuf,
+    pub home: PathBuf,
+    pub git: &'a dyn GitProbe,
+    pub search_roots: Option<&'a [PathBuf]>,
 }
 
 pub fn apply_agent_plan(
@@ -56,6 +61,10 @@ pub fn apply_agent_plan(
     let mut oplog = OperationLogger::new("agent");
     let _ = oplog.session_start();
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("/"));
+    let home = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("/"));
+    let git = LiveGitProbe;
     let mut ctx = AgentApplyContext {
         protection,
         whitelist_patterns: &[],
@@ -66,6 +75,9 @@ pub fn apply_agent_plan(
         on_event,
         now: SystemTime::now(),
         cwd,
+        home,
+        git: &git,
+        search_roots: None,
     };
     let report = apply_agent_proto_plan(plan, &mut ctx)?;
     let _ = oplog.session_end(
@@ -102,6 +114,7 @@ pub fn apply_agent_proto_plan(
     let mut deleted_bytes = 0u64;
     let mut skip_tracker = SkipTracker::default();
     let cwd = ctx.cwd.canonicalize().unwrap_or_else(|_| ctx.cwd.clone());
+    let claimed = collect_worktree_claimed_paths(&ctx.home, &ctx.cwd, ctx.git, ctx.search_roots);
 
     for (idx, entry) in plan.entries.iter().enumerate() {
         if let Some(event) = &ctx.on_event {
@@ -127,7 +140,7 @@ pub fn apply_agent_proto_plan(
             .path
             .canonicalize()
             .unwrap_or_else(|_| entry.path.clone());
-        if is_hard_excluded(&canon, &cwd) {
+        if is_hard_excluded(&canon, &cwd) || claimed.contains(&canon) {
             skipped += 1;
             skip_tracker.record(SkipReason::Whitelisted, &entry.rule_id);
             continue;
@@ -279,10 +292,73 @@ impl SkipTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ops::worktree_plan::GitProbe;
     use crate::protection::AppProtection;
     use crate::vole_proto::{Plan as ProtoPlan, PlanEntry as ProtoPlanEntry, SCHEMA_VERSION};
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    struct NoopGit;
+
+    impl GitProbe for NoopGit {
+        fn worktree_list(&self, _repo: &Path) -> Result<String, String> {
+            Ok(String::new())
+        }
+        fn status_porcelain(&self, _w: &Path, _i: bool) -> Result<String, String> {
+            Ok(String::new())
+        }
+        fn log_unpushed(&self, _w: &Path) -> Result<String, String> {
+            Ok(String::new())
+        }
+        fn last_commit_unix(&self, _w: &Path) -> Result<Option<i64>, String> {
+            Ok(None)
+        }
+        fn rev_parse_toplevel(&self, _cwd: &Path) -> Result<PathBuf, String> {
+            Err("no repo".into())
+        }
+        fn prune(&self, _repo: &Path) -> Result<(), String> {
+            Ok(())
+        }
+        fn unlock(&self, _repo: &Path, _w: &Path) -> Result<(), String> {
+            Ok(())
+        }
+    }
+
+    struct ClaimGit {
+        repo: PathBuf,
+        extra: PathBuf,
+    }
+
+    impl GitProbe for ClaimGit {
+        fn worktree_list(&self, repo: &Path) -> Result<String, String> {
+            if repo != self.repo {
+                return Ok(String::new());
+            }
+            Ok(format!(
+                "worktree {}\nHEAD abc\n\nworktree {}\nHEAD def\n",
+                self.repo.display(),
+                self.extra.display()
+            ))
+        }
+        fn status_porcelain(&self, _w: &Path, _i: bool) -> Result<String, String> {
+            Ok(String::new())
+        }
+        fn log_unpushed(&self, _w: &Path) -> Result<String, String> {
+            Ok(String::new())
+        }
+        fn last_commit_unix(&self, _w: &Path) -> Result<Option<i64>, String> {
+            Ok(None)
+        }
+        fn rev_parse_toplevel(&self, _cwd: &Path) -> Result<PathBuf, String> {
+            Err("no repo".into())
+        }
+        fn prune(&self, _repo: &Path) -> Result<(), String> {
+            Ok(())
+        }
+        fn unlock(&self, _repo: &Path, _w: &Path) -> Result<(), String> {
+            Ok(())
+        }
+    }
 
     fn empty_plan(rule_id: &str, path: PathBuf) -> ProtoPlan {
         ProtoPlan {
@@ -305,6 +381,33 @@ mod tests {
         }
     }
 
+    fn apply_with(
+        plan: &ProtoPlan,
+        git: &dyn GitProbe,
+        home: PathBuf,
+        cwd: PathBuf,
+        search_roots: &[PathBuf],
+    ) -> Result<Report, AgentApplyError> {
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::from_env();
+        let mut oplog = OperationLogger::new("agent");
+        let mut ctx = AgentApplyContext {
+            protection: &protection,
+            whitelist_patterns: &[],
+            options: AgentApplyOptions { permanent: false },
+            trash: &vole_sys::macos::MacTrash,
+            deletion_log: &deletion_log,
+            oplog: &mut oplog,
+            on_event: None,
+            now: SystemTime::now(),
+            cwd,
+            home,
+            git,
+            search_roots: Some(search_roots),
+        };
+        apply_agent_proto_plan(plan, &mut ctx)
+    }
+
     #[test]
     fn skips_non_agent_rule_ids() {
         let report = apply_agent_plan(
@@ -325,7 +428,6 @@ mod tests {
         let checkout = dir.path().join("wt");
         std::fs::create_dir_all(&cwd).unwrap();
         std::fs::create_dir_all(checkout.join(".git")).unwrap();
-        std::env::set_current_dir(&cwd).unwrap();
         let mut plan = empty_plan("agent:cache", cwd.clone());
         plan.entries.push(ProtoPlanEntry {
             id: "y".into(),
@@ -339,16 +441,60 @@ mod tests {
             mtime: UNIX_EPOCH,
             blockers: vec![],
         });
-        let report = apply_agent_plan(
-            &plan,
-            &AppProtection::new(),
-            AgentApplyOptions { permanent: false },
-            None,
-        )
-        .unwrap();
+        let report =
+            apply_with(&plan, &NoopGit, dir.path().to_path_buf(), cwd.clone(), &[]).unwrap();
         assert_eq!(report.succeeded, 0);
         assert!(report.skipped >= 2);
         assert!(cwd.exists());
         assert!(checkout.exists());
+    }
+
+    #[test]
+    fn skips_worktree_claimed_orphan_dir_even_if_stuffed_in_plan() {
+        let _guard = crate::test_env::lock();
+        let dir = tempfile::tempdir().unwrap();
+        let repo = dir.path().join("repo");
+        std::fs::create_dir_all(repo.join(".git")).unwrap();
+        let orphan = dir.path().join("orphan-wt");
+        std::fs::create_dir_all(&orphan).unwrap();
+        std::fs::write(orphan.join("keep-me"), b"x").unwrap();
+        let identity = crate::safety::capture_plan_entry_identity(&orphan).unwrap();
+        let trash_dir = dir.path().join("trash");
+        std::fs::create_dir_all(&trash_dir).unwrap();
+        std::env::set_var("MOLE_TEST_TRASH_DIR", &trash_dir);
+        let git = ClaimGit {
+            repo: repo.clone(),
+            extra: orphan.clone(),
+        };
+        let plan = ProtoPlan {
+            schema_version: SCHEMA_VERSION,
+            created_at: SystemTime::now(),
+            ttl_secs: 900,
+            coverage_note: None,
+            entries: vec![ProtoPlanEntry {
+                id: "stuffed".into(),
+                path: orphan.clone(),
+                label: format!("container cursor blockers=- {}", orphan.display()),
+                size: 1,
+                rule_id: "agent:container".into(),
+                skip_reason: None,
+                dev: identity.dev,
+                ino: identity.ino,
+                mtime: UNIX_EPOCH + Duration::from_secs(identity.mtime.max(0) as u64),
+                blockers: vec![],
+            }],
+        };
+        let report = apply_with(
+            &plan,
+            &git,
+            dir.path().to_path_buf(),
+            dir.path().join("cwd"),
+            &[dir.path().to_path_buf()],
+        )
+        .unwrap();
+        std::env::remove_var("MOLE_TEST_TRASH_DIR");
+        assert_eq!(report.succeeded, 0, "claimed checkout must not be deleted");
+        assert!(report.skipped >= 1);
+        assert!(orphan.join("keep-me").exists());
     }
 }

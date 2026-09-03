@@ -63,9 +63,9 @@
 
 **macOS 12 以上**が必要です。
 
-現在の公開版：**[v2.19.1](https://github.com/wukongnotnull/vole/releases/tag/v2.19.1)**（Developer ID 署名＋Apple 公証）。Apple Silicon / Intel 両対応。
+現在の公開版：**[v2.20.0](https://github.com/wukongnotnull/vole/releases/tag/v2.20.0)**（Developer ID 署名＋Apple 公証）。Apple Silicon / Intel 両対応。
 
-製品上の「v3」は CLI 世代の呼び名です。パッケージ版は 2.x MINOR のまま（現在 **2.19.1**）で、`3.0.0` にはしません。Homebrew は本リポジトリの tap を使い、vole を Homebrew core には出しません。次の MINOR は main に入ったユーザー向け変更で決まり、tag を打つかどうかは別に確認します。
+製品上の「v3」は CLI 世代の呼び名です。パッケージ版は 2.x MINOR のまま（現在 **2.20.0**）で、`3.0.0` にはしません。Homebrew は本リポジトリの tap を使い、vole を Homebrew core には出しません。次の MINOR は main に入ったユーザー向け変更で決まり、tag を打つかどうかは別に確認します。
 
 ### 方法 1：AI にプロンプトを送ってインストール
 
@@ -109,14 +109,14 @@ brew install vole
    - Intel：`…-x86_64-apple-darwin.tar.gz`
 3. `bin/vole` を PATH 上の場所へ置き（例：`~/.local/bin`）、同梱の `share/vole/rules` も保持する
 
-例（Apple Silicon / v2.19.1。ファイル名は Release ページに合わせてください）：
+例（Apple Silicon / v2.20.0。ファイル名は Release ページに合わせてください）：
 
 ```bash
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v2.19.1/vole-2.19.1-aarch64-apple-darwin.tar.gz
-tar xzf vole-2.19.1-aarch64-apple-darwin.tar.gz
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v2.20.0/vole-2.20.0-aarch64-apple-darwin.tar.gz
+tar xzf vole-2.20.0-aarch64-apple-darwin.tar.gz
 mkdir -p ~/.local/bin ~/.local/share/vole
-install -m 755 vole-2.19.1-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-cp -R vole-2.19.1-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+install -m 755 vole-2.20.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+cp -R vole-2.20.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 ```
 
 `vole: command not found` と出る場合は、`~/.zshrc` に次を追加して `source ~/.zshrc`：

@@ -66,9 +66,9 @@
 
 需要 **macOS 12 或更高**。
 
-当前已发布版本：**[v2.19.1](https://github.com/wukongnotnull/vole/releases/tag/v2.19.1)**（Developer ID 签名并经 Apple 公证）。Apple Silicon 与 Intel 均有对应安装包。
+当前已发布版本：**[v2.20.0](https://github.com/wukongnotnull/vole/releases/tag/v2.20.0)**（Developer ID 签名并经 Apple 公证）。Apple Silicon 与 Intel 均有对应安装包。
 
-产品话术里的「v3」指 CLI 代际。包版本继续 2.x MINOR（当前 **2.19.1**），不是 3.0.0，也不会因为「v3」发 3.0.0。请用本仓 tap 安装，我们不会把 vole 送进 Homebrew core。下一份 MINOR 由已合入的用户可见行为触发，是否打 tag **另问**。
+产品话术里的「v3」指 CLI 代际。包版本继续 2.x MINOR（当前 **2.20.0**），不是 3.0.0，也不会因为「v3」发 3.0.0。请用本仓 tap 安装，我们不会把 vole 送进 Homebrew core。下一份 MINOR 由已合入的用户可见行为触发，是否打 tag **另问**。
 
 ### 方式一：发给 AI 安装
 
@@ -112,14 +112,14 @@ brew install vole
   - Intel：`…-x86_64-apple-darwin.tar.gz`
 3. 解压后，把 `bin/vole` 放到你 PATH 里的目录（例如 `~/.local/bin`），并保留同包里的 `share/vole/rules` 目录
 
-示例（Apple Silicon / v2.19.1；请以 Release 页实际文件名为准）：
+示例（Apple Silicon / v2.20.0；请以 Release 页实际文件名为准）：
 
 ```bash
-curl -LO https://github.com/wukongnotnull/vole/releases/download/v2.19.1/vole-2.19.1-aarch64-apple-darwin.tar.gz
-tar xzf vole-2.19.1-aarch64-apple-darwin.tar.gz
+curl -LO https://github.com/wukongnotnull/vole/releases/download/v2.20.0/vole-2.20.0-aarch64-apple-darwin.tar.gz
+tar xzf vole-2.20.0-aarch64-apple-darwin.tar.gz
 mkdir -p ~/.local/bin ~/.local/share/vole
-install -m 755 vole-2.19.1-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
-cp -R vole-2.19.1-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
+install -m 755 vole-2.20.0-aarch64-apple-darwin/bin/vole ~/.local/bin/vole
+cp -R vole-2.20.0-aarch64-apple-darwin/share/vole/rules ~/.local/share/vole/
 ```
 
 若终端提示找不到 `vole`，把下面这行写进 `~/.zshrc` 后执行 `source ~/.zshrc`：

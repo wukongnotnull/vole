@@ -278,8 +278,8 @@ fn format_grouped_plan_lines_with(entries: &[PlanEntry], hyperlink: bool) -> Vec
 /// Explains the highlighted total: what it is, and how to act on it.
 pub(crate) fn plan_summary_note_lines() -> &'static [&'static str] {
     &[
-        "上面的体积是可清理候选加总（缓存、日志、残留等），不是已经腾出的空间。",
-        "先回看上方分组；确认后默认进废纸篓，删错可从废纸篓还原。",
+        "The size above is a candidate total (caches, logs, leftovers), not space already freed.",
+        "Review the groups first; confirm defaults to Trash, so you can restore if needed.",
     ]
 }
 
@@ -822,11 +822,11 @@ mod tests {
         let note = plan_summary_note_lines();
         assert_eq!(note.len(), 2);
         assert!(
-            note[0].contains("可清理候选") && note[0].contains("不是已经腾出的空间"),
+            note[0].contains("candidate") && note[0].contains("not space already freed"),
             "must say what the total is, got {note:?}"
         );
         assert!(
-            note[1].contains("废纸篓") && note[1].contains("回看上方分组"),
+            note[1].contains("Trash") && note[1].contains("Review the groups"),
             "must say how to handle it, got {note:?}"
         );
     }

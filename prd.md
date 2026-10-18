@@ -3,7 +3,7 @@
 | 项 | 内容 |
 |---|---|
 | 产品名称 | Vole（命令行版 `vole`）／ Vole for macOS（桌面版） |
-| 文档版本 | v1.0（基于代码库现状修订） |
+| 文档版本 | v1.1（基于代码库现状修订） |
 | 修订日期 | 2026-10-18 |
 | 对应代码基线 | `vole` main @ **2.20.0**；`vole-macos` main @ **0.3.0**（内嵌 sidecar `vole` 2.20.0） |
 | 产品负责人 | 悟空非空也 |
@@ -14,6 +14,7 @@
 
 | 版本 | 日期 | 修订人 | 说明 |
 |---|---|---|---|
+| v1.1 | 2026-10-18 | 悟空非空也（Claude 协助整理） | 附录 14.2 三处差异定为「以代码为准」，同步修订 v3 规格与桌面版 README；修正吉祥物动画表述 |
 | v1.0 | 2026-10-18 | 悟空非空也（Claude 协助整理） | 首份汇总 PRD。依据两个仓库的源码、README、`docs/wukong-code/specs` 设计稿与 `docs/releases` 发版记录整理，描述截至 CLI 2.20.0 / 桌面 0.3.0 已交付的产品能力 |
 
 ## 目录
@@ -376,7 +377,7 @@ Vole 以 Mole v1.48.1 为知识来源与正确性基准，用 Rust 重写为单�
 
 ### 6.1 CLI / TUI
 
-- 人读输出使用简洁 ASCII 与主题色，不复刻 Mole 的 banner 与动画猫。
+- 人读输出使用简洁 ASCII 与主题色，不复刻 Mole 的 banner 与猫；status 使用 Vole 自有的 ASCII 动画吉祥物（`K` 可隐藏）。
 - 长记录自动换行；列表显示已选与总大小；分页列表 `Q` 标为 Quit。
 - 耗时扫描显示 spinner（如 Worktree 盘点）。
 - 确认提示默认否（`[y/N]`）。
@@ -623,13 +624,13 @@ Vole 以 Mole v1.48.1 为知识来源与正确性基准，用 Rust 重写为单�
 
 ### 14.2 文档与代码差异说明
 
-本 PRD 以代码为准。修订时发现以下设计稿与代码现状不一致，建议后续同步设计稿：
+修订时发现以下设计稿与代码现状不一致。**结论（2026-10-18，产品负责人决定）：以代码为准**，设计稿与 README 已同步修订。
 
-| 设计稿表述 | 代码现状 |
-|---|---|
-| v3 规格 §3.3 写明「analyze 删除、analyze Space 多选删」不做 | CLI analyze TUI 已支持 `Space` 多选与 `Delete` 移入废纸篓（`crates/vole-cli/src/tui/analyze_state.rs`、`crates/vole-core/src/delete/analyze_trash.rs`） |
-| v3 规格 §3.3 写明「`optimize --whitelist`、status 的 `k` / `c` 键」不做 | `optimize --whitelist*` 参数已存在（`crates/vole-cli/src/main.rs`）；status 已接线 `K` / `C` 键（footer 显示 `K Vole`、`C Cores`） |
-| 桌面 README 平台徽章只写「macOS」 | 工程部署目标为 macOS 26.5 |
+| 原设计稿表述 | 代码现状（即现行需求） | 处理 |
+|---|---|---|
+| v3 规格 §3.3 写明「analyze 删除、analyze Space 多选删」不做 | CLI analyze TUI 已支持 `Space` 多选与 `Delete` 移入废纸篓（`crates/vole-cli/src/tui/analyze_state.rs`、`crates/vole-core/src/delete/analyze_trash.rs`） | 已改 v3 规格 |
+| v3 规格 §3.3 写明「`optimize --whitelist`、status 的 `k` / `c` 键与动画 cat」不做 | `optimize --whitelist*` 参数已存在（`crates/vole-cli/src/main.rs`）；status 已接线 `K`（吉祥物显隐，含动画）/ `C`（CPU 核心视图）键 | 已改 v3 规格 |
+| 桌面 README 平台徽章只写「macOS」 | 工程部署目标为 macOS 26.5 | 已在 vole-macos 五语 README 写明 macOS 26.5 及以上 |
 
 ### 14.3 参考文档
 

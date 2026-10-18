@@ -5,6 +5,7 @@
 - 性质：代际规格；**本文件不开实现**、不 bump 包版本、不发版、不开桌面 PR
 - 基线：`main` @ **2.19.1**；Mole 钉版 `third_party/mole-1.48.1`
 - 文档结构：一份代际规格（本文件）+ 日后三份独立实施计划（本文件不写 plan 正文）
+- 修订（2026-10-18）：用户决定「以代码为准」。代码已交付 analyze TUI 多选删除（固定进废纸篓）、`optimize --whitelist*`、status `K`（吉祥物显隐，含动画）/ `C`（CPU 核心视图）键；下文原「不做」条目已据此改写。见根目录 `prd.md` 附录 14.2
 - 对照：[`2026-07-30-1900-v2-product-goals-design.md`](2026-07-30-1900-v2-product-goals-design.md)；[`2026-08-08-1727-mole-parity-roadmap-design.md`](2026-08-08-1727-mole-parity-roadmap-design.md)；[`2026-08-14-0228-worktree-design.md`](2026-08-14-0228-worktree-design.md)；[`2026-08-08-2143-v2-m6-clean-hints-design.md`](2026-08-08-2143-v2-m6-clean-hints-design.md)
 
 ## 1. 结论
@@ -31,7 +32,7 @@
 | 北极星 | Mole 对齐已完成后，把 vole 做成「更好用的 CLI + 自有增值 + 现有渠道可找到」 |
 | 推进方式 | 并行 A：三轨真正并行，谁先合入谁先发 MINOR，不绑大发版 |
 | 文档结构 | 结构 A：一份代际规格（本文件）+ 日后三份独立实施计划 |
-| 轨 2 深度 | 安全长尾 + 文案：hints 未做项、可发现性、status 已接线键抛光；不做 analyze 删除、不做动画 cat |
+| 轨 2 深度 | 安全长尾 + 文案：hints 未做项、可发现性、status 已接线键抛光（analyze 删除与动画吉祥物已随代码交付，见文首修订） |
 | 轨 3 第一条 | Agent 工作区卫生；新顶层 `vole agent`；`worktree` 仍只管整棵 Git checkout |
 | 轨 3 Home | 第 7 项 `Agent`，数字键 `7`，exec 式 `["agent"]`；1–6 不变 |
 | 轨 4 深度 | 现有渠道抛光；**不冲** Homebrew core |
@@ -59,14 +60,14 @@ Mole 对齐已完成后，把 vole 做成「更好用的 CLI + 自有增值 + �
 ### 3.3 明确不做（本代际）
 
 - 桌面追上 CLI（轨 1 / vole-macos）；本代际不排期、不开桌面 PR
-- analyze 删除、analyze Space 多选删、动画 cat、冲 Homebrew core
+- 冲 Homebrew core（analyze 删除 / Space 多选删与动画吉祥物已随代码交付，不再列为不做）
 - 扩 `worktree` 去管非 checkout
 - `clean --apply` 删本地快照
 - 删 `/Library/Updates`、`/macOS Install Data`
 - 第二条删除路径
 - 无必要不 bump `schema_version`
 - 禁止注册 `vole hints` / `Command::Hints`
-- `optimize --whitelist`、status 的 `k` / `c` 键与动画 cat（T8 未交付项本代际继续不做）
+- （已撤销：`optimize --whitelist`、status 的 `k` / `c` 键与动画吉祥物已随代码交付）
 
 ### 3.4 成功标准
 
@@ -105,11 +106,11 @@ Mole 对齐已完成后，把 vole 做成「更好用的 CLI + 自有增值 + �
 
 #### status 抛光
 
-只整理**已经接线**的 footer / 人读文案，去掉过时或误导措辞。不接 `k` / `c`，不做动画 cat。footer **禁止**虚标未接线键。
+只整理**已经接线**的 footer / 人读文案，去掉过时或误导措辞。`k` / `c` 已接线并在 footer 显示（`K Vole`、`C Cores`）。footer **禁止**虚标未接线键。
 
 #### 轨 2 不做
 
-analyze 删除 / Space 多选删、`optimize --whitelist`、动画 cat。
+无（原列 analyze 删除 / Space 多选删、`optimize --whitelist`、动画 cat，现均已随代码交付，见文首修订）。
 
 ### 4.2 轨 3 — `vole agent`
 
@@ -296,9 +297,9 @@ vole-sys          仅复用已有 trash / 路径 / 权限原语；不新开特�
 | [`2026-08-08-1727-mole-parity-roadmap-design.md`](2026-08-08-1727-mole-parity-roadmap-design.md) | 权威盘点当时写「默认下一项实现：无」。对 **Mole 对齐缺口** 仍然成立：v3 不再从 Mole 路由表找下一项。v3 做的是体验长尾、自有增值与分发，不是再扩 Mole required 集合。 |
 | [`2026-08-14-0228-worktree-design.md`](2026-08-14-0228-worktree-design.md) | `worktree` 契约全部保留：整棵 checkout、默认全不选、不宣称可安全删、Home 第 6 项。v3 **不**扩 worktree 管非 checkout；`agent` 认领其余 Agent 残留，路径去重见 §4.2.3。 |
 | [`2026-08-08-2143-v2-m6-clean-hints-design.md`](2026-08-08-2143-v2-m6-clean-hints-design.md) | M6 已交付主路径（project artifacts + system data）。本代际轨 2 只补 §2.2 长尾两条；挂载点、只读、超时跳过、禁止 `Command::Hints` 全部继承。 |
-| [`2026-08-09-2303-tui-t4-interactive-closeout-design.md`](2026-08-09-2303-tui-t4-interactive-closeout-design.md) | T4 已把 analyze 删除键、status 动画 cat / `k` / `c`、`optimize --whitelist` 标为有意不做。v3 轨 2 **继续不做** 这些项；只抛光已接线 footer。 |
+| [`2026-08-09-2303-tui-t4-interactive-closeout-design.md`](2026-08-09-2303-tui-t4-interactive-closeout-design.md) | T4 已把 analyze 删除键、status 动画 cat / `k` / `c`、`optimize --whitelist` 标为有意不做。代码现已交付这些项（analyze 删除固定进废纸篓），以代码为准，见文首修订。 |
 | [`2026-08-10-1514-tui-t5-home-menu-roadmap-design.md`](2026-08-10-1514-tui-t5-home-menu-roadmap-design.md) | T5 钉过 Mole 五项首页。Worktree 已把 Home 扩到 6 项。v3 再扩到 7 项 Agent；1–6 含义与文案不变。这是有意偏离 Mole 五项，不是 Mole 缺口。 |
-| [`2026-08-10-2012-tui-t8-status-polish-optimize-whitelist-design.md`](2026-08-10-2012-tui-t8-status-polish-optimize-whitelist-design.md) | T8 曾计划动画 cat + `k` / `c` + `optimize --whitelist`，当时未作为本代际必做。v3 **明确不做** 这些项；「status 抛光」仅限已接线键文案。 |
+| [`2026-08-10-2012-tui-t8-status-polish-optimize-whitelist-design.md`](2026-08-10-2012-tui-t8-status-polish-optimize-whitelist-design.md) | T8 曾计划动画 cat + `k` / `c` + `optimize --whitelist`，当时未作为本代际必做。代码现已交付这些项，以代码为准，见文首修订。 |
 | [`2026-07-30-semver-policy-design.md`](2026-07-30-semver-policy-design.md) | 兼容新能力走 MINOR。本代际各轨切片按 MINOR 发；不因话术「v3」升 MAJOR。 |
 
 ## 9. 下一步

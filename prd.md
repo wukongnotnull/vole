@@ -3,7 +3,7 @@
 | 项 | 内容 |
 |---|---|
 | 产品名称 | Vole（命令行版 `vole`）／ Vole for macOS（桌面版） |
-| 文档版本 | v1.2（基于代码库现状修订） |
+| 文档版本 | v1.3（基于代码库现状修订） |
 | 修订日期 | 2026-10-18 |
 | 对应代码基线 | `vole` main @ **2.20.0**；`vole-macos` main @ **0.3.0**（内嵌 sidecar `vole` 2.20.0） |
 | 产品负责人 | 悟空非空也 |
@@ -14,6 +14,7 @@
 
 | 版本 | 日期 | 修订人 | 说明 |
 |---|---|---|---|
+| v1.3 | 2026-10-18 | 悟空非空也（Claude 协助整理） | F04 补齐 Mole 前置诊断：系统概要行、性能诊断（syspolicyd 时可卸载用户 DMG）；`--task` 去掉实验性标注；disk_verify 未开启时在 `coverage_note` 说明 |
 | v1.2 | 2026-10-18 | 悟空非空也（Claude 协助整理） | F02 补齐 Developer 大户长尾：DerivedData 整树、DeviceSupport 保留最新 2 版、不可用模拟器经 simctl 删除；规则数更新为约 550 |
 | v1.1 | 2026-10-18 | 悟空非空也（Claude 协助整理） | 附录 14.2 三处差异定为「以代码为准」，同步修订 v3 规格与桌面版 README；修正吉祥物动画表述 |
 | v1.0 | 2026-10-18 | 悟空非空也（Claude 协助整理） | 首份汇总 PRD。依据两个仓库的源码、README、`docs/wukong-code/specs` 设计稿与 `docs/releases` 发版记录整理，描述截至 CLI 2.20.0 / 桌面 0.3.0 已交付的产品能力 |
@@ -275,9 +276,20 @@ Vole 以 Mole v1.48.1 为知识来源与正确性基准，用 Rust 重写为单�
 | 动作类（19 项，`optimize:action:<id>`，副作用操作） | DNS 与 Spotlight 检查、网络缓存刷新、SQLite 数据库压缩（Mail / Safari / Messages，应用运行中跳过）、LaunchServices 修复、Dock 刷新、禁止网络卷生成 `.DS_Store`、旧版覆盖审计、内存优化、网络栈刷新、权限修复、Spotlight 优化、Spotlight 孤立规则清理、周期性维护、共享文件列表修复、磁盘健康检查、登录项审计、隔离数据库清理、通知清理、使用数据清理 |
 
 功能要点：
-- 需要 root 的动作（DNS 刷新、`purge`、路由刷新、权限重置等）使用 `sudo -n`；无凭证则跳过并写入 `coverage_note`。
-- `--task <TASK_ID>` 单独执行一项（实验性）。
+- **前置诊断**（对齐 Mole `show_system_health` 与 `run_optimize_diagnostics`）：TTY 确认轨与 TTY 下的人读 `--plan` 在列任务前先输出
+  - 系统概要行：`System  已用/总 GB RAM | 已用/总 GB Disk | Uptime Nd`；
+  - 性能诊断：间隔 1 秒两次采样 `ps`，按进程族（CloudShell / syspolicyd / WindowServer / Spotlight / CoreSimulator 磁盘镜像）累计 CPU，两次都 ≥ 25% 判为持续瓶颈并给出说明（阈值与间隔可由 `VOLE_OPTIMIZE_DIAG_CPU_THRESHOLD` / `VOLE_OPTIMIZE_DIAG_SAMPLE_DELAY` 调整，兼容 `MOLE_` 前缀）；
+  - syspolicyd 持续高占用时再查 `spctl --status` 与 `hdiutil info`，列出挂在 `/Volumes` 下的用户镜像（系统管理镜像、受保护路径、白名单路径不列）；确认轨中询问 `Detach now? [y/N]`，确认后逐个 `hdiutil detach`，人读 `--plan` 只提示人工复核。
+  - `--json` / `--json-stream` / `--plan-out` / `--apply` / `--task` 不跑诊断，Plan 结构不变。
+- 需要 root 的动作（DNS 刷新、`purge`、路由刷新、权限重置等）使用 `sudo -n`；TTY 下无凭证时至多一次 `sudo -v` 请求管理员权限，仍无凭证则跳过并记为 `needs_privilege`。
+- 磁盘健康检查（`disk_verify`）默认不执行（`diskutil verifyVolume /` 在 APFS 异常时可能卡死系统），须 `VOLE_ENABLE_DISK_VERIFY=1`（兼容 `MOLE_ENABLE_DISK_VERIFY`）；未开启时 Plan 的 `coverage_note` 写明如何开启。
+- `--task <TASK_ID>` 单独执行一项；未知 id 报错并列出全部有效 id。
 - 支持任务白名单（见 F12）。
+
+验收：
+- 非 TTY、`--json`、`--json-stream` 下不输出诊断、不运行 `hdiutil detach`。
+- 只有用户在确认轨输入 `y` 后才卸载镜像；`/System`、`/Library/Apple`、CoreSimulator 卷等系统管理镜像从不作为卸载目标。
+- 未开启 `disk_verify` 时 Plan 不含该任务，`coverage_note` 含开启方法。
 
 ### 5.7 F05 分析（analyze）
 

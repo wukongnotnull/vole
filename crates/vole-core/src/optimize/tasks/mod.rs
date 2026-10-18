@@ -22,7 +22,8 @@ pub use delete_paths::{
     discover_saved_state_cleanup, OptimizeCandidate, SAVED_STATE_AGE_DAYS,
 };
 pub use disk_verify::{
-    plan_disk_verify, DiskVerifyDeps, DiskVerifyError, FakeDiskVerifyDeps, LiveDiskVerifyDeps,
+    disk_verify_enabled, plan_disk_verify, DiskVerifyDeps, DiskVerifyError, FakeDiskVerifyDeps,
+    LiveDiskVerifyDeps,
 };
 pub use login_items_audit::{
     plan_login_items_audit, FakeLoginItemsAuditDeps, LiveLoginItemsAuditDeps, LoginItemSnapshot,

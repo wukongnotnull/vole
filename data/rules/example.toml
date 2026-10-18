@@ -17,18 +17,17 @@ last_verified = "2026-07"
 kind = "all"
 
 [[rule]]
-id = "xcode-derived-data-stale"
+id = "xcode-derived-data"
 category = "developer"
-label = "Xcode DerivedData older than 30 days"
+label = "Xcode DerivedData"
 platform = ["macos"]
 paths = ["~/Library/Developer/Xcode/DerivedData/*"]
-impact = "删除 30 天未修改的 DerivedData 子目录，不影响当前构建缓存"
+impact = "删除全部 DerivedData 项目子目录（构建产物与索引），下次构建自动重建；Xcode 运行时跳过"
 disabled = false
-last_verified = "2026-07"
+last_verified = "2026-10"
 
 [rule.strategy]
-kind = "older_than_days"
-days = 30
+kind = "all"
 
 [rule.guards]
-min_free_space = "1GB"
+not_running = ["Xcode"]

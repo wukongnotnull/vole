@@ -1,0 +1,35 @@
+{
+  "id": "developer_ios_device_support_keeps_newest_two",
+  "source_bats": "manual",
+  "source_test": "iOS DeviceSupport keeps 2 newest versions; logs and symbol caches are cleaned",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Developer/Xcode/iOS DeviceSupport/17.5 (21F79)/Symbols/System/Library/Caches/com.apple.dyld"
+    },
+    {
+      "write": "~/Library/Developer/Xcode/iOS DeviceSupport/iPhone16,2 Xcode.log",
+      "content": "log"
+    },
+    {
+      "mkdir": "~/Library/Developer/Xcode/iOS DeviceSupport/16.4 (20E247)",
+      "mtime": "2026-01-01T12:00"
+    },
+    {
+      "mkdir": "~/Library/Developer/Xcode/iOS DeviceSupport/17.0 (21A329)",
+      "mtime": "2026-02-01T12:00"
+    },
+    {
+      "mkdir": "~/Library/Developer/Xcode/iOS DeviceSupport/17.5 (21F79)",
+      "mtime": "2026-03-01T12:00"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Developer/Xcode/iOS DeviceSupport/16.4 (20E247)|iOS DeviceSupport old versions",
+    "~/Library/Developer/Xcode/iOS DeviceSupport/17.5 (21F79)/Symbols/System/Library/Caches/com.apple.dyld|iOS DeviceSupport symbol cache",
+    "~/Library/Developer/Xcode/iOS DeviceSupport/iPhone16,2 Xcode.log|iOS DeviceSupport logs"
+  ],
+  "expect_not_selected": [
+    "~/Library/Developer/Xcode/iOS DeviceSupport/17.0 (21A329)",
+    "~/Library/Developer/Xcode/iOS DeviceSupport/17.5 (21F79)"
+  ]
+}

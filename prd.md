@@ -3,7 +3,7 @@
 | 项 | 内容 |
 |---|---|
 | 产品名称 | Vole（命令行版 `vole`）／ Vole for macOS（桌面版） |
-| 文档版本 | v1.1（基于代码库现状修订） |
+| 文档版本 | v1.2（基于代码库现状修订） |
 | 修订日期 | 2026-10-18 |
 | 对应代码基线 | `vole` main @ **2.20.0**；`vole-macos` main @ **0.3.0**（内嵌 sidecar `vole` 2.20.0） |
 | 产品负责人 | 悟空非空也 |
@@ -14,6 +14,7 @@
 
 | 版本 | 日期 | 修订人 | 说明 |
 |---|---|---|---|
+| v1.2 | 2026-10-18 | 悟空非空也（Claude 协助整理） | F02 补齐 Developer 大户长尾：DerivedData 整树、DeviceSupport 保留最新 2 版、不可用模拟器经 simctl 删除；规则数更新为约 550 |
 | v1.1 | 2026-10-18 | 悟空非空也（Claude 协助整理） | 附录 14.2 三处差异定为「以代码为准」，同步修订 v3 规格与桌面版 README；修正吉祥物动画表述 |
 | v1.0 | 2026-10-18 | 悟空非空也（Claude 协助整理） | 首份汇总 PRD。依据两个仓库的源码、README、`docs/wukong-code/specs` 设计稿与 `docs/releases` 发版记录整理，描述截至 CLI 2.20.0 / 桌面 0.3.0 已交付的产品能力 |
 
@@ -234,18 +235,20 @@ Vole 以 Mole v1.48.1 为知识来源与正确性基准，用 Rust 重写为单�
 **用户故事**：作为 Mac 用户，我想扫出缓存、日志和残留文件，确认后再清理，删错可以从废纸篓找回。
 
 功能要点：
-1. **规则引擎**：内置约 540 条 TOML 规则（`data/rules/*.toml`，覆盖应用缓存、开发工具、AI Agent、Codex、最近项目、孤立数据等类别），每条规则声明 `id`、`category`、`paths`（glob）、`strategy`（如 `all`、保留最新 N 个、按 mtime 等）、`impact`、`last_verified`。
+1. **规则引擎**：内置约 550 条 TOML 规则（`data/rules/*.toml`，覆盖应用缓存、开发工具、AI Agent、Codex、最近项目、孤立数据等类别），每条规则声明 `id`、`category`、`paths`（glob）、`strategy`（如 `all`、保留最新 N 个、按 mtime 等）、`impact`、`last_verified`。
 2. **自定义处理器与守卫**：对需要过程逻辑的规则提供专用 handler（如进程运行中则跳过，即 process guard）。
 3. **孤立应用数据**：识别已卸载应用在用户域留下的数据（不扫描 Containers / Group Containers / LaunchAgents / `/Library/**`）。
 4. **系统级项**：系统服务孤立项（只读子集）；Time Machine 失败中的备份（`*.inProgress`，48 小时安全窗，经 `tmutil delete` 删除）；本地快照只报告数量，不删除。
-5. **只读提示（hints）**：plan 后附加只读提示，例如项目构建物可用 `purge` 清理、系统数据、用户 LaunchAgent 归属、孤立点目录。每个探针有超时预算（默认 15 秒，`VOLE_TIMEOUT_HINT_SCAN_SEC`），超时或失败则跳过，不阻塞 plan / apply；`--apply` 不运行 hints。
-6. **覆盖说明**：Plan 携带 `coverage_note`，列出未移植的 Mole 类别；权限不足时响亮提示（例如引导开启完全磁盘访问）。
-7. **白名单**：见 F12。
+5. **Developer 大户**：Xcode DerivedData 整树（Xcode 运行时跳过）；iOS / watchOS / tvOS DeviceSupport 按 mtime 保留最新 2 个版本（`MOLE_XCODE_DEVICE_SUPPORT_KEEP` 可调），并清理保留版本内的符号缓存与日志；不可用模拟器由 `xcrun simctl list devices unavailable` 选出，apply 前复验仍不可用，再经 `xcrun simctl delete` 永久删除，simctl 失败时不回退为直接删目录。`/Library/Developer` 下需 sudo 的系统级项（DocumentationCache 旧索引、CoreSimulator 系统缓存、模拟器运行时卷）尚未移植，在 `coverage_note` 中注明。
+6. **只读提示（hints）**：plan 后附加只读提示，例如项目构建物可用 `purge` 清理、系统数据、用户 LaunchAgent 归属、孤立点目录。每个探针有超时预算（默认 15 秒，`VOLE_TIMEOUT_HINT_SCAN_SEC`），超时或失败则跳过，不阻塞 plan / apply；`--apply` 不运行 hints。
+7. **覆盖说明**：Plan 携带 `coverage_note`，列出未移植的 Mole 类别；权限不足时响亮提示（例如引导开启完全磁盘访问）。
+8. **白名单**：见 F12。
 
 验收：
 - 不存在顶层 `vole hints` 命令。
 - 保护清单命中的路径不进入候选；被塞进 Plan 时 apply 拒绝执行。
 - 报告区分「移入废纸篓的字节数」与「永久删除的字节数」，不使用单一 freed 字段。
+- 不可用模拟器只经 `simctl delete` 删除；simctl 失败或 apply 复验不通过时目录原样保留。
 
 ### 5.5 F03 卸载（uninstall）
 
@@ -598,7 +601,7 @@ Vole 以 Mole v1.48.1 为知识来源与正确性基准，用 Rust 重写为单�
 
 | 方向 | 说明 |
 |---|---|
-| 规则长尾 | 继续移植 Mole 未覆盖的 clean 类别（以 `coverage_note` 中的「仍未移植」为清单） |
+| 规则长尾 | 用户域 Developer 大户（DerivedData / DeviceSupport / 不可用模拟器）已落地；剩余 `/Library/Developer` 系统级 Xcode 项（需 sudo），以 `coverage_note` 末尾「请关注后续版本」为清单 |
 | 桌面能力补齐 | 桌面白名单管理、状态与分析体验打磨 |
 | 特权助手扩展 | 在白名单内扩大系统路径覆盖，同时更新 CLI 覆盖说明 |
 | 分发 | 截图、安装文档与五语 README 持续同步 |

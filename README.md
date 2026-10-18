@@ -53,7 +53,7 @@ The home menu lists seven items: Mole-aligned Clean / Uninstall / Optimize / Ana
 | **Worktree** | List leftover Git worktrees and move them to Trash after confirm |
 | **Agent** | List leftover agent containers, sessions, and caches; confirm, then Trash |
 
-Type `vole` in Terminal for an interactive home menu. About **540** cleanup rules are built in—**no extra tools** to install.
+Type `vole` in Terminal for an interactive home menu. About **550** cleanup rules are built in—**no extra tools** to install.
 
 For anyone comfortable with Terminal who wants a safer Mac cleaner than “delete everything in one click.” Prefer a windowed app? See Desktop app below.
 

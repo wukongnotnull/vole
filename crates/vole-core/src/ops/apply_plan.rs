@@ -46,6 +46,10 @@ use crate::safety::{
     is_rosetta_update_bundle, is_system_diagnostic_report_leaf, verify_plan_entry,
     verify_plan_entry_for_apply, PlanApplyError, PlanEntryIdentity, ValidationError,
 };
+use crate::simulators::{
+    simulator_udid_for_path, udid_still_unavailable, LiveSimctlDeps, SimctlDeps,
+    XCODE_UNAVAILABLE_SIMULATORS_RULE_ID,
+};
 use crate::stubs::{
     recheck_container_stub_entry, remove_verified_container_stub, CONTAINER_STUB_RULE_ID,
 };
@@ -90,6 +94,8 @@ pub struct ApplyPlanContext<'a> {
     pub privilege_acquire_attempted: bool,
     /// Time Machine 探测；缺省 `None` → `LiveTmDeps`。
     pub tm_deps: Option<&'a dyn TmDeps>,
+    /// simctl 探测与删除；缺省 `None` → `LiveSimctlDeps`。
+    pub simctl_deps: Option<&'a dyn SimctlDeps>,
 }
 
 impl<'a> ApplyPlanContext<'a> {
@@ -121,6 +127,7 @@ impl<'a> ApplyPlanContext<'a> {
             privilege: None,
             privilege_acquire_attempted: false,
             tm_deps: None,
+            simctl_deps: None,
         }
     }
 }
@@ -1786,6 +1793,75 @@ pub fn apply_plan(
                     skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
                 }
                 Err(_) => failed += 1,
+            }
+            continue;
+        }
+
+        // xcode-unavailable-simulators：形状 → 白名单 → identity → simctl 仍报不可用
+        // → `simctl delete`（永久）。simctl 失败只记 skip，绝不回退为直接删目录。
+        if entry.rule_id == XCODE_UNAVAILABLE_SIMULATORS_RULE_ID {
+            let live = LiveSimctlDeps;
+            let deps = ctx.simctl_deps.unwrap_or(&live);
+            let path = entry.path.display().to_string();
+            let identity = proto_identity(entry);
+            let Some(udid) = simulator_udid_for_path(deps, &entry.path) else {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            };
+            if crate::whitelist::is_match(&entry.path, ctx.whitelist_patterns) {
+                skipped += 1;
+                ctx.deletion_log
+                    .log("simctl-delete", "0", "whitelisted", &path);
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::Whitelisted,
+                    });
+                }
+                skip_tracker.record(SkipReason::Whitelisted, &entry.rule_id);
+                continue;
+            }
+            if verify_plan_entry(&path, &identity).is_err() || !udid_still_unavailable(deps, &udid)
+            {
+                skipped += 1;
+                if let Some(event) = &ctx.on_event {
+                    event(StreamEvent::Skipped {
+                        rule_id: entry.rule_id.clone(),
+                        reason: SkipReason::PathVanished,
+                    });
+                }
+                skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                continue;
+            }
+            match deps.delete_device(&udid) {
+                Ok(()) => {
+                    succeeded += 1;
+                    deleted_bytes += entry.size;
+                    let size_kb = (entry.size / 1024).to_string();
+                    ctx.deletion_log.log("simctl-delete", &size_kb, "ok", &path);
+                    ctx.oplog
+                        .log("REMOVED", &entry.path, Some("simctl-delete"))
+                        .ok();
+                }
+                Err(err) => {
+                    skipped += 1;
+                    ctx.deletion_log
+                        .log("simctl-delete", "0", &format!("skip:{err}"), &path);
+                    if let Some(event) = &ctx.on_event {
+                        event(StreamEvent::Skipped {
+                            rule_id: entry.rule_id.clone(),
+                            reason: SkipReason::PathVanished,
+                        });
+                    }
+                    skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+                }
             }
             continue;
         }
@@ -5089,6 +5165,133 @@ mod tests {
         assert!(evil.exists());
         assert!(tm.deleted.lock().unwrap().is_empty());
         assert!(tm.deleted.lock().unwrap().is_empty());
+        fs::remove_dir_all(&root).ok();
+    }
+
+    fn simctl_unavailable_line(udid: &str) -> String {
+        format!("    iPhone 8 ({udid}) (Shutdown) (unavailable, runtime profile not found)\n")
+    }
+
+    fn run_simctl_apply(
+        plan: &ProtoPlan,
+        root: &std::path::Path,
+        simctl: &crate::simulators::FakeSimctlDeps,
+    ) -> Report {
+        use crate::orphan::FakeOrphanDeps;
+
+        let protection = AppProtection::new();
+        let deletion_log = DeletionLogger::with_path(root.join("deletions.log"));
+        let mut oplog = OperationLogger::new("clean");
+        let probe = crate::rules::FakeProcessProbe::default();
+        let orphan_deps = FakeOrphanDeps::default();
+        let mut ctx = ApplyPlanContext::new(
+            &protection,
+            &[],
+            apply_opts(false),
+            &MacTrash,
+            &deletion_log,
+            &mut oplog,
+            &[],
+            &probe,
+            &orphan_deps,
+            None,
+        );
+        ctx.simctl_deps = Some(simctl);
+        apply_plan(plan, &mut ctx).unwrap()
+    }
+
+    #[test]
+    fn apply_unavailable_simulator_deletes_via_simctl() {
+        use crate::simulators::{FakeSimctlDeps, XCODE_UNAVAILABLE_SIMULATORS_RULE_ID};
+
+        let _guard = test_env::lock();
+        let root = scratch("simctl-ok");
+        let devices = root.join("Devices");
+        let udid = "0A1B2C3D-4E5F-6071-8293-A4B5C6D7E8F9";
+        let dev = devices.join(udid);
+        fs::create_dir_all(dev.join("data")).unwrap();
+        fs::write(dev.join("data/blob"), vec![0u8; 4096]).unwrap();
+
+        let plan = fresh_plan(vec![plan_entry(&dev, XCODE_UNAVAILABLE_SIMULATORS_RULE_ID)]);
+        let simctl = FakeSimctlDeps::new(devices, Some(simctl_unavailable_line(udid)));
+        let report = run_simctl_apply(&plan, &root, &simctl);
+        assert_eq!(report.succeeded, 1);
+        assert_eq!(report.trashed_bytes, 0);
+        assert!(!dev.exists());
+        assert_eq!(*simctl.deleted.lock().unwrap(), vec![udid.to_string()]);
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_unavailable_simulator_skips_when_no_longer_unavailable() {
+        use crate::simulators::{FakeSimctlDeps, XCODE_UNAVAILABLE_SIMULATORS_RULE_ID};
+
+        let _guard = test_env::lock();
+        let root = scratch("simctl-revived");
+        let devices = root.join("Devices");
+        let udid = "0A1B2C3D-4E5F-6071-8293-A4B5C6D7E8F9";
+        let dev = devices.join(udid);
+        fs::create_dir_all(&dev).unwrap();
+
+        let plan = fresh_plan(vec![plan_entry(&dev, XCODE_UNAVAILABLE_SIMULATORS_RULE_ID)]);
+        let simctl = FakeSimctlDeps::new(devices.clone(), Some(String::new()));
+        let report = run_simctl_apply(&plan, &root, &simctl);
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(dev.exists());
+
+        // simctl 列不出来（不可用/超时）同样 fail-closed。
+        let simctl = FakeSimctlDeps::new(devices, None);
+        let report = run_simctl_apply(&plan, &root, &simctl);
+        assert_eq!(report.succeeded, 0);
+        assert!(dev.exists());
+        assert!(simctl.deleted.lock().unwrap().is_empty());
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_unavailable_simulator_never_falls_back_to_rm() {
+        use crate::simulators::{FakeSimctlDeps, XCODE_UNAVAILABLE_SIMULATORS_RULE_ID};
+
+        let _guard = test_env::lock();
+        let root = scratch("simctl-fail");
+        let devices = root.join("Devices");
+        let udid = "0A1B2C3D-4E5F-6071-8293-A4B5C6D7E8F9";
+        let dev = devices.join(udid);
+        fs::create_dir_all(&dev).unwrap();
+
+        let plan = fresh_plan(vec![plan_entry(&dev, XCODE_UNAVAILABLE_SIMULATORS_RULE_ID)]);
+        let mut simctl = FakeSimctlDeps::new(devices, Some(simctl_unavailable_line(udid)));
+        simctl.delete_result = Err("device in use".into());
+        let report = run_simctl_apply(&plan, &root, &simctl);
+        assert_eq!(report.succeeded, 0);
+        assert_eq!(report.skipped, 1);
+        assert!(dev.exists());
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn apply_unavailable_simulator_rejects_off_shape() {
+        use crate::simulators::{FakeSimctlDeps, XCODE_UNAVAILABLE_SIMULATORS_RULE_ID};
+
+        let _guard = test_env::lock();
+        let root = scratch("simctl-off");
+        let devices = root.join("Devices");
+        let udid = "0A1B2C3D-4E5F-6071-8293-A4B5C6D7E8F9";
+        // 篡改 plan：UDID 形状正确但不在 Devices 根下。
+        let evil = root.join("elsewhere").join(udid);
+        fs::create_dir_all(&evil).unwrap();
+        fs::create_dir_all(&devices).unwrap();
+
+        let plan = fresh_plan(vec![plan_entry(
+            &evil,
+            XCODE_UNAVAILABLE_SIMULATORS_RULE_ID,
+        )]);
+        let simctl = FakeSimctlDeps::new(devices, Some(simctl_unavailable_line(udid)));
+        let report = run_simctl_apply(&plan, &root, &simctl);
+        assert_eq!(report.succeeded, 0);
+        assert!(evil.exists());
+        assert!(simctl.deleted.lock().unwrap().is_empty());
         fs::remove_dir_all(&root).ok();
     }
 

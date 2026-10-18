@@ -81,7 +81,7 @@ pub fn build_installer_plan(
             }
             let ext = file_ext_lower(&canon).unwrap_or_default();
             let rule_id = format!("installer:{ext}");
-            let label = display_name(&canon);
+            let label = display_name(&canon, &installer_source_display(opts.home, &canon));
             if let Some(entry) = try_plan_entry(&canon, &label, &rule_id, protection) {
                 entries.push(entry);
             }
@@ -95,7 +95,9 @@ pub fn build_installer_plan(
         created_at: opts.now,
         ttl_secs: opts.ttl_secs,
         entries,
-        coverage_note: Some("installer long-tail skipped: fd-specific scan branch.".into()),
+        // Mole 的 fd 与 find 两条扫描分支结果一致（含隐藏文件、不读 ignore、
+        // 不跟随 symlink），jwalk 单一实现即覆盖两者，没有跳过的长尾。
+        coverage_note: None,
     })
 }
 
@@ -162,16 +164,15 @@ fn is_installer_zip(path: &Path) -> bool {
     let Ok(text) = listing else {
         return false;
     };
-    for (i, line) in text.lines().enumerate() {
-        if i >= MAX_ZIP_ENTRIES {
-            break;
-        }
-        let lower = line.to_ascii_lowercase();
-        if zip_line_looks_like_installer(&lower) {
-            return true;
-        }
-    }
-    false
+    zip_listing_has_installer(&text)
+}
+
+/// Mole `head -n "$MAX_ZIP_ENTRIES" | awk …`：只看前 50 行条目。
+fn zip_listing_has_installer(listing: &str) -> bool {
+    listing
+        .lines()
+        .take(MAX_ZIP_ENTRIES)
+        .any(|line| zip_line_looks_like_installer(&line.to_ascii_lowercase()))
 }
 
 fn zip_line_looks_like_installer(line: &str) -> bool {
@@ -205,14 +206,69 @@ fn zip_list_entries(path: &Path) -> Result<String, ()> {
     Err(())
 }
 
-fn display_name(path: &Path) -> String {
+/// Mole `get_source_display`：按所在目录给出来源短名（Downloads、Homebrew、iCloud…）。
+///
+/// 计划里的路径已 canonicalize，`home` 可能是 symlink（如 `/var` → `/private/var`），
+/// 所以同时按原样和 canonical 形式匹配。
+pub fn installer_source_display(home: &Path, path: &Path) -> String {
+    let dir = path.parent().unwrap_or(path);
+    let mut homes = vec![home.to_path_buf()];
+    if let Ok(canon) = home.canonicalize() {
+        if canon != home {
+            homes.push(canon);
+        }
+    }
+    for h in &homes {
+        if let Some(source) = source_under_home(h, dir) {
+            return source.to_string();
+        }
+    }
+    if dir.starts_with("/Users/Shared") {
+        return "Shared".into();
+    }
+    if dir
+        .components()
+        .any(|c| c.as_os_str() == "Telegram Desktop")
+    {
+        return "Telegram".into();
+    }
+    dir.file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_string()
+}
+
+fn source_under_home(home: &Path, dir: &Path) -> Option<&'static str> {
+    // 顺序与 Mole 的 case 分支一致：`~/Downloads/Telegram Desktop` 归入 Downloads。
+    const SOURCES: &[(&str, &str)] = &[
+        ("Downloads", "Downloads"),
+        ("Desktop", "Desktop"),
+        ("Documents", "Documents"),
+        ("Public", "Public"),
+        ("Library/Downloads", "Library"),
+        ("Library/Caches/Homebrew", "Homebrew"),
+        (
+            "Library/Mobile Documents/com~apple~CloudDocs/Downloads",
+            "iCloud",
+        ),
+        ("Library/Containers/com.apple.mail", "Mail"),
+    ];
+    let rel = dir.strip_prefix(home).ok()?;
+    SOURCES
+        .iter()
+        .find(|(prefix, _)| rel.starts_with(prefix))
+        .map(|(_, source)| *source)
+}
+
+fn display_name(path: &Path, source: &str) -> String {
     let name = path
         .file_name()
         .and_then(|s| s.to_str())
         .unwrap_or("installer")
         .to_string();
-    // Homebrew cache: strip leading sha256--
-    if name.len() > 66
+    // Mole 只对 Homebrew 缓存去掉开头的 `<sha256>--`。
+    if source == "Homebrew"
+        && name.len() > 66
         && name.as_bytes().get(64) == Some(&b'-')
         && name.as_bytes().get(65) == Some(&b'-')
         && name[..64].chars().all(|c| c.is_ascii_hexdigit())
@@ -385,5 +441,159 @@ mod tests {
             "plain zip should be skipped: {:?}",
             plan.entries
         );
+    }
+
+    fn plan_for(home: &Path, roots: &[PathBuf]) -> ProtoPlan {
+        build_installer_plan(
+            &AppProtection::new(),
+            &InstallerPlanOptions {
+                home,
+                ttl_secs: 900,
+                scan_roots: Some(roots),
+                max_depth: DEFAULT_INSTALLER_SCAN_MAX_DEPTH,
+                now: SystemTime::now(),
+            },
+        )
+        .unwrap()
+    }
+
+    fn file_names(plan: &ProtoPlan) -> Vec<String> {
+        plan.entries
+            .iter()
+            .map(|e| e.path.file_name().unwrap().to_string_lossy().into_owned())
+            .collect()
+    }
+
+    // Mole installer.bats / installer_fd.bats：fd 与 find 分支共用的扫描用例。
+    #[test]
+    fn plan_matches_mole_scan_cases() {
+        let root = tempfile::tempdir().unwrap();
+        let downloads = root.path().join("Downloads");
+        fs::create_dir_all(downloads.join("sub")).unwrap();
+        for name in [
+            "My App Installer.dmg",
+            "App-v1.2.3_beta.pkg",
+            "Suite.mpkg",
+            "Disk.iso",
+            "Xcode.xip",
+            "UPPER.DMG",
+            ".hidden.dmg",
+            "document.pdf",
+            "image.jpg",
+            "archive.tar.gz",
+        ] {
+            fs::write(downloads.join(name), b"x").unwrap();
+        }
+        fs::write(downloads.join("sub/Nested.pkg"), b"x").unwrap();
+
+        let roots = [downloads, root.path().join("Missing")];
+        let mut names = file_names(&plan_for(root.path(), &roots));
+        names.sort();
+        assert_eq!(
+            names,
+            vec![
+                ".hidden.dmg",
+                "App-v1.2.3_beta.pkg",
+                "Disk.iso",
+                "My App Installer.dmg",
+                "Nested.pkg",
+                "Suite.mpkg",
+                "UPPER.DMG",
+                "Xcode.xip",
+            ]
+        );
+    }
+
+    #[test]
+    fn plan_has_no_coverage_gap_and_empty_dir_yields_nothing() {
+        let root = tempfile::tempdir().unwrap();
+        let downloads = root.path().join("Downloads");
+        fs::create_dir_all(&downloads).unwrap();
+        fs::write(downloads.join("notes.txt"), b"x").unwrap();
+        let plan = plan_for(root.path(), &[downloads]);
+        assert!(plan.entries.is_empty(), "entries={:?}", plan.entries);
+        assert_eq!(plan.coverage_note, None);
+    }
+
+    #[test]
+    fn corrupt_zip_is_skipped() {
+        let root = tempfile::tempdir().unwrap();
+        let downloads = root.path().join("Downloads");
+        fs::create_dir_all(&downloads).unwrap();
+        fs::write(
+            downloads.join("corrupt.zip"),
+            b"This is not a valid ZIP file",
+        )
+        .unwrap();
+        let plan = plan_for(root.path(), &[downloads]);
+        assert!(plan.entries.is_empty(), "entries={:?}", plan.entries);
+    }
+
+    #[test]
+    fn zip_listing_only_checks_first_fifty_entries() {
+        let mut listing: Vec<String> = (1..=MAX_ZIP_ENTRIES)
+            .map(|i| format!("deep-content/file{i}.txt"))
+            .collect();
+        listing.push("deep-content/MyApp.app".into());
+        assert!(!zip_listing_has_installer(&listing.join("\n")));
+
+        listing.insert(MAX_ZIP_ENTRIES - 1, "deep-content/Setup.PKG".into());
+        assert!(zip_listing_has_installer(&listing.join("\n")));
+    }
+
+    #[test]
+    fn source_display_matches_mole_names() {
+        let home = Path::new("/Users/u");
+        let cases = [
+            ("/Users/u/Downloads/a.dmg", "Downloads"),
+            ("/Users/u/Downloads/Telegram Desktop/a.dmg", "Downloads"),
+            ("/Users/u/Desktop/a.dmg", "Desktop"),
+            ("/Users/u/Documents/x/a.dmg", "Documents"),
+            ("/Users/u/Public/a.dmg", "Public"),
+            ("/Users/u/Library/Downloads/a.dmg", "Library"),
+            ("/Users/Shared/Downloads/a.dmg", "Shared"),
+            (
+                "/Users/u/Library/Caches/Homebrew/downloads/a.dmg",
+                "Homebrew",
+            ),
+            (
+                "/Users/u/Library/Mobile Documents/com~apple~CloudDocs/Downloads/a.dmg",
+                "iCloud",
+            ),
+            (
+                "/Users/u/Library/Containers/com.apple.mail/Data/Library/Mail Downloads/a.dmg",
+                "Mail",
+            ),
+            (
+                "/Users/u/Library/Application Support/Telegram Desktop/a.dmg",
+                "Telegram",
+            ),
+            ("/Volumes/Ext/stash/a.dmg", "stash"),
+        ];
+        for (path, want) in cases {
+            assert_eq!(
+                installer_source_display(home, Path::new(path)),
+                want,
+                "{path}"
+            );
+        }
+    }
+
+    #[test]
+    fn homebrew_hash_prefix_stripped_only_in_homebrew_cache() {
+        let root = tempfile::tempdir().unwrap();
+        let hashed = format!("{}--Foo-1.0.dmg", "a".repeat(64));
+        let brew = root.path().join("Library/Caches/Homebrew/downloads");
+        let downloads = root.path().join("Downloads");
+        fs::create_dir_all(&brew).unwrap();
+        fs::create_dir_all(&downloads).unwrap();
+        fs::write(brew.join(&hashed), b"x").unwrap();
+        fs::write(downloads.join(&hashed), b"y").unwrap();
+
+        let roots = [root.path().join("Library/Caches/Homebrew"), downloads];
+        let plan = plan_for(root.path(), &roots);
+        let mut labels: Vec<_> = plan.entries.iter().map(|e| e.label.clone()).collect();
+        labels.sort();
+        assert_eq!(labels, vec!["Foo-1.0.dmg".to_string(), hashed]);
     }
 }

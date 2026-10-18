@@ -10,8 +10,9 @@ use crossbeam_channel::unbounded;
 use vole_core::mutex::{try_lock_installer, MutexError};
 use vole_core::ops::{
     apply_installer_plan, build_installer_plan, coverage_with_apply_permission_hint,
-    report_has_permission_skips, InstallerApplyError, InstallerApplyOptions, InstallerPlanOptions,
-    APPLY_PERMISSION_WARN, DEFAULT_INSTALLER_SCAN_MAX_DEPTH,
+    installer_source_display, report_has_permission_skips, InstallerApplyError,
+    InstallerApplyOptions, InstallerPlanOptions, APPLY_PERMISSION_WARN,
+    DEFAULT_INSTALLER_SCAN_MAX_DEPTH,
 };
 use vole_core::protection::AppProtection;
 use vole_core::units;
@@ -89,7 +90,11 @@ fn run_interactive(opts: &InstallerOptions) -> io::Result<i32> {
     }
 
     let selected_idxs = loop {
-        let items: Vec<MenuItem> = plan.entries.iter().map(menu_item_from_entry).collect();
+        let items: Vec<MenuItem> = plan
+            .entries
+            .iter()
+            .map(|e| menu_item_from_entry(&home, e))
+            .collect();
         let mut cfg = MenuState::config_from_env();
         cfg.ignore_initial_enter = true;
         // Align mole: installers start unselected.
@@ -189,7 +194,7 @@ fn run_plan(opts: InstallerOptions) -> io::Result<()> {
             .map_err(|_| io::Error::other("stream writer panicked"))??;
     }
 
-    write_plan_output(&opts, &plan)?;
+    write_plan_output(&opts, &home, &plan)?;
     Ok(())
 }
 
@@ -244,10 +249,12 @@ fn run_apply(opts: &InstallerOptions, plan_path: &Path) -> io::Result<i32> {
     }
 }
 
-fn menu_item_from_entry(entry: &PlanEntry) -> MenuItem {
+/// Mole `format_installer_display`：文件名、来源（Downloads / Homebrew / iCloud…），再附完整路径。
+fn menu_item_from_entry(home: &Path, entry: &PlanEntry) -> MenuItem {
     let path_str = entry.path.display().to_string();
+    let source = installer_source_display(home, &entry.path);
     MenuItem {
-        label: format!("{}  {}", entry.label, path_str),
+        label: format!("{}  | {}  {}", entry.label, source, path_str),
         filter_name: Some(path_str),
         epoch: mtime_epoch(entry.mtime),
         size_kb: Some(entry.size / 1024),
@@ -300,7 +307,7 @@ fn parse_max_depth_env() -> usize {
         .unwrap_or(DEFAULT_INSTALLER_SCAN_MAX_DEPTH)
 }
 
-fn write_plan_output(opts: &InstallerOptions, plan: &ProtoPlan) -> io::Result<()> {
+fn write_plan_output(opts: &InstallerOptions, home: &Path, plan: &ProtoPlan) -> io::Result<()> {
     let json = serde_json::to_string_pretty(plan).map_err(io::Error::other)?;
     if let Some(ref path) = opts.plan_out {
         std::fs::write(path, &json)?;
@@ -308,12 +315,12 @@ fn write_plan_output(opts: &InstallerOptions, plan: &ProtoPlan) -> io::Result<()
     if should_use_json(opts.json) {
         println!("{json}");
     } else if opts.plan_out.is_none() {
-        print_human_plan(plan);
+        print_human_plan(home, plan);
     }
     Ok(())
 }
 
-fn print_human_plan(plan: &ProtoPlan) {
+fn print_human_plan(home: &Path, plan: &ProtoPlan) {
     eprintln!(
         "installer plan: {} entries (ttl {}s)",
         plan.entries.len(),
@@ -321,9 +328,10 @@ fn print_human_plan(plan: &ProtoPlan) {
     );
     for entry in &plan.entries {
         eprintln!(
-            "  {}  {}  {}",
+            "  {}  {}  {:<9}  {}",
             units::bytes_bin(entry.size),
             entry.rule_id,
+            installer_source_display(home, &entry.path),
             entry.path.display()
         );
     }

@@ -92,7 +92,11 @@ pub fn coverage_note(enabled_rules: usize) -> String {
          桌面 SMAppService / 特权助手见 vole-macos（真机通道已验收）。\
          clean hints 长尾（LaunchAgents / orphan dotdirs）已落地、\
          vole agent（Cursor/Codex/Claude 容器/会话/缓存残留，确认后废纸篓）已落地、\
-         如需完整清理（含 Developer 大户整树等长尾），请关注后续版本。"
+         Developer 大户整树（Xcode DerivedData 全量 · Xcode 运行时跳过；\
+         iOS/watchOS/tvOS DeviceSupport 保留最新 2 版 + 符号缓存/日志；\
+         不可用模拟器经 `simctl delete`）已落地。\
+         `/Library/Developer` 系统级 Xcode 项（DocumentationCache 旧索引、CoreSimulator 系统缓存、\
+         模拟器运行时卷，均需 sudo）请关注后续版本。"
     )
 }
 
@@ -206,6 +210,18 @@ mod tests {
         assert!(note.contains("profile siblings"));
         assert!(note.contains("QQ Music Mac AS"));
         assert!(note.contains("已落地"));
+    }
+
+    #[test]
+    fn coverage_note_mentions_developer_long_tail() {
+        let note = coverage_note(552);
+        assert!(note.contains("Developer 大户整树"));
+        assert!(note.contains("Xcode DerivedData 全量"));
+        assert!(note.contains("DeviceSupport 保留最新 2 版"));
+        assert!(note.contains("不可用模拟器经 `simctl delete`"));
+        assert!(!note.contains("含 Developer 大户整树等长尾"));
+        assert!(note.contains("`/Library/Developer` 系统级 Xcode 项"));
+        assert!(!note.to_ascii_lowercase().contains("mole"));
     }
 
     #[test]

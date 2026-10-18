@@ -187,6 +187,8 @@ impl Orchestrator {
                     notices.push(PlanNotice::TimeMachineBusy);
                 }
                 result.paths
+            } else if rule.id == crate::simulators::XCODE_UNAVAILABLE_SIMULATORS_RULE_ID {
+                crate::simulators::select_unavailable_simulators(&crate::simulators::LiveSimctlDeps)
             } else {
                 collect_path_candidates(rule, &home)
             };

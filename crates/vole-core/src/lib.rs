@@ -27,6 +27,7 @@ pub mod protection;
 pub mod rules;
 pub mod safety;
 pub mod scan;
+pub mod simulators;
 pub mod status;
 pub mod stubs;
 pub mod sysorphan;

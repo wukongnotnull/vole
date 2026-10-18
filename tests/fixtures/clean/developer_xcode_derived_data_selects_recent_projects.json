@@ -1,0 +1,22 @@
+{
+  "id": "developer_xcode_derived_data_selects_recent_projects",
+  "source_bats": "manual",
+  "source_test": "xcode-derived-data cleans the whole tree, not only stale projects",
+  "fixture": [
+    {
+      "mkdir": "~/Library/Developer/Xcode/DerivedData/AppA-abcdef/Build",
+      "mtime": "now-1d"
+    },
+    {
+      "mkdir": "~/Library/Developer/Xcode/DerivedData/AppB-123456",
+      "mtime": "now-90d"
+    }
+  ],
+  "expect_selected": [
+    "~/Library/Developer/Xcode/DerivedData/AppA-abcdef|Xcode DerivedData",
+    "~/Library/Developer/Xcode/DerivedData/AppB-123456|Xcode DerivedData"
+  ],
+  "expect_not_selected": [
+    "~/Library/Developer/Xcode/DerivedData/AppA-abcdef/Build"
+  ]
+}

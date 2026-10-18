@@ -342,11 +342,12 @@ pub fn build_worktree_plan(
             } else {
                 WorktreeKind::Linked
             };
+            // 归属记到主 checkout：`repo` 可能是从 ~/.claude|.codex/worktrees 发现的链接 worktree 本身。
             records.push(make_record(
                 opts,
                 protection,
                 &canon,
-                repo,
+                &primary.path,
                 kind,
                 wt.head.clone(),
                 wt.locked,
@@ -1108,6 +1109,75 @@ prunable gitdir gone
                 .iter()
                 .map(|e| (&e.path, &e.rule_id))
                 .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn agent_container_worktree_labels_primary_repo_not_itself() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path();
+        let repo = home.join("Projects/repo");
+        fs::create_dir_all(repo.join(".git")).unwrap();
+        let leftover = home.join(".claude/worktrees/leftover-wt");
+        fs::create_dir_all(&leftover).unwrap();
+        fs::write(
+            leftover.join(".git"),
+            format!("gitdir: {}/.git/worktrees/leftover-wt\n", repo.display()),
+        )
+        .unwrap();
+        fs::write(leftover.join("README"), b"x").unwrap();
+        let porcelain = format!(
+            "worktree {}\nHEAD a\nbranch refs/heads/main\n\nworktree {}\nHEAD b\nbranch refs/heads/leftover\n",
+            repo.display(),
+            leftover.display()
+        );
+        let git = FakeGit {
+            lists: std::collections::HashMap::from([
+                (repo.clone(), porcelain.clone()),
+                (leftover.clone(), porcelain),
+            ]),
+            toplevel: home.to_path_buf(),
+            statuses: std::collections::HashMap::new(),
+            ignored: std::collections::HashMap::new(),
+            unpushed: std::collections::HashMap::new(),
+            ages: std::collections::HashMap::from([(leftover.clone(), 10)]),
+        };
+        let roots = [home.join(".claude/worktrees"), home.join("Projects")];
+        let plan = build_worktree_plan(
+            &AppProtection::new(),
+            &WorktreePlanOptions {
+                home,
+                cwd: home,
+                ttl_secs: 900,
+                search_roots: Some(&roots),
+                now: SystemTime::now(),
+                git: &git,
+            },
+        )
+        .unwrap();
+        let leftover_canon = leftover.canonicalize().unwrap();
+        let matching: Vec<_> = plan
+            .entries
+            .iter()
+            .filter(|e| e.path == leftover_canon)
+            .collect();
+        assert_eq!(
+            matching.len(),
+            1,
+            "entries={:?}",
+            plan.entries
+                .iter()
+                .map(|e| (&e.path, &e.label))
+                .collect::<Vec<_>>()
+        );
+        let entry = matching[0];
+        assert_eq!(entry.rule_id, "worktree:linked");
+        let labeled = parse_repo_from_label(&entry.label).unwrap();
+        assert_eq!(
+            labeled.canonicalize().unwrap(),
+            repo.canonicalize().unwrap(),
+            "label={}",
+            entry.label
         );
     }
 

@@ -173,7 +173,18 @@ pub fn apply_proto_plan(
         on_event,
     );
     ctx.privilege = Some(&sudo);
-    apply_plan(plan, &mut ctx)
+    // 对齐其他 *_apply：每次 clean apply 独立成段，history 才能显示真实条目数与大小。
+    let _ = ctx.oplog.session_start();
+    let result = apply_plan(plan, &mut ctx);
+    let (items, size_kb) = match &result {
+        Ok(report) => (
+            report.succeeded,
+            report.trashed_bytes / 1024 + report.deleted_bytes / 1024,
+        ),
+        Err(_) => (0, 0),
+    };
+    let _ = ctx.oplog.session_end(items, size_kb);
+    result
 }
 
 pub fn apply_plan(

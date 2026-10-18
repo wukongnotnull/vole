@@ -44,11 +44,12 @@ impl DiskVerifyDeps for LiveDiskVerifyDeps {
     }
 }
 
+/// `VOLE_ENABLE_DISK_VERIFY=1`（兼容 Mole `MOLE_ENABLE_DISK_VERIFY`）。
 pub fn disk_verify_enabled() -> bool {
-    match std::env::var("VOLE_ENABLE_DISK_VERIFY") {
-        Ok(v) => matches!(v.trim(), "1" | "true" | "TRUE" | "yes" | "YES"),
-        Err(_) => false,
-    }
+    ["VOLE_ENABLE_DISK_VERIFY", "MOLE_ENABLE_DISK_VERIFY"]
+        .iter()
+        .find_map(|n| std::env::var(n).ok())
+        .is_some_and(|v| matches!(v.trim(), "1" | "true" | "TRUE" | "yes" | "YES"))
 }
 
 fn timeout_secs() -> u64 {

@@ -1,6 +1,7 @@
 //! Mole-aligned optimize task catalog and `rule_id` helpers.
 
 mod catalog;
+pub mod diagnostics;
 pub mod tasks;
 
 pub use catalog::{

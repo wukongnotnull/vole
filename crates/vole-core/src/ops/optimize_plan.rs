@@ -26,8 +26,16 @@ use super::plan::DEFAULT_PLAN_TTL;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum OptimizePlanError {
-    #[error("unknown optimize task id: {0}")]
+    #[error("unknown optimize task id: {0} (valid ids: {valid})", valid = valid_task_ids())]
     UnknownTask(String),
+}
+
+fn valid_task_ids() -> String {
+    optimize_catalog()
+        .iter()
+        .map(|t| t.id)
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 pub struct OptimizePlanOptions<'a> {
@@ -176,7 +184,14 @@ pub fn build_optimize_plan(
         });
     }
 
-    let coverage_note = coverage_note_for_long_tail(opts.only_task);
+    let coverage_note = join_notes([
+        coverage_note_for_long_tail(opts.only_task),
+        disk_verify_skip_note(
+            opts.only_task,
+            opts.task_whitelist,
+            crate::optimize::tasks::disk_verify_enabled(),
+        ),
+    ]);
 
     Ok(ProtoPlan {
         schema_version: SCHEMA_VERSION,
@@ -189,6 +204,34 @@ pub fn build_optimize_plan(
         entries,
         coverage_note,
     })
+}
+
+pub const DISK_VERIFY_SKIP_NOTE: &str =
+    "Disk Health (disk_verify) skipped: set VOLE_ENABLE_DISK_VERIFY=1 to enable (diskutil verifyVolume / can freeze the system on damaged APFS volumes).";
+
+fn join_notes<const N: usize>(notes: [Option<String>; N]) -> Option<String> {
+    let parts: Vec<String> = notes.into_iter().flatten().collect();
+    if parts.is_empty() {
+        None
+    } else {
+        Some(parts.join("\n"))
+    }
+}
+
+/// 对齐 Mole `opt_disk_verify` 的 "Disk verify skipped (set MOLE_ENABLE_DISK_VERIFY=1 to enable)"：
+/// 未开启时在 plan 的 `coverage_note` 里说明，白名单或 `--task` 其它项时不提。
+fn disk_verify_skip_note(
+    only_task: Option<&str>,
+    task_whitelist: &[String],
+    enabled: bool,
+) -> Option<String> {
+    if enabled || whitelist::is_task_whitelisted("disk_verify", task_whitelist) {
+        return None;
+    }
+    match only_task {
+        None | Some("disk_verify") => Some(DISK_VERIFY_SKIP_NOTE.to_string()),
+        Some(_) => None,
+    }
 }
 
 fn coverage_note_for_long_tail(only_task: Option<&str>) -> Option<String> {
@@ -255,7 +298,11 @@ mod tests {
             .iter()
             .any(|e| e.rule_id == "optimize:action:dock_refresh"));
         // All 23 catalog tasks are in_m3 → no long-tail coverage note.
-        assert!(plan.coverage_note.is_none());
+        assert!(!plan
+            .coverage_note
+            .as_deref()
+            .unwrap_or_default()
+            .contains("long-tail"));
     }
 
     #[test]
@@ -299,7 +346,11 @@ mod tests {
             .entries
             .iter()
             .any(|e| e.rule_id == "optimize:action:periodic_maintenance"));
-        assert!(plan.coverage_note.is_none());
+        assert!(!plan
+            .coverage_note
+            .as_deref()
+            .unwrap_or_default()
+            .contains("long-tail"));
         assert!(plan
             .entries
             .iter()
@@ -332,5 +383,25 @@ mod tests {
             .entries
             .iter()
             .any(|e| e.rule_id == "optimize:action:system_maintenance"));
+    }
+
+    #[test]
+    fn disk_verify_skip_note_when_not_enabled() {
+        assert_eq!(
+            disk_verify_skip_note(None, &[], false).as_deref(),
+            Some(DISK_VERIFY_SKIP_NOTE)
+        );
+        assert!(disk_verify_skip_note(Some("disk_verify"), &[], false).is_some());
+        assert!(disk_verify_skip_note(None, &[], true).is_none());
+        assert!(disk_verify_skip_note(Some("dock_refresh"), &[], false).is_none());
+        let wl = vec!["disk_verify".to_string()];
+        assert!(disk_verify_skip_note(None, &wl, false).is_none());
+    }
+
+    #[test]
+    fn unknown_task_error_lists_valid_ids() {
+        let msg = OptimizePlanError::UnknownTask("nope".into()).to_string();
+        assert!(msg.contains("unknown optimize task id: nope"));
+        assert!(msg.contains("dock_refresh") && msg.contains("disk_verify"));
     }
 }

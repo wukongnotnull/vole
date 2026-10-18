@@ -187,7 +187,7 @@ enum Command {
         /// Write plan JSON to a file.
         #[arg(long, conflicts_with = "apply")]
         plan_out: Option<PathBuf>,
-        /// Optional: run a single optimize task id (experimental).
+        /// Run a single optimize task id (unknown ids list the valid ones).
         #[arg(long, value_name = "TASK_ID")]
         task: Option<String>,
         /// TTY paginated multi-select for the optimize-task whitelist; scripts use --whitelist-*.

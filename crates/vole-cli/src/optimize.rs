@@ -12,6 +12,11 @@ use vole_core::ops::{
     report_has_permission_skips, OptimizeApplyError, OptimizeApplyOptions, OptimizePlanOptions,
     APPLY_PERMISSION_WARN,
 };
+use vole_core::optimize::diagnostics::{
+    collect_system_summary, cpu_threshold, detach_mounted_images, format_diagnosis_lines,
+    format_system_summary, run_performance_diagnosis, LiveDiagnosticsDeps, LiveImageDetacher,
+    PerformanceDiagnosis,
+};
 use vole_core::protection::{AppProtection, ProtectionCatalog};
 use vole_core::units;
 use vole_core::vole_proto::{Plan as ProtoPlan, Report, StreamEvent, SCHEMA_VERSION};
@@ -86,14 +91,76 @@ pub(crate) fn optimize_scan_spinner_message() -> &'static str {
     "Scanning optimize tasks..."
 }
 
+/// 是否在任务前跑系统概要 + 性能诊断（对齐 Mole optimize 开头）。`--task` 单项运行跳过。
+pub(crate) fn wants_pre_run_diagnostics(opts: &OptimizeOptions) -> bool {
+    opts.task.is_none()
+}
+
+/// 打印系统概要与性能诊断；`offer_detach` 为真时（TTY 确认轨）询问是否卸载拖慢评估的镜像。
+fn run_pre_run_diagnostics(
+    home: &Path,
+    catalog: &ProtectionCatalog,
+    task_whitelist: &[String],
+    offer_detach: bool,
+) -> io::Result<()> {
+    let spinner = crate::tty_spinner::TtySpinner::start("Collecting system info...");
+    let summary = collect_system_summary(home);
+    let diag = run_performance_diagnosis(
+        &LiveDiagnosticsDeps,
+        catalog,
+        task_whitelist,
+        cpu_threshold(),
+    );
+    spinner.stop();
+
+    if let Some(summary) = summary {
+        eprintln!("{}", format_system_summary(&summary));
+    }
+    eprintln!();
+    for line in format_diagnosis_lines(&diag) {
+        eprintln!("{line}");
+    }
+    if !diag.detach_candidates.is_empty() {
+        if offer_detach {
+            offer_detach_candidates(&diag)?;
+        } else {
+            eprintln!("  Review these mounted images and detach any you no longer need");
+        }
+    }
+    eprintln!();
+    Ok(())
+}
+
+fn offer_detach_candidates(diag: &PerformanceDiagnosis) -> io::Result<()> {
+    eprint!("  Detach now? [y/N] ");
+    let _ = io::stderr().flush();
+    let mut line = String::new();
+    io::stdin().lock().read_line(&mut line)?;
+    if !line.trim().eq_ignore_ascii_case("y") {
+        eprintln!("  Kept mounted");
+        return Ok(());
+    }
+    let outcome = detach_mounted_images(&LiveImageDetacher, &diag.detach_candidates);
+    for mount in &outcome.detached {
+        eprintln!("  ✓ Detached {mount}");
+    }
+    for mount in &outcome.failed {
+        eprintln!("  ! Failed to detach {mount}");
+    }
+    Ok(())
+}
+
 fn run_interactive(opts: &OptimizeOptions) -> io::Result<()> {
-    let spinner = crate::tty_spinner::TtySpinner::start(optimize_scan_spinner_message());
     let home = env::var_os("HOME")
         .map(PathBuf::from)
         .ok_or_else(|| io::Error::other("HOME not set"))?;
     let catalog = ProtectionCatalog::embedded();
     let protection = AppProtection::new();
     let task_whitelist = vole_core::whitelist::load_optimize()?;
+    if wants_pre_run_diagnostics(opts) {
+        run_pre_run_diagnostics(&home, &catalog, &task_whitelist, true)?;
+    }
+    let spinner = crate::tty_spinner::TtySpinner::start(optimize_scan_spinner_message());
     let plan_opts = OptimizePlanOptions {
         home: &home,
         ttl_secs: 900,
@@ -162,6 +229,10 @@ fn run_plan(opts: OptimizeOptions) -> io::Result<()> {
     } else {
         None
     };
+
+    if human_plan_output(&opts) && wants_pre_run_diagnostics(&opts) {
+        run_pre_run_diagnostics(&home, &catalog, &task_whitelist, false)?;
+    }
 
     let plan = build_optimize_plan(&catalog, &protection, &plan_opts)
         .map_err(|e| io::Error::other(e.to_string()))?;
@@ -283,6 +354,11 @@ fn print_human_report(report: &Report) {
     if report_has_permission_skips(report) {
         eprintln!("{APPLY_PERMISSION_WARN}");
     }
+}
+
+/// `--plan` 在 TTY 上输出人读 plan（非 JSON / 流 / 写文件）。
+fn human_plan_output(opts: &OptimizeOptions) -> bool {
+    !opts.json_stream && opts.plan_out.is_none() && !should_use_json(opts.json)
 }
 
 fn should_use_json(force: bool) -> bool {
@@ -476,6 +552,15 @@ mod tests {
                 ..bare_opts()
             }
         ));
+    }
+
+    #[test]
+    fn pre_run_diagnostics_skipped_for_single_task() {
+        assert!(wants_pre_run_diagnostics(&bare_opts()));
+        assert!(!wants_pre_run_diagnostics(&OptimizeOptions {
+            task: Some("dock_refresh".into()),
+            ..bare_opts()
+        }));
     }
 
     #[test]

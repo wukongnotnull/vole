@@ -60,8 +60,8 @@ pub use installer_apply::{
     InstallerApplyOptions,
 };
 pub use installer_plan::{
-    build_installer_plan, resolve_default_scan_roots, InstallerPlanError, InstallerPlanOptions,
-    DEFAULT_INSTALLER_SCAN_MAX_DEPTH,
+    build_installer_plan, installer_source_display, resolve_default_scan_roots, InstallerPlanError,
+    InstallerPlanOptions, DEFAULT_INSTALLER_SCAN_MAX_DEPTH,
 };
 pub use optimize_apply::{
     apply_optimize_plan, apply_optimize_proto_plan, OptimizeApplyContext, OptimizeApplyError,

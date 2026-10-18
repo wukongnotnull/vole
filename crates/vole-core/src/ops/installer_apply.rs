@@ -142,6 +142,20 @@ pub fn apply_installer_proto_plan(
             continue;
         }
 
+        // Mole `execute_installer_delete_plan`：大小与扫描时不同也视为已变化。
+        // mtime 只精确到秒，同一秒内被改写的文件靠这一步拦下。
+        if !size_matches_plan(entry) {
+            skipped += 1;
+            if let Some(event) = &ctx.on_event {
+                event(StreamEvent::Skipped {
+                    rule_id: entry.rule_id.clone(),
+                    reason: SkipReason::PathVanished,
+                });
+            }
+            skip_tracker.record(SkipReason::PathVanished, &entry.rule_id);
+            continue;
+        }
+
         let delete_opts = MoleDeleteOptions {
             mode: delete_mode,
             dry_run: false,
@@ -206,6 +220,10 @@ fn plan_is_expired(plan: &ProtoPlan, now: SystemTime) -> bool {
     plan.created_at
         .checked_add(ttl)
         .is_none_or(|expires| now > expires)
+}
+
+fn size_matches_plan(entry: &ProtoPlanEntry) -> bool {
+    std::fs::symlink_metadata(&entry.path).is_ok_and(|m| m.len() == entry.size)
 }
 
 fn proto_identity(entry: &ProtoPlanEntry) -> PlanEntryIdentity {
@@ -341,6 +359,50 @@ mod tests {
         .unwrap();
         assert!(report.succeeded >= 1, "report={report:?}");
         assert!(!dmg.exists(), "dmg should be trashed");
+
+        std::env::remove_var("MOLE_TEST_TRASH_DIR");
+    }
+
+    #[test]
+    fn apply_skips_size_drift() {
+        let _guard = crate::test_env::lock();
+        let dir = tempfile::tempdir().unwrap();
+        let downloads = dir.path().join("Downloads");
+        fs::create_dir_all(&downloads).unwrap();
+        let dmg = downloads.join("App.dmg");
+        fs::write(&dmg, b"installer-bytes").unwrap();
+
+        let trash_dir = dir.path().join("trash");
+        fs::create_dir_all(&trash_dir).unwrap();
+        std::env::set_var("MOLE_TEST_TRASH_DIR", &trash_dir);
+
+        let protection = AppProtection::new();
+        let roots = [downloads.clone()];
+        let mut plan = build_installer_plan(
+            &protection,
+            &InstallerPlanOptions {
+                home: dir.path(),
+                ttl_secs: 900,
+                scan_roots: Some(&roots),
+                max_depth: 2,
+                now: SystemTime::now(),
+            },
+        )
+        .unwrap();
+        assert_eq!(plan.entries.len(), 1, "entries={:?}", plan.entries);
+        // 同 inode、同 mtime，只有大小与计划不符（Mole "refuses size drift"）。
+        plan.entries[0].size += 1;
+
+        let report = apply_installer_plan(
+            &plan,
+            &protection,
+            InstallerApplyOptions { permanent: false },
+            None,
+        )
+        .unwrap();
+        assert_eq!(report.succeeded, 0, "report={report:?}");
+        assert_eq!(report.skipped, 1, "report={report:?}");
+        assert!(dmg.exists(), "drifted dmg must stay in place");
 
         std::env::remove_var("MOLE_TEST_TRASH_DIR");
     }

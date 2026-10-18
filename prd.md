@@ -3,7 +3,7 @@
 | 项 | 内容 |
 |---|---|
 | 产品名称 | Vole（命令行版 `vole`）／ Vole for macOS（桌面版） |
-| 文档版本 | v1.3（基于代码库现状修订） |
+| 文档版本 | v1.4（基于代码库现状修订） |
 | 修订日期 | 2026-10-18 |
 | 对应代码基线 | `vole` main @ **2.20.0**；`vole-macos` main @ **0.3.0**（内嵌 sidecar `vole` 2.20.0） |
 | 产品负责人 | 悟空非空也 |
@@ -14,6 +14,7 @@
 
 | 版本 | 日期 | 修订人 | 说明 |
 |---|---|---|---|
+| v1.4 | 2026-10-18 | 悟空非空也（Claude 协助整理） | F09 补齐 Mole 对齐：候选标出来源（Downloads / Homebrew / iCloud 等）、Homebrew 哈希前缀只在 Homebrew 缓存中去除、apply 前校验大小未变；确认 fd / find 两条扫描分支已由同一实现覆盖，去掉 `coverage_note` 中的长尾说明 |
 | v1.3 | 2026-10-18 | 悟空非空也（Claude 协助整理） | F04 补齐 Mole 前置诊断：系统概要行、性能诊断（syspolicyd 时可卸载用户 DMG）；`--task` 去掉实验性标注；disk_verify 未开启时在 `coverage_note` 说明 |
 | v1.2 | 2026-10-18 | 悟空非空也（Claude 协助整理） | F02 补齐 Developer 大户长尾：DerivedData 整树、DeviceSupport 保留最新 2 版、不可用模拟器经 simctl 删除；规则数更新为约 550 |
 | v1.1 | 2026-10-18 | 悟空非空也（Claude 协助整理） | 附录 14.2 三处差异定为「以代码为准」，同步修订 v3 规格与桌面版 README；修正吉祥物动画表述 |
@@ -331,8 +332,17 @@ Vole 以 Mole v1.48.1 为知识来源与正确性基准，用 Rust 重写为单�
 ### 5.11 F09 安装包（installer）
 
 - 在 Downloads、Desktop、Documents、Public、`/Users/Shared`、Homebrew 缓存、iCloud Downloads、Mail 下载、Telegram 下载等目录（深度 2）查找 `.dmg`、`.pkg`、`.mpkg`、`.iso`、`.xip`。
-- 识别内含安装包的 `.zip`（检查前 50 个条目）。
-- `rule_id`：`installer:<ext>`；长尾分支在 `coverage_note` 说明。
+- 扫描包含隐藏文件、不读 ignore 规则、不跟随 symlink、扩展名不区分大小写，等同 Mole 的 fd 与 find 两条分支；不存在的目录静默跳过。深度可由 `VOLE_INSTALLER_SCAN_MAX_DEPTH` 调整。
+- 识别内含安装包的 `.zip`（只检查前 50 个条目，条目路径含 `.app` / `.pkg` / `.dmg` / `.xip`）；损坏或无法列出的 zip 跳过。
+- 每个候选标出来源（对齐 Mole `get_source_display`）：Downloads、Desktop、Documents、Public、Library、Shared、Homebrew、iCloud、Mail、Telegram，其余显示所在目录名；TTY 多选与人读 `--plan` 都显示来源列。Homebrew 缓存中的文件去掉开头的 `<sha256>--` 作为显示名。
+- apply 前除 dev / inode / mtime 外还校验文件大小与扫描时一致，不一致则跳过（记为 `path_vanished`），对齐 Mole「changed since scan」。
+- `rule_id`：`installer:<ext>`；没有未移植的分支，Plan 不带 `coverage_note`。
+- CLI 的 TTY 多选默认全不选（对齐 Mole）；桌面版扫描后默认全选。有删除失败时退出码非零。
+
+验收：
+- 隐藏的 `.dmg`、大写扩展名 `.DMG`、带空格与特殊字符的文件名都能列出；`.pdf`、`.tar.gz`、指向安装包的 symlink 不列出。
+- zip 第 51 个条目之后才出现 `.app` 时不列出。
+- 扫描后文件大小变化，apply 不删除该文件。
 
 ### 5.12 F10 Worktree
 
@@ -413,7 +423,7 @@ Vole 以 Mole v1.48.1 为知识来源与正确性基准，用 Rust 重写为单�
 | result | 移入废纸篓与永久删除分开统计；跳过项与原因 |
 
 需求要点：
-- 默认勾选规则与 CLI 一致：Worktree / Agent 默认全不选；净化 / 安装包扫描后默认全选。
+- 默认勾选：Worktree / Agent 默认全不选；净化 / 安装包扫描后默认全选（CLI 的安装包 TTY 多选按 Mole 默认全不选，两端不同）。
 - App 不得对用户勾选项用 `FileManager` 直接删除，一律走 sidecar `--apply` 或 Helper 白名单通道。
 - **版本门控**：启动时读取 sidecar `--version`，不是 `2.20.x` 时 Worktree / Agent 标为「需要内嵌 vole 2.20」并不可用。
 - 设置页（「工坊设置」）提供 sidecar 版本、Touch ID、检查与执行更新、卸载 Vole 预览与确认。
